@@ -202,14 +202,85 @@ HD_FIRST = False
 SNMP = False
 ROOT_OID = '.1.3.6.1.3.53.5.9'
 
-snmp_pytomoGblStats = '1'
-snmp_pytomoObjectName = '2'
-snmp_pytomoDescr = '3'
-snmp_pytomoContact = '4'
-snmp_pytomoDownloadDuration = '5'
-snmp_pytomoSleepTime = '6'
+# Table of global stats
+snmp_pytomoGblStats = '.'.join((ROOT_OID, '1'))
 
-snmp_pytomoUrlStats = '2'
+snmp_pytomoObjectName = '.'.join((snmp_pytomoGblStats, '1'))
+snmp_pytomoObjectName_str = 'Pytomo instance'
+snmp_pytomoDescr = '.'.join((snmp_pytomoGblStats, '2'))
+snmp_pytomoDescr_str = ('Pytomo  is a YouTube crawler designed to figure out '
+                        'network information out of YouTube video download')
+snmp_pytomoContact = '.'.join((snmp_pytomoGblStats, '3'))
+snmp_pytomoContact_str = 'Pascal??'
+snmp_pytomoDownloadDuration = '.'.join((snmp_pytomoGblStats, '4'))
+snmp_pytomoSleepTime = '.'.join((snmp_pytomoGblStats, '5'))
+
+# Table of Url stats
+snmp_pytomoUrlStats = '.'.join((ROOT_OID, '2'))
+
+# UrlIndex is the first value in the tables but not in the stats!
+snmp_pytomoUrlIndex = '.'.join((snmp_pytomoUrlStats, '1'))
+snmp_pytomoTimeStamp = '.'.join((snmp_pytomoUrlStats, '2'))
+snmp_pytomoService = '.'.join((snmp_pytomoUrlStats, '3'))
+snmp_pytomoCacheUrl = '.'.join((snmp_pytomoUrlStats, '4'))
+snmp_pytomoCacheServerDelay = '.'.join((snmp_pytomoUrlStats, '5'))
+snmp_pytomoAddressIp = '.'.join((snmp_pytomoUrlStats, '6'))
+snmp_pytomoResolver = '.'.join((snmp_pytomoUrlStats, '7'))
+snmp_pytomoResolveTime = '.'.join((snmp_pytomoUrlStats, '8'))
+snmp_pytomoAsNumber = '.'.join((snmp_pytomoUrlStats, '9'))
+snmp_pytomoPingMin = '.'.join((snmp_pytomoUrlStats, '10'))
+snmp_pytomoPingAvg = '.'.join((snmp_pytomoUrlStats, '11'))
+snmp_pytomoPingMax = '.'.join((snmp_pytomoUrlStats, '12'))
+snmp_pytomoDownloadTime = '.'.join((snmp_pytomoUrlStats, '13'))
+snmp_pytomoVideoType = '.'.join((snmp_pytomoUrlStats, '14'))
+snmp_pytomoVideoDuration = '.'.join((snmp_pytomoUrlStats, '15'))
+snmp_pytomoVideoLength = '.'.join((snmp_pytomoUrlStats, '16'))
+snmp_pytomoEncodingRate = '.'.join((snmp_pytomoUrlStats, '17'))
+snmp_pytomoDownloadBytes = '.'.join((snmp_pytomoUrlStats, '18'))
+snmp_pytomoDownloadInterruptions = '.'.join((snmp_pytomoUrlStats, '19'))
+snmp_pytomoInitialData = '.'.join((snmp_pytomoUrlStats, '20'))
+snmp_pytomoInitialRate = '.'.join((snmp_pytomoUrlStats, '21'))
+snmp_pytomoInitialPlaybackBuffer = '.'.join((snmp_pytomoUrlStats, '22'))
+snmp_pytomoBufferingDuration = '.'.join((snmp_pytomoUrlStats, '23'))
+snmp_pytomoPlaybackDuration = '.'.join((snmp_pytomoUrlStats, '24'))
+snmp_pytomoBufferDurationAtEnd = '.'.join((snmp_pytomoUrlStats, '25'))
+snmp_pytomoTimeTogetFirstByte = '.'.join((snmp_pytomoUrlStats, '26'))
+snmp_pytomoMaxInstantThp = '.'.join((snmp_pytomoUrlStats, '27'))
+snmp_pytomoRedirectUrl = '.'.join((snmp_pytomoUrlStats, '28'))
+snmp_pytomoStatusCode = '.'.join((snmp_pytomoUrlStats, '29'))
+
+URL_IDX = 2
+STATS_IDX = (
+    2, #Url
+    0, #TIMESTAMP
+    1, #Service
+    3, #CacheUrl
+    4, #CacheServerDelay
+    5, #IP
+    6, #Resolver
+    7, #ResolveTime
+    8, #ASNumber
+    9, #PingMin
+    10, #PingAvg
+    11, #PingMax
+    12, #DownloadTime
+    13, #VideoType
+    14, #VideoDuration
+    15, #VideoLength
+    16, #EncodingRate
+    17, #DownloadBytes
+    18, #DownloadInterruptions
+    19, #InitialData
+    20, #InitialRate
+    21, #InitialPlaybackBuffer
+    22, #BufferingDuration
+    23, #PlaybackDuration
+    24, #BufferDurationAtEnd
+    25, #TimeTogetFirstByte
+    26, #MaxInstantThp
+    27, #RedirectUrl
+    28, #StatusCode
+)
 
 ################################################################################
 ################################################################################
