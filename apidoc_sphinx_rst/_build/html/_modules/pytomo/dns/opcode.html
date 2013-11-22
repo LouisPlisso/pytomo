@@ -1,0 +1,200 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.opcode &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.opcode</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS Opcodes.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+
+<span class="n">QUERY</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">IQUERY</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">STATUS</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">NOTIFY</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">UPDATE</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="n">_by_text</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;QUERY&#39;</span> <span class="p">:</span> <span class="n">QUERY</span><span class="p">,</span>
+    <span class="s">&#39;IQUERY&#39;</span> <span class="p">:</span> <span class="n">IQUERY</span><span class="p">,</span>
+    <span class="s">&#39;STATUS&#39;</span> <span class="p">:</span> <span class="n">STATUS</span><span class="p">,</span>
+    <span class="s">&#39;NOTIFY&#39;</span> <span class="p">:</span> <span class="n">NOTIFY</span><span class="p">,</span>
+    <span class="s">&#39;UPDATE&#39;</span> <span class="p">:</span> <span class="n">UPDATE</span>
+<span class="p">}</span>
+
+<span class="c"># We construct the inverse mapping programmatically to ensure that we</span>
+<span class="c"># cannot make any mistakes (e.g. omissions, cut-and-paste errors) that</span>
+<span class="c"># would cause the mapping not to be true inverse.</span>
+
+<span class="n">_by_value</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">_by_text</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+
+
+<div class="viewcode-block" id="UnknownOpcode"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.opcode.UnknownOpcode">[docs]</a><span class="k">class</span> <span class="nc">UnknownOpcode</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if an opcode is unknown.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.opcode.from_text">[docs]</a><span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert text into an opcode.</span>
+
+<span class="sd">    @param text: the textual opcode</span>
+<span class="sd">    @type text: string</span>
+<span class="sd">    @raises UnknownOpcode: the opcode is unknown</span>
+<span class="sd">    @rtype: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">&lt;=</span> <span class="mi">15</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">_by_text</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">UnknownOpcode</span>
+    <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="from_flags"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.opcode.from_flags">[docs]</a><span class="k">def</span> <span class="nf">from_flags</span><span class="p">(</span><span class="n">flags</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Extract an opcode from DNS message flags.</span>
+
+<span class="sd">    @param flags: int</span>
+<span class="sd">    @rtype: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0x7800</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">11</span>
+</div>
+<div class="viewcode-block" id="to_flags"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.opcode.to_flags">[docs]</a><span class="k">def</span> <span class="nf">to_flags</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert an opcode to a value suitable for ORing into DNS message</span>
+<span class="sd">    flags.</span>
+<span class="sd">    @rtype: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;&lt;</span> <span class="mi">11</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x7800</span>
+</div>
+<div class="viewcode-block" id="to_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.opcode.to_text">[docs]</a><span class="k">def</span> <span class="nf">to_text</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert an opcode to text.</span>
+
+<span class="sd">    @param value: the opcdoe</span>
+<span class="sd">    @type value: int</span>
+<span class="sd">    @raises UnknownOpcode: the opcode is unknown</span>
+<span class="sd">    @rtype: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_by_value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">text</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+</div>
+<div class="viewcode-block" id="is_update"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.opcode.is_update">[docs]</a><span class="k">def</span> <span class="nf">is_update</span><span class="p">(</span><span class="n">flags</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;True if the opcode in flags is UPDATE.</span>
+
+<span class="sd">    @param flags: DNS flags</span>
+<span class="sd">    @type flags: int</span>
+<span class="sd">    @rtype: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">from_flags</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span> <span class="o">==</span> <span class="n">UPDATE</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="bp">False</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

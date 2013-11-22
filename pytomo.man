@@ -1,0 +1,71 @@
+PYTOMO()                                                              PYTOMO()
+
+
+
+NNAAMMEE
+       PYTOMO -
+
+       Pytomo  is a YouTube crawler designed to figure out network information
+       out of YouTube video download.
+
+UUSSAAGGEE
+       pytomo  [-r  max_rounds]  [-u  max_crawled_url]  [-p  max_per_url]  [-P
+       max_per_page]  [-t time_frame] [-n ping_packets] [-D download_time] [-B
+       buffering_video_duration]   [-M   min_playout_buffer_size]   [-x]   [-L
+       log_level]:
+
+       Options:
+         -h, --help            show this help message and exit
+         -r MAX_ROUNDS         Max number of rounds to perform (default 50)
+         -u MAX_CRAWLED_URL    Max number of urls to visit (default 10000)
+         -p MAX_PER_URL        Max number of related urls from each page (default 2)
+         -P MAX_PER_PAGE       Max number of related videos from each page (default
+                               30)
+         -t TIME_FRAME         Timeframe for the most popular videos to fetch at
+                               start of crawl put 'today', 'week', 'month' or
+                               'all_time' (default 'week')
+         -n PING_PACKETS       Number of packets to be sent for each ping (default 3)
+         -D DOWNLOAD_TIME      Download time for the video (default 30.000000)
+         -B BUFFERING_VIDEO_DURATION
+                               Buffering video duration (default 3.000000)
+         -M MIN_PLAYOUT_BUFFER_SIZE
+                               Minimum Playout Buffer Size (default 1.000000)
+         -x                    Do NOT store public IP address of the machine in the
+                               logs
+         -L LOG_LEVEL          The log level setting for the Logging module.Choose
+                               from: 'DEBUG', 'INFO', 'WARNING', 'ERROR' and
+                               'CRITICAL' (default 'DEBUG')
+         --http-proxy=PROXIES  in case of http proxy to reach Internet (default None)
+
+IINNSSTTAALLLLAATTIIOONN--FFRREEEE
+       In  order  to provide installation-free package, we provide binary exe‐
+       cutables for Linux (32 and 64bits), Windows, and Mac OS X.   The  bina‐
+       ries files were generated with _P_y_i_n_s_t_a_l_l_e_r (version 1.5RC1).
+
+       If  you  have Python installed, you can directly run the start_crawl.py
+       script at root or the pytomo script in bin directory.
+
+EEXXTTEERRNNAALL RREESSOOUURRCCEESS
+       We based the lib_youtube_download on _Y_o_u_T_u_b_e _D_o_w_n_l_o_a_d script:  we  sim‐
+       plified  it  at  most  and include only the classes we needed (and only
+       YouTube video retrieval).
+
+       The dns module is taken from the _D_N_S _P_y_t_h_o_n _P_a_c_k_a_g_e: we  just  modified
+       rdata so that _P_y_i_n_s_t_a_l_l_e_r include all needed modules.
+
+       The  extraction  of metadata out of video files is an adaptation of _K_a_a
+       _M_e_t_a_d_a_t_a _P_y_t_h_o_n _P_a_c_k_a_g_e: it has been modified in order to  be  indepen‐
+       dent of Kaa-base (thus pure Python and portable).
+
+   EExxtteerrnnaall LLiinnkkss
+       1. _Y_o_u_T_u_b_e _D_o_w_n_l_o_a_d.
+
+       2. _K_a_a _M_e_t_a_d_a_t_a _P_y_t_h_o_n _P_a_c_k_a_g_e.
+
+       3. _D_N_S _P_y_t_h_o_n _P_a_c_k_a_g_e
+
+       4. _P_y_i_n_s_t_a_l_l_e_r
+
+
+
+                                                                      PYTOMO()

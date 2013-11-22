@@ -1,0 +1,1022 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.video.mpeg &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.video.mpeg</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># mpeg.py - mpeg 1/2 file parser</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: mpeg.py 4041 2009-05-22 14:59:59Z tack $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">stat</span>
+
+<span class="c"># import kaa_metadata.video core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="c">## START_CODE</span>
+<span class="c">##</span>
+<span class="c">## Start Codes, with &#39;slice&#39; occupying 0x01..0xAF</span>
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="n">START_CODE</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mh">0x00</span> <span class="p">:</span> <span class="s">&#39;picture_start_code&#39;</span><span class="p">,</span>
+    <span class="mh">0xB0</span> <span class="p">:</span> <span class="s">&#39;reserved&#39;</span><span class="p">,</span>
+    <span class="mh">0xB1</span> <span class="p">:</span> <span class="s">&#39;reserved&#39;</span><span class="p">,</span>
+    <span class="mh">0xB2</span> <span class="p">:</span> <span class="s">&#39;user_data_start_code&#39;</span><span class="p">,</span>
+    <span class="mh">0xB3</span> <span class="p">:</span> <span class="s">&#39;sequence_header_code&#39;</span><span class="p">,</span>
+    <span class="mh">0xB4</span> <span class="p">:</span> <span class="s">&#39;sequence_error_code&#39;</span><span class="p">,</span>
+    <span class="mh">0xB5</span> <span class="p">:</span> <span class="s">&#39;extension_start_code&#39;</span><span class="p">,</span>
+    <span class="mh">0xB6</span> <span class="p">:</span> <span class="s">&#39;reserved&#39;</span><span class="p">,</span>
+    <span class="mh">0xB7</span> <span class="p">:</span> <span class="s">&#39;sequence end&#39;</span><span class="p">,</span>
+    <span class="mh">0xB8</span> <span class="p">:</span> <span class="s">&#39;group of pictures&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mh">0x01</span><span class="p">,</span><span class="mh">0xAF</span><span class="p">):</span>
+    <span class="n">START_CODE</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;slice_start_code&#39;</span>
+
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="c">## START CODES</span>
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="n">PICTURE</span>   <span class="o">=</span> <span class="mh">0x00</span>
+<span class="n">USERDATA</span>  <span class="o">=</span> <span class="mh">0xB2</span>
+<span class="n">SEQ_HEAD</span>  <span class="o">=</span> <span class="mh">0xB3</span>
+<span class="n">SEQ_ERR</span>   <span class="o">=</span> <span class="mh">0xB4</span>
+<span class="n">EXT_START</span> <span class="o">=</span> <span class="mh">0xB5</span>
+<span class="n">SEQ_END</span>   <span class="o">=</span> <span class="mh">0xB7</span>
+<span class="n">GOP</span>       <span class="o">=</span> <span class="mh">0xB8</span>
+
+<span class="n">SEQ_START_CODE</span>  <span class="o">=</span> <span class="mh">0xB3</span>
+<span class="n">PACK_PKT</span>        <span class="o">=</span> <span class="mh">0xBA</span>
+<span class="n">SYS_PKT</span>         <span class="o">=</span> <span class="mh">0xBB</span>
+<span class="n">PADDING_PKT</span>     <span class="o">=</span> <span class="mh">0xBE</span>
+<span class="n">AUDIO_PKT</span>       <span class="o">=</span> <span class="mh">0xC0</span>
+<span class="n">VIDEO_PKT</span>       <span class="o">=</span> <span class="mh">0xE0</span>
+<span class="n">PRIVATE_STREAM1</span> <span class="o">=</span> <span class="mh">0xBD</span>
+<span class="n">PRIVATE_STREAM2</span> <span class="o">=</span> <span class="mh">0xBf</span>
+
+<span class="n">TS_PACKET_LENGTH</span> <span class="o">=</span> <span class="mi">188</span>
+<span class="n">TS_SYNC</span>          <span class="o">=</span> <span class="mh">0x47</span>
+
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="c">## FRAME_RATE</span>
+<span class="c">##</span>
+<span class="c">## A lookup table of all the standard frame rates.  Some rates adhere to</span>
+<span class="c">## a particular profile that ensures compatibility with VLSI capabilities</span>
+<span class="c">## of the early to mid 1990s.</span>
+<span class="c">##</span>
+<span class="c">## CPB</span>
+<span class="c">##   Constrained Parameters Bitstreams, an MPEG-1 set of sampling and</span>
+<span class="c">##   bitstream parameters designed to normalize decoder computational</span>
+<span class="c">##   complexity, buffer size, and memory bandwidth while still addressing</span>
+<span class="c">##   the widest possible range of applications.</span>
+<span class="c">##</span>
+<span class="c">## Main Level</span>
+<span class="c">##   MPEG-2 Video Main Profile and Main Level is analogous to MPEG-1&#39;s</span>
+<span class="c">##   CPB, with sampling limits at CCIR 601 parameters (720x480x30 Hz or</span>
+<span class="c">##   720x576x24 Hz).</span>
+<span class="c">##</span>
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="n">FRAME_RATE</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="mi">0</span><span class="p">,</span>
+      <span class="mf">24000.0</span><span class="o">/</span><span class="mi">1001</span><span class="p">,</span> <span class="c">## 3-2 pulldown NTSC (CPB/Main Level)</span>
+      <span class="mi">24</span><span class="p">,</span>           <span class="c">## Film (CPB/Main Level)</span>
+      <span class="mi">25</span><span class="p">,</span>           <span class="c">## PAL/SECAM or 625/60 video</span>
+      <span class="mf">30000.0</span><span class="o">/</span><span class="mi">1001</span><span class="p">,</span> <span class="c">## NTSC (CPB/Main Level)</span>
+      <span class="mi">30</span><span class="p">,</span>           <span class="c">## drop-frame NTSC or component 525/60  (CPB/Main Level)</span>
+      <span class="mi">50</span><span class="p">,</span>           <span class="c">## double-rate PAL</span>
+      <span class="mf">60000.0</span><span class="o">/</span><span class="mi">1001</span><span class="p">,</span> <span class="c">## double-rate NTSC</span>
+      <span class="mi">60</span><span class="p">,</span>           <span class="c">## double-rate, drop-frame NTSC/component 525/60 video</span>
+      <span class="p">]</span>
+
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="c">## ASPECT_RATIO -- INCOMPLETE?</span>
+<span class="c">##</span>
+<span class="c">## This lookup table maps the header aspect ratio index to a float value.</span>
+<span class="c">## These are just the defined ratios for CPB I believe.  As I understand</span>
+<span class="c">## it, a stream that doesn&#39;t adhere to one of these aspect ratios is</span>
+<span class="c">## technically considered non-compliant.</span>
+<span class="c">##------------------------------------------------------------------------</span>
+<span class="n">ASPECT_RATIO</span> <span class="o">=</span> <span class="p">(</span> <span class="bp">None</span><span class="p">,</span>     <span class="c"># Forbidden</span>
+                 <span class="mf">1.0</span><span class="p">,</span>      <span class="c"># 1/1 (VGA)</span>
+                 <span class="mf">4.0</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span>  <span class="c"># 4/3 (TV)</span>
+                 <span class="mf">16.0</span> <span class="o">/</span> <span class="mi">9</span><span class="p">,</span> <span class="c"># 16/9 (Widescreen)</span>
+                 <span class="mf">2.21</span>      <span class="c"># (Cinema)</span>
+               <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MPEG</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parser for various MPEG files. This includes MPEG-1 and MPEG-2</span>
+<span class="sd">    program streams, elementary streams and transport streams. The</span>
+<span class="sd">    reported length differs from the length reported by most video</span>
+<span class="sd">    players but the provides length here is correct. An MPEG file has</span>
+<span class="sd">    no additional metadata like title, etc; only codecs, length and</span>
+<span class="sd">    resolution is reported back.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mpeg_version</span> <span class="o">=</span> <span class="mi">2</span>
+
+        <span class="c"># detect TS (fast scan)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTS</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+            <span class="c"># detect system mpeg (many infos)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMPEG</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+                <span class="c"># detect PES</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPES</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+                    <span class="c"># Maybe it&#39;s MPEG-ES</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isES</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+                        <span class="c"># If isES() succeeds, we needn&#39;t do anything further.</span>
+                        <span class="k">return</span>
+                    <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;mpeg&#39;</span><span class="p">)</span> <span class="ow">or</span> \
+                             <span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;mpg&#39;</span><span class="p">):</span>
+                        <span class="c"># This has to be an mpeg file. It could be a bad</span>
+                        <span class="c"># recording from an ivtv based hardware encoder with</span>
+                        <span class="c"># same bytes missing at the beginning.</span>
+                        <span class="c"># Do some more digging...</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMPEG</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="ow">or</span> \
+                           <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+                            <span class="c"># does not look like an mpeg at all</span>
+                            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c"># no mpeg at all</span>
+                        <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;video/mpeg&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressive</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">vi</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">:</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">vi</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dxy</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">fps</span><span class="p">,</span> <span class="n">vi</span><span class="o">.</span><span class="n">aspect</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">framerate_aspect</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">bitrate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitrate</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+                <span class="n">vi</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;MPEG Video&#39;</span>
+
+        <span class="c"># set fourcc codec for video and audio</span>
+        <span class="n">vc</span><span class="p">,</span> <span class="n">ac</span> <span class="o">=</span> <span class="s">&#39;MP2V&#39;</span><span class="p">,</span> <span class="s">&#39;MP2A&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mpeg_version</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">vc</span><span class="p">,</span> <span class="n">ac</span> <span class="o">=</span> <span class="s">&#39;MPEG&#39;</span><span class="p">,</span> <span class="mh">0x0050</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">:</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">vc</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">a</span><span class="o">.</span><span class="n">codec</span><span class="p">:</span>
+                <span class="n">a</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">ac</span>
+
+
+    <span class="k">def</span> <span class="nf">dxy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get width and height of the video</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span><span class="o">+</span><span class="mi">4</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;H&#39;</span><span class="p">,</span><span class="n">v</span><span class="p">[:</span><span class="mi">2</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;H&#39;</span><span class="p">,</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x0FFF</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">framerate_aspect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read framerate and aspect ratio</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span><span class="o">+</span><span class="mi">7</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span> <span class="s">&#39;&gt;B&#39;</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">fps</span> <span class="o">=</span> <span class="n">FRAME_RATE</span><span class="p">[</span><span class="n">v</span><span class="o">&amp;</span><span class="mh">0xf</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="n">fps</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">v</span><span class="o">&gt;&gt;</span><span class="mi">4</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">ASPECT_RATIO</span><span class="p">):</span>
+            <span class="n">aspect</span> <span class="o">=</span> <span class="n">ASPECT_RATIO</span><span class="p">[</span><span class="n">v</span><span class="o">&gt;&gt;</span><span class="mi">4</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">aspect</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">fps</span><span class="p">,</span> <span class="n">aspect</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">progressive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Try to find out with brute force if the mpeg is interlaced or not.</span>
+<span class="sd">        Search for the Sequence_Extension in the extension header (01B5)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="nb">buffer</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">count</span>  <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">:</span>
+                <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1000</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="nb">buffer</span> <span class="o">+=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="nb">buffer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x00\x00\x01\xb5</span><span class="s">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">-</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+                <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:]</span>
+                <span class="k">continue</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="mi">8</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="n">ext</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">5</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;progressive&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;interlaced&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;ext&#39;</span><span class="p">,</span> <span class="n">ext</span><span class="p">)</span>
+            <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">4</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+
+    <span class="c">##------------------------------------------------------------------------</span>
+    <span class="c">## bitrate()</span>
+    <span class="c">##</span>
+    <span class="c">## From the MPEG-2.2 spec:</span>
+    <span class="c">##</span>
+    <span class="c">##   bit_rate -- This is a 30-bit integer.  The lower 18 bits of the</span>
+    <span class="c">##   integer are in bit_rate_value and the upper 12 bits are in</span>
+    <span class="c">##   bit_rate_extension.  The 30-bit integer specifies the bitrate of the</span>
+    <span class="c">##   bitstream measured in units of 400 bits/second, rounded upwards.</span>
+    <span class="c">##   The value zero is forbidden.</span>
+    <span class="c">##</span>
+    <span class="c">## So ignoring all the variable bitrate stuff for now, this 30 bit integer</span>
+    <span class="c">## multiplied times 400 bits/sec should give the rate in bits/sec.</span>
+    <span class="c">##</span>
+    <span class="c">## TODO: Variable bitrates?  I need one that implements this.</span>
+    <span class="c">##</span>
+    <span class="c">## Continued from the MPEG-2.2 spec:</span>
+    <span class="c">##</span>
+    <span class="c">##   If the bitstream is a constant bitrate stream, the bitrate specified</span>
+    <span class="c">##   is the actual rate of operation of the VBV specified in annex C.  If</span>
+    <span class="c">##   the bitstream is a variable bitrate stream, the STD specifications in</span>
+    <span class="c">##   ISO/IEC 13818-1 supersede the VBV, and the bitrate specified here is</span>
+    <span class="c">##   used to dimension the transport stream STD (2.4.2 in ITU-T Rec. xxx |</span>
+    <span class="c">##   ISO/IEC 13818-1), or the program stream STD (2.4.5 in ITU-T Rec. xxx |</span>
+    <span class="c">##   ISO/IEC 13818-1).</span>
+    <span class="c">##</span>
+    <span class="c">##   If the bitstream is not a constant rate bitstream the vbv_delay</span>
+    <span class="c">##   field shall have the value FFFF in hexadecimal.</span>
+    <span class="c">##</span>
+    <span class="c">##   Given the value encoded in the bitrate field, the bitstream shall be</span>
+    <span class="c">##   generated so that the video encoding and the worst case multiplex</span>
+    <span class="c">##   jitter do not cause STD buffer overflow or underflow.</span>
+    <span class="c">##</span>
+    <span class="c">##</span>
+    <span class="c">##------------------------------------------------------------------------</span>
+
+
+    <span class="c">## Some parts in the code are based on mpgtx (mpgtx.sf.net)</span>
+
+    <span class="k">def</span> <span class="nf">bitrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read the bitrate (most of the time broken)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span><span class="o">+</span><span class="mi">8</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">t</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span> <span class="s">&#39;&gt;HB&#39;</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="p">)</span>
+        <span class="n">vrate</span> <span class="o">=</span> <span class="n">t</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span> <span class="o">|</span> <span class="n">b</span> <span class="o">&gt;&gt;</span> <span class="mi">6</span>
+        <span class="k">return</span> <span class="n">vrate</span> <span class="o">*</span> <span class="mi">400</span>
+
+
+    <span class="k">def</span> <span class="nf">ReadSCRMpeg2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read SCR (timestamp) for MPEG2 at the buffer beginning (6 Bytes)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="n">highbit</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&amp;</span><span class="mh">0x20</span><span class="p">)</span><span class="o">&gt;&gt;</span><span class="mi">5</span>
+
+        <span class="n">low4Bytes</span><span class="o">=</span> <span class="p">((</span><span class="nb">long</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">&amp;</span> <span class="mh">0x18</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">3</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">30</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x03</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">28</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">20</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xF8</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">12</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x03</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">13</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">5</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">4</span><span class="p">]))</span> <span class="o">&gt;&gt;</span> <span class="mi">3</span>
+
+        <span class="n">sys_clock_ref</span><span class="o">=</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x3</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">7</span>
+        <span class="n">sys_clock_ref</span><span class="o">|=</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="nb">long</span><span class="p">(</span><span class="n">highbit</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">16</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">16</span><span class="p">))</span> <span class="o">+</span> <span class="n">low4Bytes</span><span class="p">)</span> <span class="o">/</span> <span class="mi">90000</span>
+
+
+    <span class="k">def</span> <span class="nf">ReadSCRMpeg1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read SCR (timestamp) for MPEG1 at the buffer beginning (5 Bytes)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="n">highbit</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x01</span>
+
+        <span class="n">low4Bytes</span> <span class="o">=</span> <span class="p">((</span><span class="nb">long</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x03</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">30</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">22</span><span class="p">;</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">15</span><span class="p">;</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">7</span><span class="p">;</span>
+        <span class="n">low4Bytes</span> <span class="o">|=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">;</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="nb">long</span><span class="p">(</span><span class="n">highbit</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">16</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">16</span><span class="p">)</span> <span class="o">+</span> <span class="n">low4Bytes</span><span class="p">)</span> <span class="o">/</span> <span class="mi">90000</span><span class="p">;</span>
+
+
+    <span class="k">def</span> <span class="nf">ReadPTS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read PTS (PES timestamp) at the buffer beginning (5 Bytes)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">high</span> <span class="o">=</span> <span class="p">((</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xF</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">med</span>  <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">7</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">low</span>  <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">7</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">((</span><span class="nb">long</span><span class="p">(</span><span class="n">high</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">30</span> <span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">med</span> <span class="o">&lt;&lt;</span> <span class="mi">15</span><span class="p">)</span> <span class="o">+</span> <span class="n">low</span><span class="p">)</span> <span class="o">/</span> <span class="mi">90000</span>
+
+
+    <span class="k">def</span> <span class="nf">ReadHeader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">,</span> <span class="n">offset</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handle MPEG header in buffer on position offset</span>
+<span class="sd">        Return None on error, new offset or 0 if the new offset can&#39;t be scanned</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">3</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="nb">id</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">3</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">PADDING_PKT</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">offset</span> <span class="o">+</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> \
+                   <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">5</span><span class="p">])</span> <span class="o">+</span> <span class="mi">6</span>
+
+        <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">PACK_PKT</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xF0</span> <span class="o">==</span> <span class="mh">0x20</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;MPEG-1 Video&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadSCRMpeg1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mpeg_version</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">return</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">12</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xC0</span><span class="p">)</span> <span class="o">==</span> <span class="mh">0x40</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;MPEG-2 Video&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadSCRMpeg2</span>
+                <span class="k">return</span> <span class="n">offset</span> <span class="o">+</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">13</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x07</span><span class="p">)</span> <span class="o">+</span> <span class="mi">14</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># I have no idea what just happened, but for some DVB</span>
+                <span class="c"># recordings done with mencoder this points to a</span>
+                <span class="c"># PACK_PKT describing something odd. Returning 0 here</span>
+                <span class="c"># (let&#39;s hope there are no extensions in the header)</span>
+                <span class="c"># fixes it.</span>
+                <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="mh">0xC0</span> <span class="o">&lt;=</span> <span class="nb">id</span> <span class="o">&lt;=</span> <span class="mh">0xDF</span><span class="p">:</span>
+            <span class="c"># code for audio stream</span>
+            <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="mh">0xE0</span> <span class="o">&lt;=</span> <span class="nb">id</span> <span class="o">&lt;=</span> <span class="mh">0xEF</span><span class="p">:</span>
+            <span class="c"># code for video stream</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">SEQ_HEAD</span><span class="p">:</span>
+            <span class="c"># sequence header, remember that position for later use</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span> <span class="o">=</span> <span class="n">offset</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="p">(</span><span class="n">PRIVATE_STREAM1</span><span class="p">,</span> <span class="n">PRIVATE_STREAM2</span><span class="p">):</span>
+            <span class="c"># private stream. we don&#39;t know, but maybe we can guess later</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">8</span><span class="p">])</span>
+            <span class="c"># if (ord(buffer[offset+6]) &amp; 4) or 1:</span>
+            <span class="c"># id = ord(buffer[offset+10+add])</span>
+            <span class="k">if</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">11</span><span class="o">+</span><span class="n">add</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">15</span><span class="o">+</span><span class="n">add</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x0b\x77</span><span class="s">&#39;</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="c"># AC3 stream</span>
+                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">())</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="mh">0x2000</span> <span class="c"># AC3</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">SYS_PKT</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">EXT_START</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="k">return</span> <span class="mi">0</span>
+
+
+    <span class="c"># Normal MPEG (VCD, SVCD) ========================================</span>
+
+    <span class="k">def</span> <span class="nf">isMPEG</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This MPEG starts with a sequence of 0x00 followed by a PACK Header</span>
+<span class="sd">        http://dvd.sourceforge.net/dvdinfo/packhdr.html</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c"># seek until the 0 byte stop</span>
+        <span class="k">while</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span><span class="o">-</span><span class="mi">100</span> <span class="ow">and</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">offset</span> <span class="o">-=</span> <span class="mi">2</span>
+
+        <span class="c"># test for mpeg header 0x00 0x00 0x01</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">chr</span><span class="p">(</span><span class="n">PACK_PKT</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="n">header</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="c"># brute force and try to find the pack header in the first</span>
+            <span class="c"># 10000 bytes somehow</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="nb">buffer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="c"># scan the 100000 bytes of data</span>
+        <span class="nb">buffer</span> <span class="o">+=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">100000</span><span class="p">)</span>
+
+        <span class="c"># scan first header, to get basic info about</span>
+        <span class="c"># how to read a timestamp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ReadHeader</span><span class="p">(</span><span class="nb">buffer</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+
+        <span class="c"># store first timestamp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">:])</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1000</span> <span class="ow">and</span> \
+                  <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="c"># read the mpeg header</span>
+            <span class="n">new_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadHeader</span><span class="p">(</span><span class="nb">buffer</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+
+            <span class="c"># header scanning detected error, this is no mpeg</span>
+            <span class="k">if</span> <span class="n">new_offset</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+
+            <span class="k">if</span> <span class="n">new_offset</span><span class="p">:</span>
+                <span class="c"># we have a new offset</span>
+                <span class="n">offset</span> <span class="o">=</span> <span class="n">new_offset</span>
+
+                <span class="c"># skip padding 0 before a new header</span>
+                <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">10</span> <span class="ow">and</span> \
+                          <span class="ow">not</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">2</span><span class="p">]):</span>
+                    <span class="n">offset</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># seek to new header by brute force</span>
+                <span class="n">offset</span> <span class="o">+=</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">:]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="s">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span>
+
+        <span class="c"># fill in values for support functions:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__seek_size__</span>   <span class="o">=</span> <span class="mi">1000000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span> <span class="o">=</span> <span class="mi">10000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__search__</span>      <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_timer_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span>        <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="c"># get length of the file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_length</span><span class="p">()</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+
+    <span class="k">def</span> <span class="nf">_find_timer_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return position of timer in buffer or None if not found.</span>
+<span class="sd">        This function is valid for &#39;normal&#39; mpeg files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="nb">buffer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">chr</span><span class="p">(</span><span class="n">PACK_PKT</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">4</span>
+
+
+
+    <span class="c"># PES ============================================================</span>
+
+
+    <span class="k">def</span> <span class="nf">ReadPESHeader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse a PES header.</span>
+<span class="sd">        Since it starts with 0x00 0x00 0x01 like &#39;normal&#39; mpegs, this</span>
+<span class="sd">        function will return (0, None) when it is no PES header or</span>
+<span class="sd">        (packet length, timestamp position (maybe None))</span>
+
+<span class="sd">        http://dvd.sourceforge.net/dvdinfo/pes-hdr.html</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">None</span>
+
+        <span class="n">packet_length</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">+</span> <span class="mi">6</span>
+        <span class="n">align</span>         <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mi">4</span>
+        <span class="n">header_length</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+
+        <span class="c"># PES ID (starting with 001)</span>
+        <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xE0</span> <span class="o">==</span> <span class="mh">0xC0</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="nb">id</span> <span class="ow">or</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x1F</span>
+            <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xF0</span> <span class="o">==</span> <span class="mh">0xE0</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="nb">id</span> <span class="ow">or</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xF</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+
+            <span class="c"># new mpeg starting</span>
+            <span class="k">if</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">header_length</span><span class="o">+</span><span class="mi">9</span><span class="p">:</span><span class="n">header_length</span><span class="o">+</span><span class="mi">13</span><span class="p">]</span> <span class="o">==</span> \
+                   <span class="s">&#39;</span><span class="se">\x00\x00\x01\xB3</span><span class="s">&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span><span class="p">:</span>
+                <span class="c"># yes, remember offset for later use</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">header_length</span><span class="o">+</span><span class="mi">9</span>
+        <span class="k">elif</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">==</span> <span class="mi">189</span> <span class="ow">or</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">==</span> <span class="mi">191</span><span class="p">:</span>
+            <span class="c"># private stream. we don&#39;t know, but maybe we can guess later</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="nb">id</span> <span class="ow">or</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xF</span>
+            <span class="k">if</span> <span class="n">align</span> <span class="ow">and</span> \
+                   <span class="nb">buffer</span><span class="p">[</span><span class="n">header_length</span><span class="o">+</span><span class="mi">9</span><span class="p">:</span><span class="n">header_length</span><span class="o">+</span><span class="mi">11</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x0b\x77</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="c"># AC3 stream</span>
+                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">())</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="mh">0x2000</span> <span class="c"># AC3</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># unknown content</span>
+            <span class="k">pass</span>
+
+        <span class="n">ptsdts</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">6</span>
+
+        <span class="k">if</span> <span class="n">ptsdts</span> <span class="ow">and</span> <span class="n">ptsdts</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">9</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">9</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span> <span class="o">!=</span> <span class="n">ptsdts</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;WARNING: bad PTS/DTS, please contact us&#39;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">packet_length</span><span class="p">,</span> <span class="bp">None</span>
+
+            <span class="c"># timestamp = self.ReadPTS(buffer[9:14])</span>
+            <span class="n">high</span> <span class="o">=</span> <span class="p">((</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">9</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xF</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">med</span>  <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">7</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">11</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">low</span>  <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">12</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">7</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="mi">13</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">packet_length</span><span class="p">,</span> <span class="mi">9</span>
+
+        <span class="k">return</span> <span class="n">packet_length</span><span class="p">,</span> <span class="bp">None</span>
+
+
+
+    <span class="k">def</span> <span class="nf">isPES</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;trying mpeg-pes scan&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+        <span class="c"># header (also valid for all mpegs)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">buffer</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="nb">buffer</span> <span class="o">+=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">):</span>
+            <span class="n">pos</span><span class="p">,</span> <span class="n">timestamp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadPESHeader</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">:])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pos</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">timestamp</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadPTS</span>
+                <span class="n">bpos</span> <span class="o">=</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="n">timestamp</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="n">timestamp</span><span class="o">+</span><span class="mi">5</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="n">bpos</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">):</span>
+                <span class="c"># we have all informations we need</span>
+                <span class="k">break</span>
+
+            <span class="n">offset</span> <span class="o">+=</span> <span class="n">pos</span>
+            <span class="k">if</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1000000</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c"># looks like a pes, read more</span>
+                <span class="nb">buffer</span> <span class="o">+=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+            <span class="c"># no video and no audio?</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;MPEG-PES&#39;</span>
+
+        <span class="c"># fill in values for support functions:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__seek_size__</span>   <span class="o">=</span> <span class="mi">10000000</span>  <span class="c"># 10 MB</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span> <span class="o">=</span> <span class="mi">500000</span>    <span class="c"># 500 k scanning</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__search__</span>      <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_timer_PES_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span>        <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="c"># get length of the file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_length</span><span class="p">()</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+
+    <span class="k">def</span> <span class="nf">_find_timer_PES_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return position of timer in buffer or -1 if not found.</span>
+<span class="sd">        This function is valid for PES files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span>    <span class="o">=</span> <span class="nb">buffer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="n">retpos</span>   <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">ackcount</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">):</span>
+            <span class="n">pos</span><span class="p">,</span> <span class="n">timestamp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadPESHeader</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">:])</span>
+            <span class="k">if</span> <span class="n">timestamp</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">retpos</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">retpos</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">timestamp</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># Oops, that was a mpeg header, no PES header</span>
+                <span class="n">offset</span>  <span class="o">+=</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">:]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x00\x00\x01</span><span class="s">&#39;</span><span class="p">)</span>
+                <span class="n">retpos</span>   <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="n">ackcount</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">offset</span>   <span class="o">+=</span> <span class="n">pos</span>
+                <span class="k">if</span> <span class="n">retpos</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">ackcount</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">ackcount</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+                <span class="c"># looks ok to me</span>
+                <span class="k">return</span> <span class="n">retpos</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+
+    <span class="c"># Elementary Stream ===============================================</span>
+
+    <span class="k">def</span> <span class="nf">isES</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;LL&#39;</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="ne">IOError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+        <span class="k">if</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mh">0x1B3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+        <span class="c"># Is an mpeg video elementary stream</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;video/mpeg&#39;</span>
+        <span class="n">video</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">()</span>
+        <span class="n">video</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">20</span>
+        <span class="n">video</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="p">(</span><span class="n">header</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xfff</span>
+        <span class="k">if</span> <span class="n">header</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0xf</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">FRAME_RATE</span><span class="p">):</span>
+            <span class="n">video</span><span class="o">.</span><span class="n">fps</span> <span class="o">=</span> <span class="n">FRAME_RATE</span><span class="p">[</span><span class="n">header</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0xf</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">header</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xf</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">ASPECT_RATIO</span><span class="p">):</span>
+            <span class="c"># FIXME: Empirically the aspect looks like PAR rather than DAR</span>
+            <span class="n">video</span><span class="o">.</span><span class="n">aspect</span> <span class="o">=</span> <span class="n">ASPECT_RATIO</span><span class="p">[(</span><span class="n">header</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xf</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">video</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+
+    <span class="c"># Transport Stream ===============================================</span>
+
+    <span class="k">def</span> <span class="nf">isTS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">TS_PACKET_LENGTH</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="n">c</span> <span class="o">+</span> <span class="n">TS_PACKET_LENGTH</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="p">])</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="n">TS_PACKET_LENGTH</span><span class="p">])</span> <span class="o">==</span> <span class="n">TS_SYNC</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">c</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="nb">buffer</span> <span class="o">+=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;MPEG-TS&#39;</span>
+
+        <span class="k">while</span> <span class="n">c</span> <span class="o">+</span> <span class="n">TS_PACKET_LENGTH</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">):</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x40</span>
+            <span class="c"># maybe load more into the buffer</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">TS_PACKET_LENGTH</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="ow">and</span> <span class="n">c</span> <span class="o">&lt;</span> <span class="mi">500000</span><span class="p">:</span>
+                <span class="nb">buffer</span> <span class="o">+=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+
+            <span class="c"># wait until the ts payload contains a payload header</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">start</span><span class="p">:</span>
+                <span class="n">c</span> <span class="o">+=</span> <span class="n">TS_PACKET_LENGTH</span>
+                <span class="k">continue</span>
+
+            <span class="n">tsid</span> <span class="o">=</span> <span class="p">((</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x3F</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">adapt</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">3</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x30</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span>
+
+            <span class="n">offset</span> <span class="o">=</span> <span class="mi">4</span>
+            <span class="k">if</span> <span class="n">adapt</span> <span class="o">&amp;</span> <span class="mh">0x02</span><span class="p">:</span>
+                <span class="c"># meta info present, skip it for now</span>
+                <span class="n">adapt_len</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="n">offset</span><span class="p">])</span>
+                <span class="n">offset</span> <span class="o">+=</span> <span class="n">adapt_len</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x40</span><span class="p">:</span>
+                <span class="c"># no new pes or psi in stream payload starting</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="n">adapt</span> <span class="o">&amp;</span> <span class="mh">0x01</span><span class="p">:</span>
+                <span class="c"># PES</span>
+                <span class="n">timestamp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadPESHeader</span><span class="p">(</span><span class="n">c</span><span class="o">+</span><span class="n">offset</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="n">offset</span><span class="p">:],</span>
+                                               <span class="n">tsid</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">timestamp</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadPTS</span>
+                        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">c</span> <span class="o">+</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">timestamp</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">timestamp</span><span class="p">:</span><span class="n">timestamp</span><span class="o">+</span><span class="mi">5</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;audio_ok&#39;</span><span class="p">):</span>
+                        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">c</span> <span class="o">+</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">timestamp</span>
+                        <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">timestamp</span><span class="p">:</span><span class="n">timestamp</span><span class="o">+</span><span class="mi">5</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+                               <span class="nb">abs</span><span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+                            <span class="c"># looks ok</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">audio_ok</span> <span class="o">=</span> <span class="bp">True</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c"># timestamp broken</span>
+                            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span>
+                            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;Timestamp error, correcting&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="ow">and</span> \
+                   <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">c</span> <span class="o">+=</span> <span class="n">TS_PACKET_LENGTH</span>
+
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_header_offset</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="c"># fill in values for support functions:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__seek_size__</span>   <span class="o">=</span> <span class="mi">10000000</span>  <span class="c"># 10 MB</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span> <span class="o">=</span> <span class="mi">100000</span>    <span class="c"># 100 k scanning</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__search__</span>      <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_timer_TS_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span>        <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="c"># get length of the file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_length</span><span class="p">()</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+
+    <span class="k">def</span> <span class="nf">_find_timer_TS_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="n">c</span> <span class="o">+</span> <span class="n">TS_PACKET_LENGTH</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="p">])</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="n">TS_PACKET_LENGTH</span><span class="p">])</span> <span class="o">==</span> <span class="n">TS_SYNC</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">c</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="k">while</span> <span class="n">c</span> <span class="o">+</span> <span class="n">TS_PACKET_LENGTH</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">):</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x40</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">start</span><span class="p">:</span>
+                <span class="n">c</span> <span class="o">+=</span> <span class="n">TS_PACKET_LENGTH</span>
+                <span class="k">continue</span>
+
+            <span class="n">tsid</span> <span class="o">=</span> <span class="p">((</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x3F</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">adapt</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">3</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x30</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span>
+
+            <span class="n">offset</span> <span class="o">=</span> <span class="mi">4</span>
+            <span class="k">if</span> <span class="n">adapt</span> <span class="o">&amp;</span> <span class="mh">0x02</span><span class="p">:</span>
+                <span class="c"># meta info present, skip it for now</span>
+                <span class="n">offset</span> <span class="o">+=</span> <span class="nb">ord</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="n">offset</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">adapt</span> <span class="o">&amp;</span> <span class="mh">0x01</span><span class="p">:</span>
+                <span class="n">timestamp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ReadPESHeader</span><span class="p">(</span><span class="n">c</span><span class="o">+</span><span class="n">offset</span><span class="p">,</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="n">offset</span><span class="p">:],</span> <span class="n">tsid</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">timestamp</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c"># this should not happen</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;bad TS&#39;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="bp">None</span>
+                <span class="k">return</span> <span class="n">c</span> <span class="o">+</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">timestamp</span>
+            <span class="n">c</span> <span class="o">+=</span> <span class="n">TS_PACKET_LENGTH</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+
+
+    <span class="c"># Support functions ==============================================</span>
+
+    <span class="k">def</span> <span class="nf">get_endpos</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get the last timestamp of the mpeg, return -1 if this is not possible</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;filename&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="n">length</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)[</span><span class="n">stat</span><span class="o">.</span><span class="n">ST_SIZE</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="nb">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">length</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span><span class="p">)</span>
+        <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span><span class="p">)</span>
+
+        <span class="n">end</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__search__</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span> <span class="ow">or</span> <span class="n">end</span>
+            <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">buffer</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">100</span><span class="p">:]</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">end</span>
+
+
+    <span class="k">def</span> <span class="nf">get_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get the length in seconds, return -1 if this is not possible</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_endpos</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">&gt;</span> <span class="n">end</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(((</span><span class="nb">long</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">33</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">)</span> <span class="o">/</span> <span class="mi">90000</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span>
+        <span class="k">return</span> <span class="n">end</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span>
+
+
+    <span class="k">def</span> <span class="nf">seek</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">end_time</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the byte position in the file where the time position</span>
+<span class="sd">        is &#39;pos&#39; seconds. Return 0 if this is not possible</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;filename&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="nb">file</span>    <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">seek_to</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__seek_size__</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10000</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__search__</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># found something</span>
+                <span class="n">nt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
+                <span class="k">if</span> <span class="n">nt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">nt</span> <span class="o">&gt;=</span> <span class="n">end_time</span><span class="p">:</span>
+                    <span class="c"># too much, break</span>
+                    <span class="k">break</span>
+            <span class="c"># that wasn&#39;t enough</span>
+            <span class="n">seek_to</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">seek_to</span>
+
+
+    <span class="k">def</span> <span class="nf">__scan__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        scan file for timestamps (may take a long time)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;filename&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="nb">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;scanning file...&#39;</span><span class="p">)</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__seek_size__</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size__</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10000</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__search__</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;buffer position: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">pos</span><span class="p">:]))</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;done scanning file&#39;</span><span class="p">)</span>
+
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">MPEG</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

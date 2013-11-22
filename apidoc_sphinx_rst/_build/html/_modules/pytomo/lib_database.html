@@ -1,0 +1,591 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.lib_database &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.lib_database</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="sd">&#39;&#39;&#39; Module for sqllite interface to the pytomo database</span>
+<span class="sd">    Usage (to be run interactively above the pytomo directory):</span>
+
+<span class="sd">       import pytomo.start_pytomo as start_pytomo</span>
+<span class="sd">       start_pytomo.configure_log_file(&#39;doc_test&#39;)</span>
+<span class="sd">       import pytomo.lib_database as lib_database</span>
+<span class="sd">       import time</span>
+<span class="sd">       import datetime</span>
+<span class="sd">       timestamp = time.strftime(&quot;%Y-%m-%d.%H_%M_%S&quot;)</span>
+<span class="sd">       # to make sure a new file is created for every run.</span>
+<span class="sd">       db_name = &#39;doc_test&#39; + str(timestamp) + &#39;.db&#39;</span>
+<span class="sd">       doc_db = lib_database.PytomoDatabase(db_name)</span>
+<span class="sd">       doc_db.create_pytomo_table(&#39;doc_test_table&#39;)</span>
+<span class="sd">       doc_db.describe_tables()</span>
+<span class="sd">       row = (datetime.datetime(2011, 5, 6, 15, 30, 50, 103775),</span>
+<span class="sd">            &#39;Youtube&#39;, &#39;http://www.youtube.com/watch?v=RcmKbTR--iA&#39;,</span>
+<span class="sd">            &#39;http://v15.lscache3.c.youtube.com&#39;,</span>
+<span class="sd">            &#39;173.194.20.56&#39;,&#39;default_10.193.225.12&#39;, None, None, None,</span>
+<span class="sd">            8.9944229125976562, &#39;mp4&#39;, 225, 115012833.0, 511168.14666666667,</span>
+<span class="sd">            9575411, 0, 1024, 100, 0.99954795837402344, 7.9875903129577637,</span>
+<span class="sd">            40, 11.722306421319782, 1192528.8804511931,</span>
+<span class="sd">            &#39;http://www.youtube.com/fake_redirect&#39;)</span>
+<span class="sd">       doc_db.insert_record(row)</span>
+<span class="sd">       doc_db.fetch_all()</span>
+<span class="sd">       doc_db.fetch_all_parameters([&#39;DownloadTime&#39;, &#39;PingMin&#39;, &#39;PingMax&#39;])</span>
+
+<span class="sd">       &gt;&gt;&gt; import time</span>
+<span class="sd">       &gt;&gt;&gt; timestamp = time.strftime(&quot;%Y-%m-%d.%H_%M_%S&quot;)</span>
+<span class="sd">       &gt;&gt;&gt; # to make sure a new file is created for every run we use</span>
+<span class="sd">       &gt;&gt;&gt; # timestamp.</span>
+<span class="sd">       &gt;&gt;&gt; db_name = &#39;doc_test_lib_db&#39; + str(timestamp) + &#39;.db&#39;</span>
+<span class="sd">       &gt;&gt;&gt; # import pytomo.lib_database as lib_database</span>
+<span class="sd">       &gt;&gt;&gt; doc_db = PytomoDatabase(db_name)</span>
+<span class="sd">       &gt;&gt;&gt; doc_db.create_pytomo_table(&#39;doc_test_table&#39;)</span>
+<span class="sd">       &gt;&gt;&gt; doc_db.describe_tables() #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">       (u&#39;CREATE TABLE doc_test_table(ID TIMESTAMP,\\n</span>
+<span class="sd">           Service text,\\n                       Url text,\\n</span>
+<span class="sd">           CacheUrl text,\\n                       IP text,\\n</span>
+<span class="sd">           Resolver text,\\n                       PingMin real,\\n</span>
+<span class="sd">           PingAvg real,\\n                       PingMax real,\\n</span>
+<span class="sd">           DownloadTime real,\\n                       VideoType text,\\n</span>
+<span class="sd">           VideoDuration real,\\n                       VideoLength real,\\n</span>
+<span class="sd">           EncodingRate real,\\n                       DownloadBytes int,\\n</span>
+<span class="sd">           DownloadInterruptions int,\\n                       InitialData</span>
+<span class="sd">           real,\\n                       InitialRate real,\\n</span>
+<span class="sd">           InitialPlaybacKBuffer real,\\n</span>
+<span class="sd">           BufferingDuration real,\\n                       PlaybackDuration</span>
+<span class="sd">           real,\\n                       BufferDurationAtEnd real,\\n</span>
+<span class="sd">           MaxInstantThp real,\\n                       RedirectUrl text\\n</span>
+<span class="sd">           )&#39;,)</span>
+<span class="sd">       &gt;&gt;&gt; import datetime</span>
+<span class="sd">       &gt;&gt;&gt; record = (datetime.datetime(2011, 5, 6, 15, 30, 50, 103775),</span>
+<span class="sd">       ... &#39;Youtube&#39;, &#39;http://www.youtube.com/watch?v=RcmKbTR--iA&#39;,</span>
+<span class="sd">       ... &#39;http://v15.lscache3.c.youtube.com&#39;,</span>
+<span class="sd">       ... &#39;173.194.20.56&#39;,&#39;default_10.193.225.12&#39;, None, None, None,</span>
+<span class="sd">       ... 8.9944229125976562, &#39;mp4&#39;, 225, 115012833.0, 511168.14666666667,</span>
+<span class="sd">       ... 9575411, 0, 1024 ,100,  0.99954795837402344, 7.9875903129577637,</span>
+<span class="sd">       ... 35, 11.722306421319782, 1192528.8804511931, None)</span>
+<span class="sd">       &gt;&gt;&gt; doc_db.insert_record(record)</span>
+<span class="sd">       &gt;&gt;&gt; record = (datetime.datetime(2011, 5, 6, 15, 40, 50, 103775),</span>
+<span class="sd">       ... &#39;Youtube&#39;, &#39;http://www.youtube.com/watch?v=RcmKbTR--iA&#39;,</span>
+<span class="sd">       ... &#39;http://v15.lscache3.c.youtube.com&#39;,</span>
+<span class="sd">       ... &#39;173.194.20.56&#39;,&#39;default_10.193.225.12&#39;, None, None, None,</span>
+<span class="sd">       ... 8.9944229125976562, &#39;mp4&#39;, 225, 115012833.0, 511168.14666666667,</span>
+<span class="sd">       ... 9575411, 0, 1024, 100, 0.99954795837402344, 7.9875903129577637,</span>
+<span class="sd">       ... 40, 11.722306421319782, 1192528.8804511931,</span>
+<span class="sd">       ... &#39;http://www.youtube.com/fake_redirect&#39;)</span>
+<span class="sd">       &gt;&gt;&gt; doc_db.insert_record(record)</span>
+<span class="sd">       &gt;&gt;&gt; doc_db.fetch_all() #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">       (u&#39;2011-05-06 15:30:50.103775&#39;,</span>
+<span class="sd">        u&#39;Youtube&#39;,</span>
+<span class="sd">        u&#39;http://www.youtube.com/watch?v=RcmKbTR--iA&#39;,</span>
+<span class="sd">        u&#39;http://v15.lscache3.c.youtube.com&#39;,</span>
+<span class="sd">        u&#39;173.194.20.56&#39;,</span>
+<span class="sd">        u&#39;default_10.193.225.12&#39;,</span>
+<span class="sd">        None,</span>
+<span class="sd">        None,</span>
+<span class="sd">        None,</span>
+<span class="sd">        8.9944229125976562,</span>
+<span class="sd">        u&#39;mp4&#39;,</span>
+<span class="sd">        225.0,</span>
+<span class="sd">        115012833.0,</span>
+<span class="sd">        511168.14666666667,</span>
+<span class="sd">        9575411,</span>
+<span class="sd">        0,</span>
+<span class="sd">        1024.0,</span>
+<span class="sd">        100.0,</span>
+<span class="sd">        0.99954795837402344,</span>
+<span class="sd">        7.9875903129577637,</span>
+<span class="sd">        35.0,</span>
+<span class="sd">        11.722306421319782,</span>
+<span class="sd">        1192528.8804511931,</span>
+<span class="sd">        None)</span>
+<span class="sd">       (u&#39;2011-05-06 15:40:50.103775&#39;,</span>
+<span class="sd">        u&#39;Youtube&#39;,</span>
+<span class="sd">        u&#39;http://www.youtube.com/watch?v=RcmKbTR--iA&#39;,</span>
+<span class="sd">        u&#39;http://v15.lscache3.c.youtube.com&#39;,</span>
+<span class="sd">        u&#39;173.194.20.56&#39;,</span>
+<span class="sd">        u&#39;default_10.193.225.12&#39;,</span>
+<span class="sd">        None,</span>
+<span class="sd">        None,</span>
+<span class="sd">        None,</span>
+<span class="sd">        8.9944229125976562,</span>
+<span class="sd">        u&#39;mp4&#39;,</span>
+<span class="sd">        225.0,</span>
+<span class="sd">        115012833.0,</span>
+<span class="sd">        511168.14666666667,</span>
+<span class="sd">        9575411,</span>
+<span class="sd">        0,</span>
+<span class="sd">        1024.0,</span>
+<span class="sd">        100.0,</span>
+<span class="sd">        0.99954795837402344,</span>
+<span class="sd">        7.9875903129577637,</span>
+<span class="sd">        40.0,</span>
+<span class="sd">        11.722306421319782,</span>
+<span class="sd">        1192528.8804511931,</span>
+<span class="sd">        u&#39;http://www.youtube.com/fake_redirect&#39;)</span>
+<span class="sd">       &gt;&gt;&gt; doc_db.fetch_single_parameter(&#39;DownloadTime&#39;)</span>
+<span class="sd">       ... #doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE</span>
+<span class="sd">        [(u&#39;2011-05-06 15:30:50.103775&#39;, 8.9944229125976562),</span>
+<span class="sd">        (u&#39;2011-05-06 15:40:50.103775&#39;, 8.9944229125976562)]</span>
+<span class="sd">        &gt;&gt;&gt; doc_db.fetch_all_parameters([&#39;DownloadTime&#39;, &#39;PingMin&#39;, &#39;PingMax&#39;])</span>
+<span class="sd">        ... #doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE</span>
+<span class="sd">        [(8.9944229125976562, None, None, u&#39;2011-05-06 15:30:50.103775&#39;),</span>
+<span class="sd">        (8.9944229125976562, None, None, u&#39;2011-05-06 15:40:50.103775&#39;)]</span>
+<span class="sd">        &gt;&gt;&gt; doc_db.fetch_start_time()</span>
+<span class="sd">        1304688650</span>
+<span class="sd">        &gt;&gt;&gt; from os import unlink</span>
+<span class="sd">        &gt;&gt;&gt; unlink(db_name)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">with_statement</span><span class="p">,</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sqlite3</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+
+<span class="c"># only for logging</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c"># config file</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">config_pytomo</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">config_pytomo</span>
+
+<div class="viewcode-block" id="PytomoDatabase"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase">[docs]</a><span class="k">class</span> <span class="nc">PytomoDatabase</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39; Pytomo database class</span>
+<span class="sd">        The columns of the file pytomo_table are as follows:</span>
+<span class="sd">        TID     - A timestamped ID generated by for each record entered</span>
+<span class="sd">        Service - The website on which the analysis is performed</span>
+<span class="sd">                  Example: Youtube, Dailymotion</span>
+<span class="sd">        Url     - The url of the webpage</span>
+<span class="sd">        CacheUrl- The Url of the cache server hosting the video</span>
+<span class="sd">        CacheServerDelay- the delay to obtain the cache server url (from the</span>
+<span class="sd">                    initial web page)</span>
+<span class="sd">        IP      - The IP address of the cache server from which the video is</span>
+<span class="sd">                  downloaded</span>
+<span class="sd">        Resolver- The DNS resolver used to get obtain the IP address of the</span>
+<span class="sd">                  cache server prefixed with ISP given (if any)</span>
+<span class="sd">                  Example Google DNS, Local DNS</span>
+<span class="sd">        ResolveTime- The time to get an answer from DNS</span>
+<span class="sd">        AS      - The AS as resolved by RIPE</span>
+<span class="sd">        PingMin - The minimum recorded ping time to the resolved IP address of</span>
+<span class="sd">                  the cache server</span>
+<span class="sd">        PingAvg - The average recorded ping time to the resolved IP address of</span>
+<span class="sd">                  the cache server</span>
+<span class="sd">        PingMax - The maximum recorded ping time to the resolved IP address of</span>
+<span class="sd">                  the cache server</span>
+<span class="sd">        DownloadTime - The Time taken to download the video sample</span>
+<span class="sd">                       (We do not download the entire video but only for a</span>
+<span class="sd">                       limited download time)</span>
+<span class="sd">        VideoDuration - The actual duration of the complete video</span>
+<span class="sd">        VideoLength - The length (in bytes) of the complete video</span>
+<span class="sd">        EncodingRate - The encoding rate of the video: VideoLength/VideoDuration</span>
+<span class="sd">        DownloadBytes - The length of the video sample (in bytes)</span>
+<span class="sd">        DownloadInterruptions -  Nb of interruptions experienced during the</span>
+<span class="sd">                                 download</span>
+<span class="sd">        InitialData - Number of bytes downloaded in the initial buffering</span>
+<span class="sd">                      period,</span>
+<span class="sd">        InitialRate - The mean data rate (in kbps) during the initial</span>
+<span class="sd">                      buffering period,</span>
+<span class="sd">        BufferingDuration -  Accumulate time spend in buffering state</span>
+<span class="sd">        PlaybackDuration - Accumulate time spend in playing state</span>
+<span class="sd">        BufferDurationAtEnd - The buffer length at the end of download</span>
+<span class="sd">        TimeTogetFirstByte - Time to get first byte</span>
+<span class="sd">        MaxInstantThp - The max instantaneous throughput of the download</span>
+<span class="sd">        RedirectUrl - The Redirection Url in case of an HTTP redirect</span>
+<span class="sd">        StatusCode - HTTP Return Code</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">_table_name</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">created</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database_file</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">DATABASE_TIMESTAMP</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Initialize the database object&#39;&#39;&#39;</span>
+        <span class="c"># Intialize the logger for standalone testing Logging</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger_db</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># isolation_level in order to auto-commit</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">database_file</span><span class="p">,</span> <span class="n">isolation_level</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Error</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span>
+                <span class="s">&#39;Unable to connect to the database: &#39;</span><span class="p">,</span> <span class="n">database_file</span><span class="p">,</span>
+                <span class="s">&#39;</span><span class="se">\n</span><span class="s">Error message: &#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">mes</span><span class="p">))))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;Created connection to data base&quot;</span><span class="p">,</span>
+                                <span class="s">&quot;Database:&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">database_file</span><span class="p">))))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">created</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+<div class="viewcode-block" id="PytomoDatabase.create_pytomo_table"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.create_pytomo_table">[docs]</a>    <span class="k">def</span> <span class="nf">create_pytomo_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TABLE_TIMESTAMP</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;  Function to create a table&#39;&#39;&#39;</span>
+        <span class="c"># Using Python&#39;s string operations makes it insecure (vulnerable</span>
+        <span class="c"># to SQL injection attack). Use of tuples makes it secure.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Table creation aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">table_name</span> <span class="o">=</span> <span class="p">(</span><span class="n">table</span><span class="p">,)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span> <span class="s">&quot;CREATE TABLE &quot;</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span>
+                       <span class="sd">&quot;&quot;&quot;(ID TIMESTAMP,</span>
+<span class="sd">                       Service text,</span>
+<span class="sd">                       Url text,</span>
+<span class="sd">                       CacheUrl text,</span>
+<span class="sd">                       CacheServerDelay real,</span>
+<span class="sd">                       IP text,</span>
+<span class="sd">                       Resolver text,</span>
+<span class="sd">                       ResolveTime real,</span>
+<span class="sd">                       ASNumber int,</span>
+<span class="sd">                       PingMin real,</span>
+<span class="sd">                       PingAvg real,</span>
+<span class="sd">                       PingMax real,</span>
+<span class="sd">                       DownloadTime real,</span>
+<span class="sd">                       VideoType text,</span>
+<span class="sd">                       VideoDuration real,</span>
+<span class="sd">                       VideoLength real,</span>
+<span class="sd">                       EncodingRate real,</span>
+<span class="sd">                       DownloadBytes int,</span>
+<span class="sd">                       DownloadInterruptions int,</span>
+<span class="sd">                       InitialData real,</span>
+<span class="sd">                       InitialRate real,</span>
+<span class="sd">                       InitialPlaybacKBuffer real,</span>
+<span class="sd">                       BufferingDuration real,</span>
+<span class="sd">                       PlaybackDuration real,</span>
+<span class="sd">                       BufferDurationAtEnd real,</span>
+<span class="sd">                       TimeTogetFirstByte real,</span>
+<span class="sd">                       MaxInstantThp real,</span>
+<span class="sd">                       RedirectUrl text,</span>
+<span class="sd">                       StatusCode int</span>
+<span class="sd">                      )&quot;&quot;&quot;</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Error</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Table </span><span class="si">%s</span><span class="s"> already exists: </span><span class="si">%s</span><span class="s">&quot;</span>
+                                   <span class="o">%</span> <span class="p">(</span><span class="n">table_name</span><span class="p">,</span> <span class="n">mes</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Creating table : </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">table_name</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.insert_record"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.insert_record">[docs]</a>    <span class="k">def</span> <span class="nf">insert_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Function to insert a record&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Insertion aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;INSERT INTO &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">,</span>
+                       <span class="s">&quot; VALUES(?&quot;</span><span class="p">,</span>
+                       <span class="s">&#39;,?&#39;</span> <span class="o">*</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">NB_FIELDS</span><span class="p">,</span> <span class="s">&#39;)&#39;</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Error</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;unable to add row: </span><span class="si">%s</span><span class="s"> with error: </span><span class="si">%s</span><span class="s">&#39;</span>
+                                    <span class="o">%</span> <span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">mes</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;row added to table&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.fetch_all"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.fetch_all">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Function to print all the records of the table&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;select name from sqlite_master&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;No tables found in database&quot;</span><span class="p">)</span>
+
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;SELECT * FROM&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="p">:</span>
+            <span class="n">pprint</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.describe_tables"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.describe_tables">[docs]</a>    <span class="k">def</span> <span class="nf">describe_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Function to show the create command of a table&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;SELECT name FROM sqlite_master&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;No tables found in database&quot;</span><span class="p">)</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;SELECT sql FROM sqlite_master WHERE type = &#39;table&#39;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="p">:</span>
+            <span class="n">pprint</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.count_rows"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.count_rows">[docs]</a>    <span class="k">def</span> <span class="nf">count_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Function to return the number of rows in a table.</span>
+<span class="sd">        If there are problems related to database integrity, -1 is returned.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;SELECT name FROM sqlite_master&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;No tables found in database&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;SELECT COUNT(*) FROM&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.fetch_single_parameter_with_stats"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.fetch_single_parameter_with_stats">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_single_parameter_with_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Function to save (timestamp, parameter) in a sorted list of tuples</span>
+<span class="sd">        only for records with stats</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;select name from sqlite_master&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;No tables found in database&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&#39;SELECT ID, </span><span class="si">%s</span><span class="s"> FROM&#39;</span> <span class="o">%</span> <span class="n">parameter</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">,</span>
+                        <span class="s">&#39;WHERE DownloadTime &gt; 0&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.fetch_single_parameter"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.fetch_single_parameter">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_single_parameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Function to save (timestamp,parameter) in a sorted list of tuples&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;select name from sqlite_master&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;No tables found in database&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;SELECT ID, </span><span class="si">%s</span><span class="s"> FROM&quot;</span> <span class="o">%</span> <span class="n">parameter</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.fetch_all_parameters"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.fetch_all_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_all_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameters</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Function to save (parameter_1, ..., parameter_n, timestamp) in a</span>
+<span class="sd">        sorted list of tuples dependent on timestamp&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;select name from sqlite_master&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;No tables found in database&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+        <span class="c"># create the command to extract all the specified parameters</span>
+        <span class="c"># timestamp is the last element of each tuple</span>
+        <span class="n">join_parameters</span> <span class="o">=</span> <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;SELECT </span><span class="si">%s</span><span class="s">, ID FROM&quot;</span> <span class="o">%</span> <span class="n">join_parameters</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">))</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Select command: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">cmd</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="n">all_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="c">#config_pytomo.LOG.debug(&#39;Extracted: %s&#39; %</span>
+        <span class="c">#        str(all_parameters))</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_parameters</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.fetch_start_time"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.fetch_start_time">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_start_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Function to return the first timestamp in the database in linux</span>
+<span class="sd">        format</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="s">&quot;select name from sqlite_master&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;No tables found in database&#39;</span><span class="p">)</span>
+                <span class="k">return</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;SELECT ID FROM&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="n">time_to_epoch</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">py_cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">())[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">timestamp</span>
+</div>
+<div class="viewcode-block" id="PytomoDatabase.close_handle"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.close_handle">[docs]</a>    <span class="k">def</span> <span class="nf">close_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Closes the connection to the database&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Database could not be created</span><span class="se">\n</span><span class="s">&#39;</span>
+                                   <span class="s">&#39;Close aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">py_conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="PytomoDatabase.logger_db"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.PytomoDatabase.logger_db">[docs]</a>    <span class="k">def</span> <span class="nf">logger_db</span><span class="p">():</span>
+        <span class="sd">&#39;&#39;&#39; Initialze the logger&#39;&#39;&#39;</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;pytomo_db&#39;</span><span class="p">)</span>
+        <span class="c"># to not have console output</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_LEVEL</span><span class="p">)</span>
+        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s">.%H_%M_%S&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_FILE</span> <span class="o">==</span> <span class="s">&#39;-&#39;</span><span class="p">:</span>
+            <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">config_pytomo</span><span class="o">.</span> <span class="n">LOG_DIR</span><span class="p">,</span>
+                                <span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_FILE</span><span class="p">))))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="s">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s">&#39;Logfile </span><span class="si">%s</span><span class="s"> could not be open for writing&#39;</span> <span class="o">%</span>
+                                                                    <span class="n">log_file</span><span class="p">)</span>
+            <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">log_file</span><span class="p">)</span>
+        <span class="n">log_formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s"> - &quot;</span>
+                                  <span class="s">&quot;</span><span class="si">%(levelname)s</span><span class="s"> - </span><span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">)</span>
+        <span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">log_formatter</span><span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+
+<span class="c"># TODO</span></div></div>
+<div class="viewcode-block" id="time_to_epoch"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_database.time_to_epoch">[docs]</a><span class="k">def</span> <span class="nf">time_to_epoch</span><span class="p">(</span><span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to transform to seconds from epoch time represented by a</span>
+<span class="sd">    string of the form &#39;%Y-%m-%d %H:%M:%S.%f&#39;</span>
+<span class="sd">    &gt;&gt;&gt; time_to_epoch(&#39;2012-06-25 14:54:57.422007&#39;)</span>
+<span class="sd">    1340628897</span>
+<span class="sd">    &gt;&gt;&gt; time_to_epoch(None)</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">        ...</span>
+<span class="sd">    TypeError: expected string or buffer</span>
+<span class="sd">    &gt;&gt;&gt; time_to_epoch(&#39;2012-06-25 14:54:57&#39;)</span>
+<span class="sd">    1340628897</span>
+<span class="sd">    &gt;&gt;&gt; time_to_epoch(&#39;2012-06-25 14:54:57&#39;) #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">        ...</span>
+<span class="sd">    ValueError: time data &#39;2012-06-25 14:54:57&#39; does not match format</span>
+<span class="sd">    &#39;%Y-%m-%d %H:%M:%S.%f&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span>
+                                             <span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s"> %H:%M:%S.</span><span class="si">%f</span><span class="s">&quot;</span><span class="p">)))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s"> %H:%M:%S&quot;</span><span class="p">)))</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">doctest</span>
+    <span class="n">doctest</span><span class="o">.</span><span class="n">testmod</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

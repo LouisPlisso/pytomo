@@ -1,0 +1,400 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.flvlib.astypes &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.flvlib.astypes</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">primitives</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">constants</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">helpers</span> <span class="kn">import</span> <span class="n">FixedOffset</span><span class="p">,</span> <span class="n">Local</span><span class="p">,</span> <span class="n">OrderedAttrDict</span>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The AS types and their FLV representations.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;flvlib.astypes&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="MalformedFLV"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.MalformedFLV">[docs]</a><span class="k">class</span> <span class="nc">MalformedFLV</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="c"># Number</span></div>
+<div class="viewcode-block" id="get_number"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_number">[docs]</a><span class="k">def</span> <span class="nf">get_number</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">get_double</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="make_number"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_number">[docs]</a><span class="k">def</span> <span class="nf">make_number</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">make_double</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
+
+
+<span class="c"># Boolean</span></div>
+<div class="viewcode-block" id="get_boolean"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_boolean">[docs]</a><span class="k">def</span> <span class="nf">get_boolean</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="make_boolean"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_boolean">[docs]</a><span class="k">def</span> <span class="nf">make_boolean</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">make_ui8</span><span class="p">((</span><span class="n">value</span> <span class="ow">and</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+
+
+<span class="c"># String</span></div>
+<div class="viewcode-block" id="get_string"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_string">[docs]</a><span class="k">def</span> <span class="nf">get_string</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="c"># First 16 bits are the string&#39;s length</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">get_ui16</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="c"># Then comes the string itself</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="make_string"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_string">[docs]</a><span class="k">def</span> <span class="nf">make_string</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">):</span>
+        <span class="c"># We need a blob, not unicode. Arbitrarily choose UTF-8</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">make_ui16</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">string</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">length</span> <span class="o">+</span> <span class="n">string</span>
+
+
+<span class="c"># Longstring</span></div>
+<div class="viewcode-block" id="get_longstring"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_longstring">[docs]</a><span class="k">def</span> <span class="nf">get_longstring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="c"># First 32 bits are the string&#39;s length</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">get_ui32</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="c"># Then comes the string itself</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="make_longstring"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_longstring">[docs]</a><span class="k">def</span> <span class="nf">make_longstring</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">):</span>
+        <span class="c"># We need a blob, not unicode. Arbitrarily choose UTF-8</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">make_ui32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">string</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">length</span> <span class="o">+</span> <span class="n">string</span>
+
+
+<span class="c"># ECMA Array</span></div>
+<div class="viewcode-block" id="ECMAArray"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.ECMAArray">[docs]</a><span class="k">class</span> <span class="nc">ECMAArray</span><span class="p">(</span><span class="n">OrderedAttrDict</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="get_ecma_array"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_ecma_array">[docs]</a><span class="k">def</span> <span class="nf">get_ecma_array</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">get_ui32</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The ECMA array has approximately </span><span class="si">%d</span><span class="s"> elements&quot;</span><span class="p">,</span> <span class="n">length</span><span class="p">)</span>
+    <span class="n">array</span> <span class="o">=</span> <span class="n">ECMAArray</span><span class="p">()</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">max_offset</span> <span class="ow">and</span> <span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">==</span> <span class="n">max_offset</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Prematurely terminating reading an ECMA array&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="n">marker</span> <span class="o">=</span> <span class="n">get_ui24</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">marker</span> <span class="o">==</span> <span class="mi">9</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Marker!&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_CUR</span><span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">get_script_data_variable</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="n">max_offset</span><span class="p">)</span>
+        <span class="n">array</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">array</span>
+</div>
+<div class="viewcode-block" id="make_ecma_array"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_ecma_array">[docs]</a><span class="k">def</span> <span class="nf">make_ecma_array</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">make_ui32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">))</span>
+    <span class="n">rest</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">make_script_data_variable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+    <span class="n">marker</span> <span class="o">=</span> <span class="n">make_ui24</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">length</span> <span class="o">+</span> <span class="n">rest</span> <span class="o">+</span> <span class="n">marker</span>
+
+
+<span class="c"># Strict Array</span></div>
+<div class="viewcode-block" id="get_strict_array"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_strict_array">[docs]</a><span class="k">def</span> <span class="nf">get_strict_array</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">get_ui32</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The length is </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">length</span><span class="p">)</span>
+    <span class="n">elements</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_script_data_value</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="n">max_offset</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">length</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">elements</span>
+</div>
+<div class="viewcode-block" id="make_strict_array"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_strict_array">[docs]</a><span class="k">def</span> <span class="nf">make_strict_array</span><span class="p">(</span><span class="n">l</span><span class="p">):</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">make_ui32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">))</span>
+    <span class="n">rest</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">make_script_data_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">l</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">ret</span> <span class="o">+</span> <span class="n">rest</span>
+
+
+<span class="c"># Date</span></div>
+<div class="viewcode-block" id="get_date"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_date">[docs]</a><span class="k">def</span> <span class="nf">get_date</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">get_number</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1000.0</span>
+    <span class="n">time_offset</span> <span class="o">=</span> <span class="n">get_si16</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">tz</span> <span class="o">=</span> <span class="n">FixedOffset</span><span class="p">(</span><span class="n">time_offset</span><span class="p">,</span> <span class="s">&quot;FLV Fixed Offset&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">tz</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="make_date"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_date">[docs]</a><span class="k">def</span> <span class="nf">make_date</span><span class="p">(</span><span class="n">date</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">date</span><span class="o">.</span><span class="n">tzinfo</span><span class="p">:</span>
+        <span class="n">local_date</span> <span class="o">=</span> <span class="n">date</span><span class="o">.</span><span class="n">astimezone</span><span class="p">(</span><span class="n">Local</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">local_date</span> <span class="o">=</span> <span class="n">date</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">make_number</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">local_date</span><span class="o">.</span><span class="n">timetuple</span><span class="p">())</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="n">time_offset</span> <span class="o">=</span> <span class="n">date</span><span class="o">.</span><span class="n">utcoffset</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">time_offset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">time_offset</span><span class="o">.</span><span class="n">days</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">26</span> <span class="o">+</span> <span class="n">time_offset</span><span class="o">.</span><span class="n">seconds</span> <span class="o">/</span> <span class="mi">60</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">ret</span> <span class="o">+</span> <span class="n">make_si16</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+
+
+<span class="c"># Null</span></div>
+<div class="viewcode-block" id="get_null"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_null">[docs]</a><span class="k">def</span> <span class="nf">get_null</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="make_null"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_null">[docs]</a><span class="k">def</span> <span class="nf">make_null</span><span class="p">(</span><span class="n">none</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&#39;</span>
+
+
+<span class="c"># Object</span></div>
+<div class="viewcode-block" id="FLVObject"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.FLVObject">[docs]</a><span class="k">class</span> <span class="nc">FLVObject</span><span class="p">(</span><span class="n">OrderedAttrDict</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="get_object"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_object">[docs]</a><span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">FLVObject</span><span class="p">()</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">max_offset</span> <span class="ow">and</span> <span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">==</span> <span class="n">max_offset</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Prematurely terminating reading an object&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="n">marker</span> <span class="o">=</span> <span class="n">get_ui24</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">marker</span> <span class="o">==</span> <span class="mi">9</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Marker!&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_CUR</span><span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">get_script_data_variable</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ret</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="make_object"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_object">[docs]</a><span class="k">def</span> <span class="nf">make_object</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="c"># If the object is iterable, serialize keys/values. If not, fall</span>
+    <span class="c"># back on iterating over __dict__.</span>
+    <span class="c"># This makes sure that make_object(get_object(StringIO(blob))) == blob</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">iterator</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">iterator</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">make_script_data_variable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">iterator</span><span class="p">])</span>
+    <span class="n">marker</span> <span class="o">=</span> <span class="n">make_ui24</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span> <span class="o">+</span> <span class="n">marker</span>
+
+
+<span class="c"># MovieClip</span></div>
+<div class="viewcode-block" id="MovieClip"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.MovieClip">[docs]</a><span class="k">class</span> <span class="nc">MovieClip</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">MovieClip</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">path</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;&lt;MovieClip at </span><span class="si">%s</span><span class="s">&gt;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
+</div>
+<div class="viewcode-block" id="get_movieclip"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_movieclip">[docs]</a><span class="k">def</span> <span class="nf">get_movieclip</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">get_string</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">MovieClip</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="make_movieclip"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_movieclip">[docs]</a><span class="k">def</span> <span class="nf">make_movieclip</span><span class="p">(</span><span class="n">clip</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">make_string</span><span class="p">(</span><span class="n">clip</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+
+<span class="c"># Undefined</span></div>
+<div class="viewcode-block" id="Undefined"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.Undefined">[docs]</a><span class="k">class</span> <span class="nc">Undefined</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Undefined</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;Undefined&gt;&#39;</span>
+</div>
+<div class="viewcode-block" id="get_undefined"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_undefined">[docs]</a><span class="k">def</span> <span class="nf">get_undefined</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Undefined</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="make_undefined"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_undefined">[docs]</a><span class="k">def</span> <span class="nf">make_undefined</span><span class="p">(</span><span class="n">undefined</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&#39;</span>
+
+
+<span class="c"># Reference</span></div>
+<div class="viewcode-block" id="Reference"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.Reference">[docs]</a><span class="k">class</span> <span class="nc">Reference</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ref</span> <span class="o">=</span> <span class="n">ref</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Reference</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ref</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;&lt;Reference to </span><span class="si">%d</span><span class="s">&gt;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span>
+</div>
+<div class="viewcode-block" id="get_reference"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_reference">[docs]</a><span class="k">def</span> <span class="nf">get_reference</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">get_ui16</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Reference</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="make_reference"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_reference">[docs]</a><span class="k">def</span> <span class="nf">make_reference</span><span class="p">(</span><span class="n">reference</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">make_ui16</span><span class="p">(</span><span class="n">reference</span><span class="o">.</span><span class="n">ref</span><span class="p">)</span>
+
+</div>
+<span class="n">as_type_to_getter_and_maker</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">VALUE_TYPE_NUMBER</span><span class="p">:</span> <span class="p">(</span><span class="n">get_number</span><span class="p">,</span> <span class="n">make_number</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_BOOLEAN</span><span class="p">:</span> <span class="p">(</span><span class="n">get_boolean</span><span class="p">,</span> <span class="n">make_boolean</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_STRING</span><span class="p">:</span> <span class="p">(</span><span class="n">get_string</span><span class="p">,</span> <span class="n">make_string</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_OBJECT</span><span class="p">:</span> <span class="p">(</span><span class="n">get_object</span><span class="p">,</span> <span class="n">make_object</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_MOVIECLIP</span><span class="p">:</span> <span class="p">(</span><span class="n">get_movieclip</span><span class="p">,</span> <span class="n">make_movieclip</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_NULL</span><span class="p">:</span> <span class="p">(</span><span class="n">get_null</span><span class="p">,</span> <span class="n">make_null</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_UNDEFINED</span><span class="p">:</span> <span class="p">(</span><span class="n">get_undefined</span><span class="p">,</span> <span class="n">make_undefined</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_REFERENCE</span><span class="p">:</span> <span class="p">(</span><span class="n">get_reference</span><span class="p">,</span> <span class="n">make_reference</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_ECMA_ARRAY</span><span class="p">:</span> <span class="p">(</span><span class="n">get_ecma_array</span><span class="p">,</span> <span class="n">make_ecma_array</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_STRICT_ARRAY</span><span class="p">:</span> <span class="p">(</span><span class="n">get_strict_array</span><span class="p">,</span> <span class="n">make_strict_array</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_DATE</span><span class="p">:</span> <span class="p">(</span><span class="n">get_date</span><span class="p">,</span> <span class="n">make_date</span><span class="p">),</span>
+    <span class="n">VALUE_TYPE_LONGSTRING</span><span class="p">:</span> <span class="p">(</span><span class="n">get_longstring</span><span class="p">,</span> <span class="n">make_longstring</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="n">type_to_as_type</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nb">bool</span><span class="p">:</span> <span class="n">VALUE_TYPE_BOOLEAN</span><span class="p">,</span>
+    <span class="nb">int</span><span class="p">:</span> <span class="n">VALUE_TYPE_NUMBER</span><span class="p">,</span>
+    <span class="nb">long</span><span class="p">:</span> <span class="n">VALUE_TYPE_NUMBER</span><span class="p">,</span>
+    <span class="nb">float</span><span class="p">:</span> <span class="n">VALUE_TYPE_NUMBER</span><span class="p">,</span>
+    <span class="c"># WARNING: not supporting Longstrings here.</span>
+    <span class="c"># With a max length of 65535 chars, noone will notice.</span>
+    <span class="nb">str</span><span class="p">:</span> <span class="n">VALUE_TYPE_STRING</span><span class="p">,</span>
+    <span class="nb">unicode</span><span class="p">:</span> <span class="n">VALUE_TYPE_STRING</span><span class="p">,</span>
+    <span class="nb">list</span><span class="p">:</span> <span class="n">VALUE_TYPE_STRICT_ARRAY</span><span class="p">,</span>
+    <span class="nb">dict</span><span class="p">:</span> <span class="n">VALUE_TYPE_ECMA_ARRAY</span><span class="p">,</span>
+    <span class="n">ECMAArray</span><span class="p">:</span> <span class="n">VALUE_TYPE_ECMA_ARRAY</span><span class="p">,</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">:</span> <span class="n">VALUE_TYPE_DATE</span><span class="p">,</span>
+    <span class="n">Undefined</span><span class="p">:</span> <span class="n">VALUE_TYPE_UNDEFINED</span><span class="p">,</span>
+    <span class="n">MovieClip</span><span class="p">:</span> <span class="n">VALUE_TYPE_MOVIECLIP</span><span class="p">,</span>
+    <span class="n">Reference</span><span class="p">:</span> <span class="n">VALUE_TYPE_REFERENCE</span><span class="p">,</span>
+    <span class="nb">type</span><span class="p">(</span><span class="bp">None</span><span class="p">):</span> <span class="n">VALUE_TYPE_NULL</span>
+<span class="p">}</span>
+
+<span class="c"># SCRIPTDATAVARIABLE</span>
+<div class="viewcode-block" id="get_script_data_variable"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_script_data_variable">[docs]</a><span class="k">def</span> <span class="nf">get_script_data_variable</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">get_string</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The name is </span><span class="si">%s</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">get_script_data_value</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="n">max_offset</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The value is </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="make_script_data_variable"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_script_data_variable">[docs]</a><span class="k">def</span> <span class="nf">make_script_data_variable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The name is </span><span class="si">%s</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The value is </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">make_string</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="n">make_script_data_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="c"># SCRIPTDATAVALUE</span></div>
+<div class="viewcode-block" id="get_script_data_value"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.get_script_data_value">[docs]</a><span class="k">def</span> <span class="nf">get_script_data_value</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">value_type</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The value type is </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">value_type</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">get_value</span> <span class="o">=</span> <span class="n">as_type_to_getter_and_maker</span><span class="p">[</span><span class="n">value_type</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;Invalid script data value type: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">value_type</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The getter function is </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">get_value</span><span class="p">)</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">get_value</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="n">max_offset</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="make_script_data_value"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.astypes.make_script_data_value">[docs]</a><span class="k">def</span> <span class="nf">make_script_data_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="n">value_type</span> <span class="o">=</span> <span class="n">type_to_as_type</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">VALUE_TYPE_OBJECT</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The value type is </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">value_type</span><span class="p">)</span>
+    <span class="c">#  KeyError can&#39;t happen here, because we always fall back on</span>
+    <span class="c">#  VALUE_TYPE_OBJECT when determining value_type</span>
+    <span class="n">make_value</span> <span class="o">=</span> <span class="n">as_type_to_getter_and_maker</span><span class="p">[</span><span class="n">value_type</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;The maker function is </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">make_value</span><span class="p">)</span>
+    <span class="n">type_tag</span> <span class="o">=</span> <span class="n">make_ui8</span><span class="p">(</span><span class="n">value_type</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">make_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">type_tag</span> <span class="o">+</span> <span class="n">ret</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

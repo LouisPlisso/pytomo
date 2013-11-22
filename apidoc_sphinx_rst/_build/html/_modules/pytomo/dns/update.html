@@ -1,0 +1,342 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.update &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.update</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS Dynamic Update Support&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">message</span> <span class="k">as</span> <span class="n">dns_message</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">opcode</span> <span class="k">as</span> <span class="n">dns_opcode</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdata</span> <span class="k">as</span> <span class="n">dns_rdata</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataset</span> <span class="k">as</span> <span class="n">dns_rdataset</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">tsig</span> <span class="k">as</span> <span class="n">dns_tsig</span>
+
+<div class="viewcode-block" id="Update"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.update.Update">[docs]</a><span class="k">class</span> <span class="nc">Update</span><span class="p">(</span><span class="n">dns_message</span><span class="o">.</span><span class="n">Message</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zone</span><span class="p">,</span> <span class="n">rdclass</span><span class="o">=</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span> <span class="n">keyring</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">keyname</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">keyalgorithm</span><span class="o">=</span><span class="n">dns_tsig</span><span class="o">.</span><span class="n">default_algorithm</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a new DNS Update object.</span>
+
+<span class="sd">        @param zone: The zone which is being updated.</span>
+<span class="sd">        @type zone: A dns_name.Name or string</span>
+<span class="sd">        @param rdclass: The class of the zone; defaults to dns_rdataclass.IN.</span>
+<span class="sd">        @type rdclass: An int designating the class, or a string whose value</span>
+<span class="sd">        is the name of a class.</span>
+<span class="sd">        @param keyring: The TSIG keyring to use; defaults to None.</span>
+<span class="sd">        @type keyring: dict</span>
+<span class="sd">        @param keyname: The name of the TSIG key to use; defaults to None.</span>
+<span class="sd">        The key must be defined in the keyring.  If a keyring is specified</span>
+<span class="sd">        but a keyname is not, then the key used will be the first key in the</span>
+<span class="sd">        keyring.  Note that the order of keys in a dictionary is not defined,</span>
+<span class="sd">        so applications should supply a keyname when a keyring is used, unless</span>
+<span class="sd">        they know the keyring contains only one key.</span>
+<span class="sd">        @type keyname: dns_name.Name or string</span>
+<span class="sd">        @param keyalgorithm: The TSIG algorithm to use; defaults to</span>
+<span class="sd">        dns_tsig.default_algorithm.  Constants for TSIG algorithms are defined</span>
+<span class="sd">        in dns_tsig, and the currently implemented algorithms are</span>
+<span class="sd">        HMAC_MD5, HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, and</span>
+<span class="sd">        HMAC_SHA512.</span>
+<span class="sd">        @type keyalgorithm: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Update</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">dns_opcode</span><span class="o">.</span><span class="n">to_flags</span><span class="p">(</span><span class="n">dns_opcode</span><span class="o">.</span><span class="n">UPDATE</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">zone</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">zone</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">zone</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">origin</span> <span class="o">=</span> <span class="n">zone</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">rdclass</span> <span class="o">=</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zone_rdclass</span> <span class="o">=</span> <span class="n">rdclass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">question</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">SOA</span><span class="p">,</span>
+                        <span class="n">create</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">force_unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">keyring</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">use_tsig</span><span class="p">(</span><span class="n">keyring</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="n">keyalgorithm</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_rr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">deleting</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">section</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a single RR to the update section.&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">section</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">section</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">authority</span>
+        <span class="n">covers</span> <span class="o">=</span> <span class="n">rd</span><span class="o">.</span><span class="n">covers</span><span class="p">()</span>
+        <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zone_rdclass</span><span class="p">,</span> <span class="n">rd</span><span class="o">.</span><span class="n">rdtype</span><span class="p">,</span>
+                                <span class="n">covers</span><span class="p">,</span> <span class="n">deleting</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="n">rrset</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rd</span><span class="p">,</span> <span class="n">ttl</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">replace</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add records.  The first argument is the replace mode.  If</span>
+<span class="sd">        false, RRs are added to an existing RRset; if true, the RRset</span>
+<span class="sd">        is replaced with the specified contents.  The second</span>
+<span class="sd">        argument is the section to add to.  The third argument</span>
+<span class="sd">        is always a name.  The other arguments can be:</span>
+
+<span class="sd">                - rdataset...</span>
+
+<span class="sd">                - ttl, rdata...</span>
+
+<span class="sd">                - ttl, rdtype, string...&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dns_rdataset</span><span class="o">.</span><span class="n">Rdataset</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">rds</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">replace</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rds</span><span class="o">.</span><span class="n">rdtype</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">rd</span> <span class="ow">in</span> <span class="n">rds</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_rr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rds</span><span class="o">.</span><span class="n">ttl</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">section</span><span class="o">=</span><span class="n">section</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+            <span class="n">ttl</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">Rdata</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">replace</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rdtype</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">rd</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_rr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">section</span><span class="o">=</span><span class="n">section</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">rdtype</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">replace</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+                    <span class="n">rd</span> <span class="o">=</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zone_rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_rr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">section</span><span class="o">=</span><span class="n">section</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Update.add"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.update.Update.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add records.  The first argument is always a name.  The other</span>
+<span class="sd">        arguments can be:</span>
+
+<span class="sd">                - rdataset...</span>
+
+<span class="sd">                - ttl, rdata...</span>
+
+<span class="sd">                - ttl, rdtype, string...&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">authority</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Update.delete"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.update.Update.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete records.  The first argument is always a name.  The other</span>
+<span class="sd">        arguments can be:</span>
+
+<span class="sd">                - I{nothing}</span>
+
+<span class="sd">                - rdataset...</span>
+
+<span class="sd">                - rdata...</span>
+
+<span class="sd">                - rdtype, [string...]&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">authority</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span>
+                                    <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span>
+                                    <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dns_rdataset</span><span class="o">.</span><span class="n">Rdataset</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">rds</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">rd</span> <span class="ow">in</span> <span class="n">rds</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_rr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">NONE</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">Rdata</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">rd</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_rr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">NONE</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">rdtype</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+                    <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">authority</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">zone_rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span>
+                                            <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span>
+                                            <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span>
+                                            <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+                        <span class="n">rd</span> <span class="o">=</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zone_rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_add_rr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">NONE</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Update.replace"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.update.Update.replace">[docs]</a>    <span class="k">def</span> <span class="nf">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Replace records.  The first argument is always a name.  The other</span>
+<span class="sd">        arguments can be:</span>
+
+<span class="sd">                - rdataset...</span>
+
+<span class="sd">                - ttl, rdata...</span>
+
+<span class="sd">                - ttl, rdtype, string...</span>
+
+<span class="sd">        Note that if you want to replace the entire node, you should do</span>
+<span class="sd">        a delete of the name followed by one or more calls to add.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">authority</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Update.present"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.update.Update.present">[docs]</a>    <span class="k">def</span> <span class="nf">present</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Require that an owner name (and optionally an rdata type,</span>
+<span class="sd">        or specific rdataset) exists as a prerequisite to the</span>
+<span class="sd">        execution of the update.  The first argument is always a name.</span>
+<span class="sd">        The other arguments can be:</span>
+
+<span class="sd">                - rdataset...</span>
+
+<span class="sd">                - rdata...</span>
+
+<span class="sd">                - rdtype, string...&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">answer</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>
+                                    <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span>
+                                    <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                                    <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dns_rdataset</span><span class="o">.</span><span class="n">Rdataset</span><span class="p">)</span> <span class="ow">or</span> \
+             <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">Rdata</span><span class="p">)</span> <span class="ow">or</span> \
+             <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dns_rdataset</span><span class="o">.</span><span class="n">Rdataset</span><span class="p">):</span>
+                <span class="c"># Add a 0 TTL</span>
+                <span class="n">args</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">answer</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+                <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">answer</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>
+                                    <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span>
+                                    <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                                    <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Update.absent"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.update.Update.absent">[docs]</a>    <span class="k">def</span> <span class="nf">absent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Require that an owner name (and optionally an rdata type) does</span>
+<span class="sd">        not exist as a prerequisite to the execution of the update.&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rdtype</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">answer</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>
+                                    <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span>
+                                    <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                                    <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+                <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">answer</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>
+                                    <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span>
+                                    <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                                    <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Update.to_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.update.Update.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">65535</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a string containing the update in DNS compressed wire</span>
+<span class="sd">        format.</span>
+<span class="sd">        @rtype: string&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">origin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Update</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">max_size</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

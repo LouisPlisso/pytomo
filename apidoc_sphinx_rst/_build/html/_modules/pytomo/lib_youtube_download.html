@@ -1,0 +1,419 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.lib_youtube_download &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.lib_youtube_download</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python2</span>
+
+<span class="c">#</span>
+<span class="c">#    Pytomo: Python based tomographic tool to perform analysis of Youtube video</span>
+<span class="c">#    download rates.</span>
+<span class="c">#    Copyright (C) 2011, Louis Plissonneau, Parikshit Juluri, Mickael Meulle</span>
+<span class="c">#</span>
+<span class="c">#    This program is free software; you can redistribute it and/or modify</span>
+<span class="c">#    it under the terms of the GNU General Public License as published by</span>
+<span class="c">#    the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c">#    (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c">#    This program is distributed in the hope that it will be useful,</span>
+<span class="c">#    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c">#    GNU General Public License for more details.</span>
+<span class="c">#</span>
+<span class="c">#    You should have received a copy of the GNU General Public License along</span>
+<span class="c">#    with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c">#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.</span>
+<span class="c">#</span>
+
+
+
+<span class="sd">&quot;&quot;&quot;Module to download youtube video for a limited amount of time and</span>
+<span class="sd">calculate the data downloaded within that time</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        This module provides two classes: FileDownloader class and the</span>
+<span class="sd">        InfoExtractor class.</span>
+<span class="sd">        This module is not meant to be called directly.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">with_statement</span><span class="p">,</span> <span class="n">absolute_import</span>
+<span class="kn">import</span> <span class="nn">httplib</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">urllib</span>
+<span class="kn">import</span> <span class="nn">urllib2</span>
+
+<span class="c"># for python2.5 only</span>
+<span class="kn">from</span> <span class="nn">cgi</span> <span class="kn">import</span> <span class="n">parse_qs</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">config_pytomo</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">lib_general_download</span>
+
+<div class="viewcode-block" id="YoutubeIE"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE">[docs]</a><span class="k">class</span> <span class="nc">YoutubeIE</span><span class="p">(</span><span class="n">lib_general_download</span><span class="o">.</span><span class="n">InfoExtractor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Information extractor for youtube.com.&quot;&quot;&quot;</span>
+
+    <span class="n">_VALID_URL</span> <span class="o">=</span> <span class="p">(</span><span class="s">r&#39;^((?:https?://)?(?:youtu\.be/|(?:\w+\.)?&#39;</span>
+                  <span class="o">+</span> <span class="s">r&#39;youtube(?:-nocookie)?\.com/(?:(?:v/)&#39;</span>
+                  <span class="o">+</span> <span class="s">r&#39;|(?:(?:watch(?:_popup)?(?:\.php)?)?(?:\?|#!?)(?:.+&amp;)?&#39;</span>
+                  <span class="o">+</span> <span class="s">r&#39;v=))))?([0-9A-Za-z_-]+)(?(1).+)?$&#39;</span><span class="p">)</span>
+    <span class="n">_URL_GROUP_NB_VIDEO_ID</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">_LANG_URL</span> <span class="o">=</span> <span class="p">(</span><span class="s">r&#39;http://www.youtube.com/?&#39;</span> <span class="o">+</span>
+                 <span class="s">r&#39;hl=en&amp;persist_hl=1&amp;gl=US&amp;persist_gl=1&amp;opt_out_ackd=1&#39;</span><span class="p">)</span>
+    <span class="n">_LOGIN_URL</span> <span class="o">=</span> <span class="s">&#39;https://www.youtube.com/signup?next=/&amp;gl=US&amp;hl=en&#39;</span>
+    <span class="n">_AGE_URL</span> <span class="o">=</span> <span class="s">&#39;http://www.youtube.com/verify_age?next_url=/&amp;gl=US&amp;hl=en&#39;</span>
+    <span class="n">_NETRC_MACHINE</span> <span class="o">=</span> <span class="s">&#39;youtube&#39;</span>
+    <span class="c"># Listed in order of quality</span>
+    <span class="c">#_available_formats = [&#39;38&#39;, &#39;37&#39;, &#39;22&#39;, &#39;45&#39;, &#39;35&#39;, &#39;34&#39;, &#39;43&#39;, &#39;18&#39;, &#39;6&#39;,</span>
+                          <span class="c">#&#39;5&#39;, &#39;17&#39;, &#39;13&#39;]</span>
+    <span class="c"># Listed in usual browser way</span>
+    <span class="n">_available_formats</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;34&#39;</span><span class="p">,</span> <span class="s">&#39;18&#39;</span><span class="p">,</span> <span class="s">&#39;43&#39;</span><span class="p">,</span> <span class="s">&#39;35&#39;</span><span class="p">,</span> <span class="s">&#39;22&#39;</span><span class="p">,</span> <span class="s">&#39;45&#39;</span><span class="p">,</span> <span class="s">&#39;38&#39;</span><span class="p">,</span> <span class="s">&#39;5&#39;</span><span class="p">,</span> <span class="s">&#39;17&#39;</span><span class="p">,</span>
+                          <span class="s">&#39;37&#39;</span><span class="p">,</span> <span class="s">&#39;6&#39;</span><span class="p">,</span> <span class="s">&#39;13&#39;</span><span class="p">]</span>
+    <span class="n">_video_extensions</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;13&#39;</span><span class="p">:</span> <span class="s">&#39;3gp&#39;</span><span class="p">,</span>
+        <span class="s">&#39;17&#39;</span><span class="p">:</span> <span class="s">&#39;mp4&#39;</span><span class="p">,</span>
+        <span class="s">&#39;18&#39;</span><span class="p">:</span> <span class="s">&#39;mp4&#39;</span><span class="p">,</span>
+        <span class="s">&#39;22&#39;</span><span class="p">:</span> <span class="s">&#39;mp4&#39;</span><span class="p">,</span>
+        <span class="s">&#39;37&#39;</span><span class="p">:</span> <span class="s">&#39;mp4&#39;</span><span class="p">,</span>
+        <span class="c"># You actually don&#39;t know if this will be MOV, AVI or whatever</span>
+        <span class="s">&#39;38&#39;</span><span class="p">:</span> <span class="s">&#39;video&#39;</span><span class="p">,</span>
+        <span class="s">&#39;43&#39;</span><span class="p">:</span> <span class="s">&#39;webm&#39;</span><span class="p">,</span>
+        <span class="s">&#39;45&#39;</span><span class="p">:</span> <span class="s">&#39;webm&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="YoutubeIE.suitable"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.suitable">[docs]</a>    <span class="k">def</span> <span class="nf">suitable</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns True if URL is suitable to this IE else False</span>
+<span class="sd">        &gt;&gt;&gt; yie = YoutubeIE(InfoExtractor)</span>
+<span class="sd">        &gt;&gt;&gt; yie.suitable(&#39;http://www.youtube.com/watch?v=rERIxeYOYhI&#39;)</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; yie.suitable(&#39;http://www.youtube.com&#39;)</span>
+<span class="sd">        False</span>
+<span class="sd">        &gt;&gt;&gt; yie.suitable(&#39;http://www.youtube.com/watch?v=-VB2dHVNyds&amp;amp&#39;)</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; yie.suitable(&#39;http://www.youtube.com/watch?&#39;)</span>
+<span class="sd">        False</span>
+<span class="sd">        &gt;&gt;&gt; yie.suitable(&#39;http://youtu.be/3VdOTTfSKyM&#39;)</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">YoutubeIE</span><span class="o">.</span><span class="n">_VALID_URL</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="YoutubeIE.report_lang"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.report_lang">[docs]</a>    <span class="k">def</span> <span class="nf">report_lang</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Report attempt to set language.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">to_screen</span><span class="p">(</span><span class="s">u&#39;[youtube] Setting language&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="YoutubeIE.report_video_webpage_download"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.report_video_webpage_download">[docs]</a>    <span class="k">def</span> <span class="nf">report_video_webpage_download</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Report attempt to download video webpage.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">to_screen</span><span class="p">(</span><span class="s">u&#39;[youtube] </span><span class="si">%s</span><span class="s">: Downloading video webpage&#39;</span>
+                                   <span class="o">%</span> <span class="n">video_id</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="YoutubeIE.report_infopage_download"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.report_infopage_download">[docs]</a>    <span class="k">def</span> <span class="nf">report_infopage_download</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Report attempt to download video info webpage.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">to_screen</span><span class="p">(</span>
+            <span class="s">u&#39;[youtube] </span><span class="si">%s</span><span class="s">: Downloading video info webpage&#39;</span> <span class="o">%</span> <span class="n">video_id</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="YoutubeIE.report_information_extraction"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.report_information_extraction">[docs]</a>    <span class="k">def</span> <span class="nf">report_information_extraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Report attempt to extract video information.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">to_screen</span><span class="p">(</span>
+            <span class="s">u&#39;[youtube] </span><span class="si">%s</span><span class="s">: Extracting video information&#39;</span> <span class="o">%</span> <span class="n">video_id</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="YoutubeIE.get_video_info"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.get_video_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_video_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get video info</span>
+<span class="sd">        Return the video</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">report_video_webpage_download</span><span class="p">(</span><span class="n">video_id</span><span class="p">)</span>
+        <span class="n">video_info</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">el_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;&amp;el=embedded&#39;</span><span class="p">,</span> <span class="s">&#39;&amp;el=detailpage&#39;</span><span class="p">,</span> <span class="s">&#39;&amp;el=vevo&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">]:</span>
+            <span class="n">video_info_url</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;http://www.youtube.com/get_video_info?</span><span class="se">\</span>
+<span class="s">&amp;video_id=</span><span class="si">%s%s</span><span class="s">&amp;ps=default&amp;eurl=&amp;gl=US&amp;hl=en&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">el_type</span><span class="p">))</span>
+            <span class="n">request</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">video_info_url</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">lib_general_download</span><span class="o">.</span><span class="n">STD_HEADERS</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">PROXIES</span><span class="p">:</span>
+                <span class="n">proxy</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">ProxyHandler</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">PROXIES</span><span class="p">)</span>
+                <span class="n">opener</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">build_opener</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+                <span class="n">urllib2</span><span class="o">.</span><span class="n">install_opener</span><span class="p">(</span><span class="n">opener</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">video_info_webpage</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="n">video_info</span> <span class="o">=</span> <span class="n">parse_qs</span><span class="p">(</span><span class="n">video_info_webpage</span><span class="p">)</span>
+                <span class="k">if</span> <span class="s">&#39;token&#39;</span> <span class="ow">in</span> <span class="n">video_info</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">urllib2</span><span class="o">.</span><span class="n">URLError</span><span class="p">,</span> <span class="n">httplib</span><span class="o">.</span><span class="n">HTTPException</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">),</span> <span class="n">err</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">trouble</span><span class="p">(</span>
+                    <span class="s">u&#39;ERROR: unable to download video info webpage: </span><span class="si">%s</span><span class="s">&#39;</span>
+                    <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+                <span class="k">return</span>
+        <span class="k">if</span> <span class="s">&#39;token&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">video_info</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39;reason&#39;</span> <span class="ow">in</span> <span class="n">video_info</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">trouble</span><span class="p">(</span><span class="s">u&#39;ERROR: YouTube said: </span><span class="si">%s</span><span class="s">&#39;</span>
+                                         <span class="o">%</span> <span class="n">video_info</span><span class="p">[</span><span class="s">&#39;reason&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span>
+                                             <span class="s">&#39;utf-8&#39;</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">trouble</span><span class="p">(</span><span class="s">u&#39;ERROR: &quot;token&quot; parameter not in&#39;</span>
+                                         <span class="s">&#39;video info for unknown reason&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">video_info</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">video_info</span><span class="p">[</span><span class="s">&#39;token&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">video_info</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="YoutubeIE.get_swf"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.get_swf">[docs]</a>    <span class="k">def</span> <span class="nf">get_swf</span><span class="p">(</span><span class="n">video_webpage</span><span class="p">,</span> <span class="n">mobj</span><span class="p">):</span>
+        <span class="s">&quot;Attempt to extract SWF player URL&quot;</span>
+        <span class="n">mobj</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">r&#39;swfConfig.*?&quot;(http:</span><span class="se">\\</span><span class="s">/</span><span class="se">\\</span><span class="s">/.*?watch.*?-.*?\.swf)&quot;&#39;</span><span class="p">,</span>
+                         <span class="n">video_webpage</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mobj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">player_url</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">r&#39;</span><span class="se">\\</span><span class="s">(.)&#39;</span><span class="p">,</span> <span class="s">r&#39;\1&#39;</span><span class="p">,</span> <span class="n">mobj</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">player_url</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">player_url</span>
+</div>
+<div class="viewcode-block" id="YoutubeIE.get_video_url_list"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.YoutubeIE.get_video_url_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_video_url_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_id</span><span class="p">,</span> <span class="n">video_token</span><span class="p">,</span> <span class="n">video_info</span><span class="p">,</span>
+                           <span class="n">req_format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Decide which formats to download with req_format (default is best</span>
+<span class="sd">        quality)</span>
+<span class="sd">        Return video url list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">video_url_list</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c">#req_format = self._downloader.params.get(&#39;format&#39;, None)</span>
+        <span class="n">get_video_template</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;http://www.youtube.com/get_video?&#39;</span>
+                              <span class="o">+</span> <span class="s">&#39;video_id=</span><span class="si">%s</span><span class="s">&amp;t=</span><span class="si">%s</span><span class="s">&amp;eurl=&amp;el=&amp;ps=&amp;asv=&amp;fmt=</span><span class="si">%%</span><span class="s">s&#39;</span>
+                              <span class="o">%</span> <span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">video_token</span><span class="p">))</span>
+        <span class="k">if</span> <span class="s">&#39;fmt_url_map&#39;</span> <span class="ow">in</span> <span class="n">video_info</span><span class="p">:</span>
+            <span class="n">url_map</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">pair</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;|&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+                           <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">video_info</span><span class="p">[</span><span class="s">&#39;fmt_url_map&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="s">&#39;url_encoded_fmt_stream_map&#39;</span> <span class="ow">in</span> <span class="n">video_info</span>
+              <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">video_info</span><span class="p">[</span><span class="s">&#39;url_encoded_fmt_stream_map&#39;</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">url_data_strs</span> <span class="o">=</span> <span class="n">video_info</span><span class="p">[</span><span class="s">&#39;url_encoded_fmt_stream_map&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span>\
+                            <span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span>
+            <span class="n">url_data</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">pairStr</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;=&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">pairStr</span> <span class="ow">in</span> <span class="n">uds</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;&amp;&#39;</span><span class="p">))</span>
+                        <span class="k">for</span> <span class="n">uds</span> <span class="ow">in</span> <span class="n">url_data_strs</span><span class="p">]</span>
+            <span class="c"># AO 20120927 403 forbidden error on youtube since 2:30am</span>
+            <span class="c">#url_map = dict((ud[&#39;itag&#39;], urllib.unquote(ud[&#39;url&#39;]))</span>
+            <span class="c">#               for ud in url_data)</span>
+            <span class="c"># fix inspired from: https://github.com/rg3/youtube-dl/issues/427</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">url_map</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">ud</span><span class="p">[</span><span class="s">&#39;itag&#39;</span><span class="p">],</span> <span class="n">urllib</span><span class="o">.</span><span class="n">unquote</span><span class="p">(</span><span class="n">ud</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">])</span> <span class="o">+</span>
+                                <span class="s">&#39;&amp;signature=&#39;</span> <span class="o">+</span> <span class="n">urllib</span><span class="o">.</span><span class="n">unquote</span><span class="p">(</span><span class="n">ud</span><span class="p">[</span><span class="s">&#39;sig&#39;</span><span class="p">]))</span>
+                               <span class="k">for</span> <span class="n">ud</span> <span class="ow">in</span> <span class="n">url_data</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;Could not retrieve itag, url or sig&#39;</span>
+                                          <span class="s">&#39; to download the video&#39;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="bp">None</span>
+<span class="c">#            format_limit = None</span>
+<span class="c">#            #self._downloader.params.get(&#39;format_limit&#39;, None)</span>
+<span class="c">#            if (format_limit is not None</span>
+<span class="c">#                and format_limit in self._available_formats):</span>
+<span class="c">#                format_list = self._available_formats[</span>
+<span class="c">#                    self._available_formats.index(format_limit):]</span>
+<span class="c">#            else:</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">trouble</span><span class="p">(</span><span class="s">u&#39;ERROR: no fmt_url_map or conn &#39;</span>
+                                     <span class="s">&#39;information found in video info: &#39;</span>
+                                    <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">video_info</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="n">format_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_available_formats</span>
+        <span class="n">existing_formats</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">format_list</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">url_map</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">existing_formats</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">trouble</span><span class="p">(</span>
+                <span class="s">u&#39;ERROR: no known formats available for video&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">req_format</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+<span class="c">#        elif req_format is None and &#39;fmt_url_map&#39; in video_info:</span>
+<span class="c">#            video_url_list = [(req_format, get_video_template</span>
+<span class="c">#                               % existing_formats[0])]</span>
+            <span class="n">video_url_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">existing_formats</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="n">url_map</span><span class="p">[</span><span class="n">existing_formats</span><span class="p">[</span><span class="mi">0</span><span class="p">]])]</span>
+            <span class="c"># first quality from format list (default qual)</span>
+        <span class="k">elif</span> <span class="n">req_format</span> <span class="o">==</span> <span class="s">&#39;-1&#39;</span><span class="p">:</span>
+            <span class="c"># All formats</span>
+            <span class="n">video_url_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">f</span><span class="p">,</span> <span class="n">url_map</span><span class="p">[</span><span class="n">f</span><span class="p">])</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">existing_formats</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">req_format</span> <span class="ow">in</span> <span class="n">url_map</span><span class="p">:</span>
+            <span class="c"># Specific format</span>
+            <span class="n">video_url_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">req_format</span><span class="p">,</span> <span class="n">url_map</span><span class="p">[</span><span class="n">req_format</span><span class="p">])]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Specific format</span>
+            <span class="n">video_url_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">req_format</span><span class="p">,</span> <span class="n">get_video_template</span> <span class="o">%</span> <span class="n">req_format</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">video_url_list</span>
+</div>
+    <span class="k">def</span> <span class="nf">_real_extract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="s">&quot;Extract informations from url&quot;</span>
+        <span class="c"># Extract video id from URL</span>
+        <span class="n">mobj</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_VALID_URL</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mobj</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">trouble</span><span class="p">(</span><span class="s">u&#39;ERROR: invalid URL: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">video_id</span> <span class="o">=</span> <span class="n">mobj</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_URL_GROUP_NB_VIDEO_ID</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">video_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_video_info</span><span class="p">(</span><span class="n">video_id</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">lib_general_download</span><span class="o">.</span><span class="n">DownloadError</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">video_info</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c"># Start extracting information</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">report_information_extraction</span><span class="p">(</span><span class="n">video_id</span><span class="p">)</span>
+        <span class="n">video_token</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">unquote_plus</span><span class="p">(</span><span class="n">video_info</span><span class="p">[</span><span class="s">&#39;token&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">video_url_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_video_url_list</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">video_token</span><span class="p">,</span>
+                                                 <span class="n">video_info</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">format_param</span><span class="p">,</span> <span class="n">video_real_url</span> <span class="ow">in</span> <span class="n">video_url_list</span><span class="p">:</span>
+            <span class="c"># At this point we have a new video</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">set_format</span><span class="p">(</span><span class="n">format_param</span><span class="p">)</span>
+            <span class="c"># Extension</span>
+            <span class="n">video_extension</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_video_extensions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">format_param</span><span class="p">,</span> <span class="s">&#39;flv&#39;</span><span class="p">)</span>
+            <span class="c"># Find the video URL in fmt_url_map or conn paramters</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c"># Process video information</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">process_info</span><span class="p">({</span>
+                    <span class="s">&#39;id&#39;</span><span class="p">:</span>       <span class="n">video_id</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">),</span>
+                    <span class="s">&#39;url&#39;</span><span class="p">:</span>      <span class="n">video_real_url</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">),</span>
+                    <span class="s">&#39;ext&#39;</span><span class="p">:</span>      <span class="n">video_extension</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">),</span>
+                    <span class="s">&#39;format&#39;</span><span class="p">:</span>   <span class="p">(</span><span class="n">format_param</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="s">u&#39;NA&#39;</span>
+                                 <span class="ow">or</span> <span class="n">format_param</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">)),</span>
+                <span class="p">})</span>
+            <span class="k">except</span> <span class="n">lib_general_download</span><span class="o">.</span><span class="n">UnavailableVideoError</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_downloader</span><span class="o">.</span><span class="n">trouble</span><span class="p">(</span><span class="s">u&#39;ERROR: unable to download video &#39;</span>
+                                         <span class="s">&#39;(format may not be available)&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="get_youtube_info_extractor"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.get_youtube_info_extractor">[docs]</a><span class="k">def</span> <span class="nf">get_youtube_info_extractor</span><span class="p">(</span><span class="n">download_time</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">DOWNLOAD_TIME</span><span class="p">):</span>
+    <span class="s">&quot;Return an info extractor for YouTube with correct mocks&quot;</span>
+    <span class="n">youtube_ie</span> <span class="o">=</span> <span class="n">YoutubeIE</span><span class="p">()</span>
+    <span class="c"># only to have trouble/to_screen functions in case of errors</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;instanciate a Youtube FileDownloader with &#39;</span>
+                            <span class="s">&#39;download_time: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">download_time</span><span class="p">)</span>
+    <span class="n">file_downloader</span> <span class="o">=</span> <span class="n">lib_general_download</span><span class="o">.</span><span class="n">FileDownloader</span><span class="p">(</span><span class="n">download_time</span><span class="p">)</span>
+    <span class="n">file_downloader</span><span class="o">.</span><span class="n">add_info_extractor</span><span class="p">(</span><span class="n">youtube_ie</span><span class="p">)</span>
+    <span class="c"># Mock because only partial consturction of object</span>
+    <span class="n">youtube_ie</span><span class="o">.</span><span class="n">report_video_webpage_download</span> <span class="o">=</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span>
+                            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Download webpage </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">x</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">youtube_ie</span>
+</div>
+<div class="viewcode-block" id="get_cache_url"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_download.get_cache_url">[docs]</a><span class="k">def</span> <span class="nf">get_cache_url</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">redirect</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="s">&quot;Return the cache url of the video (Wrote mock test)&quot;</span>
+    <span class="k">if</span> <span class="n">redirect</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">url</span>
+    <span class="n">youtube_ie</span> <span class="o">=</span> <span class="n">get_youtube_info_extractor</span><span class="p">()</span>
+    <span class="n">mobj</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">youtube_ie</span><span class="o">.</span><span class="n">_VALID_URL</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mobj</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&#39;url: </span><span class="si">%s</span><span class="s"> not valid&#39;</span> <span class="o">%</span> <span class="n">url</span><span class="p">,</span>
+                                     <span class="s">&#39;only YouTube download is implemented&#39;</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">BLACK_LISTED</span> <span class="ow">in</span> <span class="n">url</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Black listed url: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">BlackListException</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="n">video_id</span> <span class="o">=</span> <span class="n">mobj</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">video_info</span> <span class="o">=</span> <span class="n">youtube_ie</span><span class="o">.</span><span class="n">get_video_info</span><span class="p">(</span><span class="n">video_id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">lib_general_download</span><span class="o">.</span><span class="n">DownloadError</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">mes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;Uncaught exception: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">mes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="n">video_token</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">unquote_plus</span><span class="p">(</span><span class="n">video_info</span><span class="p">[</span><span class="s">&#39;token&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="c"># req_format=&#39;-1&#39; for all available formats</span>
+    <span class="c"># req_format=None for best available format</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">video_url_list</span> <span class="o">=</span> <span class="n">youtube_ie</span><span class="o">.</span><span class="n">get_video_url_list</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">video_token</span><span class="p">,</span>
+                                                       <span class="n">video_info</span><span class="p">,</span>
+                                                       <span class="n">req_format</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">lib_general_download</span><span class="o">.</span><span class="n">DownloadError</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">mes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;Uncaught exception: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">mes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">video_url_list</span><span class="p">:</span>
+        <span class="n">cache_url</span> <span class="o">=</span> <span class="n">video_url_list</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Cache url found: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">cache_url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cache_url</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c">#sys.exit(main())</span>
+    <span class="kn">import</span> <span class="nn">doctest</span>
+    <span class="n">doctest</span><span class="o">.</span><span class="n">testmod</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

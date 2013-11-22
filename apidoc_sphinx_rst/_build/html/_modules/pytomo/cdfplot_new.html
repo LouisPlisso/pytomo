@@ -1,0 +1,395 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.cdfplot_new &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.cdfplot_new</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="s">&quot;Module to plot cdf from data or file. Can be called directly.&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="c">#from optparse import OptionParser</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="c"># AO 201221010 (due to error in win) =&gt;</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">np</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="c"># in case of non-interactive usage</span>
+<span class="c">#import matplotlib</span>
+<span class="c">#matplotlib.use(&#39;PDF&#39;)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+    <span class="kn">from</span> <span class="nn">matplotlib.font_manager</span> <span class="kn">import</span> <span class="n">FontProperties</span>
+    <span class="kn">from</span> <span class="nn">matplotlib.colors</span> <span class="kn">import</span> <span class="n">colorConverter</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">plt</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="c"># &lt;= AO 201221010 (due to error in win)</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
+
+<span class="n">_VERSION</span> <span class="o">=</span> <span class="s">&#39;2.0&#39;</span>
+
+<span class="c"># possibility to place legend outside graph:</span>
+<span class="c">#pylab.subfigure(111)</span>
+<span class="c">#pylab.subplots_adjust(right=0.8) or (top=0.8)</span>
+<span class="c">#pylab.legend(loc=(1.1, 0.5)</span>
+
+<div class="viewcode-block" id="CdfFigure"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure">[docs]</a><span class="k">class</span> <span class="nc">CdfFigure</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="s">&quot;Hold the figure and its default properties&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s">&#39;x&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s">r&#39;P(X$\leq$x)&#39;</span><span class="p">,</span>
+                 <span class="n">title</span><span class="o">=</span><span class="s">&#39;Empirical Distribution&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s">&#39;xx-large&#39;</span><span class="p">,</span>
+                 <span class="n">legend_fontsize</span><span class="o">=</span><span class="s">&#39;large&#39;</span><span class="p">,</span> <span class="n">legend_ncol</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">subplot_top</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">subplot_top</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_figure</span><span class="o">.</span><span class="n">subplotpars</span><span class="o">.</span><span class="n">top</span> <span class="o">=</span> <span class="n">subplot_top</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_figure</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lines</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xlabel</span> <span class="o">=</span> <span class="n">xlabel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylabel</span> <span class="o">=</span> <span class="n">ylabel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span> <span class="o">=</span> <span class="n">fontsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">legend_fontsize</span> <span class="o">=</span> <span class="n">legend_fontsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">legend_ncol</span> <span class="o">=</span> <span class="n">legend_ncol</span>
+
+<div class="viewcode-block" id="CdfFigure.savefig"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.savefig">[docs]</a>    <span class="k">def</span> <span class="nf">savefig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Saves the figure: interface to plt.Figure.savefig&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_figure</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.bar"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.bar">[docs]</a>    <span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Plot in the axis: interface to plt.Axes.bar&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.plot"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Plot in the axis: interface to plt.Axes.plot&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.get_xlim"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.get_xlim">[docs]</a>    <span class="k">def</span> <span class="nf">get_xlim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Plot in the axis: interface to plt.Axes.get_xlim()&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">get_xlim</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.set_xlim"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.set_xlim">[docs]</a>    <span class="k">def</span> <span class="nf">set_xlim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Plot in the axis: interface to plt.Axes.set_xlim()&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.set_ylim"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.set_ylim">[docs]</a>    <span class="k">def</span> <span class="nf">set_ylim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Plot in the axis: interface to plt.Axes.set_ylim()&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.cdfplot"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.cdfplot">[docs]</a>    <span class="k">def</span> <span class="nf">cdfplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_in</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;Data&#39;</span><span class="p">,</span> <span class="n">finalize</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot the cdf of a data array</span>
+<span class="sd">        Wrapper to call the plot method of axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">,</span> <span class="n">data_in</span><span class="p">))</span>
+        <span class="n">data_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data_len</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;no data to plot&quot;</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">cdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">data_len</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">data_len</span>
+        <span class="c"># to have cdf up to 1</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">cdf</span><span class="p">,</span> <span class="n">drawstyle</span><span class="o">=</span><span class="s">&#39;steps&#39;</span><span class="p">,</span>
+                              <span class="n">label</span><span class="o">=</span><span class="n">name</span> <span class="o">+</span> <span class="s">&#39;: </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lines</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">finalize</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adjust_plot</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.ccdfplot"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.ccdfplot">[docs]</a>    <span class="k">def</span> <span class="nf">ccdfplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_in</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;Data&#39;</span><span class="p">,</span> <span class="n">finalize</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot the cdf of a data array</span>
+<span class="sd">        Wrapper to call the plot method of axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">,</span> <span class="n">data_in</span><span class="p">))</span>
+        <span class="n">data_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data_len</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;no data to plot&quot;</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">ccdf</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">data_len</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">data_len</span>
+        <span class="c"># to have cdf up to 1</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">ccdf</span><span class="p">,</span> <span class="n">drawstyle</span><span class="o">=</span><span class="s">&#39;steps&#39;</span><span class="p">,</span>
+                              <span class="n">label</span><span class="o">=</span><span class="n">name</span> <span class="o">+</span> <span class="s">&#39;: </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lines</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">finalize</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adjust_plot</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.show"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Show the figure, and hold to do interactive drawing&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_figure</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_figure</span><span class="o">.</span><span class="n">hold</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="CdfFigure.generate_line_properties"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.generate_line_properties">[docs]</a>    <span class="k">def</span> <span class="nf">generate_line_properties</span><span class="p">():</span>
+        <span class="s">&quot;Cycle through the lines properties&quot;</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="s">&#39;mgcb&#39;</span><span class="p">)</span>
+        <span class="n">line_width</span> <span class="o">=</span> <span class="mf">2.5</span>
+        <span class="n">dashes</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span> <span class="c">#self.dash_generator()</span>
+        <span class="n">linestyles</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">([</span><span class="s">&#39;-&#39;</span><span class="p">])</span>
+        <span class="c">#alphas = cycle([.3, 1.])</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="s">&#39; oxv*d&#39;</span><span class="p">)</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">dash</span> <span class="o">=</span> <span class="n">dashes</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span> <span class="n">line_width</span><span class="p">,</span> <span class="n">dash</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span>
+                   <span class="n">markers</span><span class="o">.</span><span class="n">next</span><span class="p">())</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span> <span class="n">line_width</span><span class="p">,</span> <span class="n">dash</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span>
+                   <span class="n">markers</span><span class="o">.</span><span class="n">next</span><span class="p">())</span>
+            <span class="n">dash</span> <span class="o">=</span> <span class="n">dashes</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span> <span class="n">line_width</span><span class="p">,</span> <span class="n">dash</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span>
+                   <span class="n">markers</span><span class="o">.</span><span class="n">next</span><span class="p">())</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span> <span class="n">line_width</span><span class="p">,</span> <span class="n">dash</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span>
+                   <span class="n">markers</span><span class="o">.</span><span class="n">next</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.adjust_lines"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.adjust_lines">[docs]</a>    <span class="k">def</span> <span class="nf">adjust_lines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashes</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">leg_loc</span><span class="o">=</span><span class="s">&#39;best&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Put correct styles in the axes lines</span>
+<span class="sd">        Should be launch when all lines are plotted</span>
+<span class="sd">        Optimised for up to 8 lines in the plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">generator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_line_properties</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_lines</span><span class="p">):</span>
+            <span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">line_width</span><span class="p">,</span> <span class="n">dash</span><span class="p">,</span> <span class="n">linestyle</span><span class="p">,</span> <span class="n">marker</span><span class="p">)</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lines</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_lw</span><span class="p">(</span><span class="n">line_width</span><span class="p">)</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_linestyle</span><span class="p">(</span><span class="n">linestyle</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">dashes</span><span class="p">:</span>
+                <span class="n">line</span><span class="o">.</span><span class="n">set_dashes</span><span class="p">(</span><span class="n">dash</span><span class="p">)</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_marker</span><span class="p">(</span><span class="n">marker</span><span class="p">)</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_markersize</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_markeredgewidth</span><span class="p">(</span><span class="mf">1.5</span><span class="p">)</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_markerfacecolor</span><span class="p">(</span><span class="s">&#39;1.&#39;</span><span class="p">)</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_markeredgecolor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+            <span class="c"># we want at most 15 markers per line</span>
+            <span class="n">markevery</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">get_xdata</span><span class="p">())</span> <span class="o">//</span> <span class="mi">15</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">set_markevery</span><span class="p">(</span><span class="n">markevery</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adjust_plot</span><span class="p">(</span><span class="n">leg_loc</span><span class="o">=</span><span class="n">leg_loc</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.adjust_plot"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.adjust_plot">[docs]</a>    <span class="k">def</span> <span class="nf">adjust_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">leg_loc</span><span class="o">=</span><span class="s">&#39;best&#39;</span><span class="p">):</span>
+        <span class="s">&quot;Adjust main plot properties (grid, ticks, legend)&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">put_labels</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adjust_ticks</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="n">leg_loc</span><span class="p">,</span> <span class="n">ncol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">legend_ncol</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.put_labels"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.put_labels">[docs]</a>    <span class="k">def</span> <span class="nf">put_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Put labels for axes and title&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ylabel</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.legend"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.legend">[docs]</a>    <span class="k">def</span> <span class="nf">legend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s">&#39;best&#39;</span><span class="p">):</span>
+        <span class="s">&quot;Plot legend with correct font size&quot;</span>
+        <span class="n">font</span> <span class="o">=</span> <span class="n">FontProperties</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">legend_fontsize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="n">loc</span><span class="p">,</span> <span class="n">prop</span><span class="o">=</span><span class="n">font</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.adjust_ticks"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.adjust_ticks">[docs]</a>    <span class="k">def</span> <span class="nf">adjust_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adjusts ticks sizes</span>
+<span class="sd">        To call after a rescale (log...)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">minorticks_on</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">tick</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">get_major_ticks</span><span class="p">():</span>
+            <span class="n">tick</span><span class="o">.</span><span class="n">label1</span><span class="o">.</span><span class="n">set_fontsize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">tick</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">yaxis</span><span class="o">.</span><span class="n">get_major_ticks</span><span class="p">():</span>
+            <span class="n">tick</span><span class="o">.</span><span class="n">label1</span><span class="o">.</span><span class="n">set_fontsize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.setgraph_logx"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.setgraph_logx">[docs]</a>    <span class="k">def</span> <span class="nf">setgraph_logx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Set graph in xlogscale and adjusts plot (grid, ticks, legend)&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">semilogx</span><span class="p">(</span><span class="n">nonposy</span><span class="o">=</span><span class="s">&#39;clip&#39;</span><span class="p">,</span> <span class="n">nonposx</span><span class="o">=</span><span class="s">&#39;clip&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.setgraph_logy"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.setgraph_logy">[docs]</a>    <span class="k">def</span> <span class="nf">setgraph_logy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Set graph in xlogscale and adjusts plot (grid, ticks, legend)&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">semilogy</span><span class="p">(</span><span class="n">nonposy</span><span class="o">=</span><span class="s">&#39;clip&#39;</span><span class="p">,</span> <span class="n">nonposx</span><span class="o">=</span><span class="s">&#39;clip&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.setgraph_loglog"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.setgraph_loglog">[docs]</a>    <span class="k">def</span> <span class="nf">setgraph_loglog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Set graph in xlogscale and adjusts plot (grid, ticks, legend)&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axis</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">nonposy</span><span class="o">=</span><span class="s">&#39;clip&#39;</span><span class="p">,</span> <span class="n">nonposx</span><span class="o">=</span><span class="s">&#39;clip&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.cdfplotdata"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.cdfplotdata">[docs]</a>    <span class="k">def</span> <span class="nf">cdfplotdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_data_name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Method to be able to append data to the figure&quot;</span>
+        <span class="n">cdfplotdata</span><span class="p">(</span><span class="n">list_data_name</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CdfFigure.ccdfplotdata"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.CdfFigure.ccdfplotdata">[docs]</a>    <span class="k">def</span> <span class="nf">ccdfplotdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_data_name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Method to be able to append data to the figure&quot;</span>
+        <span class="n">cdfplotdata</span><span class="p">(</span><span class="n">list_data_name</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">cdf</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="cdfplotdata"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.cdfplotdata">[docs]</a><span class="k">def</span> <span class="nf">cdfplotdata</span><span class="p">(</span><span class="n">list_data_name</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s">&#39;x&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s">&#39;best&#39;</span><span class="p">,</span>
+                <span class="n">fs_legend</span><span class="o">=</span><span class="s">&#39;large&#39;</span><span class="p">,</span> <span class="n">title</span> <span class="o">=</span> <span class="s">&#39;Empirical Distribution&#39;</span><span class="p">,</span> <span class="n">logx</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                <span class="n">logy</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">cdf</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">dashes</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">legend_ncol</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="s">&quot;Plot the cdf of a list of names and data arrays&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">figure</span><span class="p">:</span>
+        <span class="n">figure</span> <span class="o">=</span> <span class="n">CdfFigure</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+                           <span class="n">legend_fontsize</span><span class="o">=</span><span class="n">fs_legend</span><span class="p">,</span> <span class="n">legend_ncol</span><span class="o">=</span><span class="n">legend_ncol</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">xlabel</span> <span class="o">=</span> <span class="n">xlabel</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">legend_fontsize</span> <span class="o">=</span> <span class="n">fs_legend</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">legend_ncol</span> <span class="o">=</span> <span class="n">legend_ncol</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">list_data_name</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;no data to plot&quot;</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">figure</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">list_data_name</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">cdf</span><span class="p">:</span>
+            <span class="n">figure</span><span class="o">.</span><span class="n">cdfplot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">figure</span><span class="o">.</span><span class="n">ccdfplot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">logx</span> <span class="ow">and</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_loglog</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logy</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logx</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logx</span><span class="p">()</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">adjust_lines</span><span class="p">(</span><span class="n">dashes</span><span class="o">=</span><span class="n">dashes</span><span class="p">,</span> <span class="n">leg_loc</span><span class="o">=</span><span class="n">loc</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">figure</span>
+</div>
+<div class="viewcode-block" id="cdfplot"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.cdfplot">[docs]</a><span class="k">def</span> <span class="nf">cdfplot</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="s">&quot;Plot the cdf of a column in file&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">usecols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span><span class="p">])</span>
+    <span class="n">cdfplotdata</span><span class="p">((</span><span class="s">&#39;Data&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="scatter_plot"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.scatter_plot">[docs]</a><span class="k">def</span> <span class="nf">scatter_plot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&#39;Scatterplot&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s">&#39;Y&#39;</span><span class="p">,</span>
+                 <span class="n">logx</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">logy</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="s">&quot;Plot a scatter plot of data&quot;</span>
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">CdfFigure</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s">&#39;^&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+             <span class="n">markeredgecolor</span><span class="o">=</span><span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="n">markerfacecolor</span><span class="o">=</span><span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">logx</span> <span class="ow">and</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_loglog</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logy</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logx</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logx</span><span class="p">()</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">adjust_plot</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">figure</span>
+</div>
+<div class="viewcode-block" id="scatter_plot_multi"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.scatter_plot_multi">[docs]</a><span class="k">def</span> <span class="nf">scatter_plot_multi</span><span class="p">(</span><span class="n">datas</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&#39;Scatterplot&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s">&#39;Y&#39;</span><span class="p">,</span>
+                 <span class="n">logx</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">logy</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="s">&quot;Plot a scatter plot of dictionary&quot;</span>
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">CdfFigure</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="s">&#39;^xo&#39;</span><span class="p">)</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="s">&#39;brm&#39;</span><span class="p">)</span>
+    <span class="n">transparent</span> <span class="o">=</span> <span class="n">colorConverter</span><span class="o">.</span><span class="n">to_rgba</span><span class="p">(</span><span class="s">&#39;w&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">total_nb</span> <span class="o">=</span> <span class="nb">len</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">datas</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">y</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">datas</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span>
+                    <span class="n">label</span><span class="o">=</span><span class="p">(</span><span class="s">r&#39;</span><span class="si">%s</span><span class="s">: </span><span class="si">%d</span><span class="s"> (\textbf{</span><span class="si">%d</span><span class="s">\</span><span class="si">%%</span><span class="s">})&#39;</span>
+                           <span class="o">%</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">//</span> <span class="n">total_nb</span><span class="p">)),</span>
+                    <span class="n">linestyle</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="n">markers</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                    <span class="n">markeredgecolor</span><span class="o">=</span><span class="n">colors</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span> <span class="n">markerfacecolor</span><span class="o">=</span><span class="n">transparent</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">logx</span> <span class="ow">and</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_loglog</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logy</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logx</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logx</span><span class="p">()</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">adjust_plot</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">figure</span>
+</div>
+<div class="viewcode-block" id="bin_plot"><a class="viewcode-back" href="../../pytomo.html#pytomo.cdfplot_new.bin_plot">[docs]</a><span class="k">def</span> <span class="nf">bin_plot</span><span class="p">(</span><span class="n">datas</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&#39;Bin Plot&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s">&#39;Y&#39;</span><span class="p">,</span>
+             <span class="n">logx</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">logy</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="s">&quot;Plot a bin plot of dictionary&quot;</span>
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">CdfFigure</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">)</span>
+<span class="c">#    linestyles = cycle((&#39;-&#39;, &#39;--&#39;))</span>
+<span class="c">#    markers = cycle(&#39;^xo&#39;)</span>
+<span class="c">#    colors = cycle(&#39;brm&#39;)</span>
+<span class="c">#    for label, data in datas:</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">yerr</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">datas</span><span class="p">)</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c">#, yerr=yerr)</span>
+<span class="c">#                    linestyle=linestyles.next(), marker=markers.next(),</span>
+<span class="c">#                    markersize=6, markeredgecolor=colors.next(),</span>
+<span class="c">#                    markerfacecolor=&#39;w&#39;)</span>
+    <span class="k">if</span> <span class="n">logx</span> <span class="ow">and</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_loglog</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logy</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logy</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">logx</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">setgraph_logx</span><span class="p">()</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">adjust_plot</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">figure</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

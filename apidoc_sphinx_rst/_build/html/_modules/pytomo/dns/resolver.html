@@ -1,0 +1,862 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.resolver &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.resolver</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS stub resolver.</span>
+
+<span class="sd">@var default_resolver: The default resolver object</span>
+<span class="sd">@type default_resolver: dns_resolver.Resolver object&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">message</span> <span class="k">as</span> <span class="n">dns_message</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">query</span> <span class="k">as</span> <span class="n">dns_query</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rcode</span> <span class="k">as</span> <span class="n">dns_rcode</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">tsig</span> <span class="k">as</span> <span class="n">dns_tsig</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s">&#39;win32&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">_winreg</span>
+
+<div class="viewcode-block" id="NXDOMAIN"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.NXDOMAIN">[docs]</a><span class="k">class</span> <span class="nc">NXDOMAIN</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The query name does not exist.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+
+<span class="c"># The definition of the Timeout exception has moved from here to the</span>
+<span class="c"># dns_exception module.  We keep dns_resolver.Timeout defined for</span>
+<span class="c"># backwards compatibility.</span>
+</div>
+<span class="n">Timeout</span> <span class="o">=</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">Timeout</span>
+
+<div class="viewcode-block" id="NoAnswer"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.NoAnswer">[docs]</a><span class="k">class</span> <span class="nc">NoAnswer</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The response did not contain an answer to the question.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NoNameservers"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.NoNameservers">[docs]</a><span class="k">class</span> <span class="nc">NoNameservers</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;No non-broken nameservers are available to answer the query.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NotAbsolute"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.NotAbsolute">[docs]</a><span class="k">class</span> <span class="nc">NotAbsolute</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if an absolute domain name is required but a relative name</span>
+<span class="sd">    was provided.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NoRootSOA"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.NoRootSOA">[docs]</a><span class="k">class</span> <span class="nc">NoRootSOA</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if for some reason there is no SOA at the root name.</span>
+<span class="sd">    This should never happen!&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="Answer"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Answer">[docs]</a><span class="k">class</span> <span class="nc">Answer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;DNS stub resolver answer</span>
+
+<span class="sd">    Instances of this class bundle up the result of a successful DNS</span>
+<span class="sd">    resolution.</span>
+
+<span class="sd">    For convenience, the answer object implements much of the sequence</span>
+<span class="sd">    protocol, forwarding to its rrset.  E.g. &quot;for a in answer&quot; is</span>
+<span class="sd">    equivalent to &quot;for a in answer.rrset&quot;, &quot;answer[i]&quot; is equivalent</span>
+<span class="sd">    to &quot;answer.rrset[i]&quot;, and &quot;answer[i:j]&quot; is equivalent to</span>
+<span class="sd">    &quot;answer.rrset[i:j]&quot;.</span>
+
+<span class="sd">    Note that CNAMEs or DNAMEs in the response may mean that answer</span>
+<span class="sd">    node&#39;s name might not be the query name.</span>
+
+<span class="sd">    @ivar qname: The query name</span>
+<span class="sd">    @type qname: dns_name.Name object</span>
+<span class="sd">    @ivar rdtype: The query type</span>
+<span class="sd">    @type rdtype: int</span>
+<span class="sd">    @ivar rdclass: The query class</span>
+<span class="sd">    @type rdclass: int</span>
+<span class="sd">    @ivar response: The response message</span>
+<span class="sd">    @type response: dns_message.Message object</span>
+<span class="sd">    @ivar rrset: The answer</span>
+<span class="sd">    @type rrset: dns_rrset.RRset object</span>
+<span class="sd">    @ivar expiration: The time when the answer expires</span>
+<span class="sd">    @type expiration: float (seconds since the epoch)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qname</span> <span class="o">=</span> <span class="n">qname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">=</span> <span class="n">rdtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">=</span> <span class="n">rdclass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">response</span> <span class="o">=</span> <span class="n">response</span>
+        <span class="n">min_ttl</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">rrset</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">15</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">rrset</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">answer</span><span class="p">,</span> <span class="n">qname</span><span class="p">,</span>
+                                            <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">min_ttl</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">rrset</span><span class="o">.</span><span class="n">ttl</span> <span class="o">&lt;</span> <span class="n">min_ttl</span><span class="p">:</span>
+                    <span class="n">min_ttl</span> <span class="o">=</span> <span class="n">rrset</span><span class="o">.</span><span class="n">ttl</span>
+                <span class="k">break</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rdtype</span> <span class="o">!=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">CNAME</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">crrset</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">answer</span><span class="p">,</span>
+                                                     <span class="n">qname</span><span class="p">,</span>
+                                                     <span class="n">rdclass</span><span class="p">,</span>
+                                                     <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">CNAME</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">min_ttl</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">crrset</span><span class="o">.</span><span class="n">ttl</span> <span class="o">&lt;</span> <span class="n">min_ttl</span><span class="p">:</span>
+                            <span class="n">min_ttl</span> <span class="o">=</span> <span class="n">crrset</span><span class="o">.</span><span class="n">ttl</span>
+                        <span class="k">for</span> <span class="n">rd</span> <span class="ow">in</span> <span class="n">crrset</span><span class="p">:</span>
+                            <span class="n">qname</span> <span class="o">=</span> <span class="n">rd</span><span class="o">.</span><span class="n">target</span>
+                            <span class="k">break</span>
+                        <span class="k">continue</span>
+                    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">NoAnswer</span>
+                <span class="k">raise</span> <span class="n">NoAnswer</span>
+        <span class="k">if</span> <span class="n">rrset</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoAnswer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span> <span class="o">=</span> <span class="n">rrset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="n">min_ttl</span>
+
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">attr</span> <span class="o">==</span> <span class="s">&#39;name&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">elif</span> <span class="n">attr</span> <span class="o">==</span> <span class="s">&#39;ttl&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="o">.</span><span class="n">ttl</span>
+        <span class="k">elif</span> <span class="n">attr</span> <span class="o">==</span> <span class="s">&#39;covers&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="o">.</span><span class="n">covers</span>
+        <span class="k">elif</span> <span class="n">attr</span> <span class="o">==</span> <span class="s">&#39;rdclass&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="o">.</span><span class="n">rdclass</span>
+        <span class="k">elif</span> <span class="n">attr</span> <span class="o">==</span> <span class="s">&#39;rdtype&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="o">.</span><span class="n">rdtype</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__getslice__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">j</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__delslice__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">rrset</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">j</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Cache"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Cache">[docs]</a><span class="k">class</span> <span class="nc">Cache</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simple DNS answer cache.</span>
+
+<span class="sd">    @ivar data: A dictionary of cached data</span>
+<span class="sd">    @type data: dict</span>
+<span class="sd">    @ivar cleaning_interval: The number of seconds between cleanings.  The</span>
+<span class="sd">    default is 300 (5 minutes).</span>
+<span class="sd">    @type cleaning_interval: float</span>
+<span class="sd">    @ivar next_cleaning: The time the cache should next be cleaned (in seconds</span>
+<span class="sd">    since the epoch.)</span>
+<span class="sd">    @type next_cleaning: float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cleaning_interval</span><span class="o">=</span><span class="mf">300.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a DNS cache.</span>
+
+<span class="sd">        @param cleaning_interval: the number of seconds between periodic</span>
+<span class="sd">        cleanings.  The default is 300.0</span>
+<span class="sd">        @type cleaning_interval: float.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cleaning_interval</span> <span class="o">=</span> <span class="n">cleaning_interval</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">next_cleaning</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaning_interval</span>
+
+<div class="viewcode-block" id="Cache.maybe_clean"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Cache.maybe_clean">[docs]</a>    <span class="k">def</span> <span class="nf">maybe_clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clean the cache if it&#39;s time to do so.&quot;&quot;&quot;</span>
+
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">next_cleaning</span> <span class="o">&lt;=</span> <span class="n">now</span><span class="p">:</span>
+            <span class="n">keys_to_delete</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">expiration</span> <span class="o">&lt;=</span> <span class="n">now</span><span class="p">:</span>
+                    <span class="n">keys_to_delete</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys_to_delete</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">next_cleaning</span> <span class="o">=</span> <span class="n">now</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaning_interval</span>
+</div>
+<div class="viewcode-block" id="Cache.get"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Cache.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the answer associated with I{key}.  Returns None if</span>
+<span class="sd">        no answer is cached for the key.</span>
+<span class="sd">        @param key: the key</span>
+<span class="sd">        @type key: (dns_name.Name, int, int) tuple whose values are the</span>
+<span class="sd">        query name, rdtype, and rdclass.</span>
+<span class="sd">        @rtype: dns_resolver.Answer object or None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">maybe_clean</span><span class="p">()</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">v</span><span class="o">.</span><span class="n">expiration</span> <span class="o">&lt;=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">v</span>
+</div>
+<div class="viewcode-block" id="Cache.put"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Cache.put">[docs]</a>    <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Associate key and value in the cache.</span>
+<span class="sd">        @param key: the key</span>
+<span class="sd">        @type key: (dns_name.Name, int, int) tuple whose values are the</span>
+<span class="sd">        query name, rdtype, and rdclass.</span>
+<span class="sd">        @param value: The answer being cached</span>
+<span class="sd">        @type value: dns_resolver.Answer object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">maybe_clean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Cache.flush"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Cache.flush">[docs]</a>    <span class="k">def</span> <span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Flush the cache.</span>
+
+<span class="sd">        If I{key} is specified, only that item is flushed.  Otherwise</span>
+<span class="sd">        the entire cache is flushed.</span>
+
+<span class="sd">        @param key: the key to flush</span>
+<span class="sd">        @type key: (dns_name.Name, int, int) tuple or None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">next_cleaning</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaning_interval</span>
+</div></div>
+<div class="viewcode-block" id="Resolver"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Resolver">[docs]</a><span class="k">class</span> <span class="nc">Resolver</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;DNS stub resolver</span>
+
+<span class="sd">    @ivar domain: The domain of this host</span>
+<span class="sd">    @type domain: dns_name.Name object</span>
+<span class="sd">    @ivar nameservers: A list of nameservers to query.  Each nameserver is</span>
+<span class="sd">    a string which contains the IP address of a nameserver.</span>
+<span class="sd">    @type nameservers: list of strings</span>
+<span class="sd">    @ivar search: The search list.  If the query name is a relative name,</span>
+<span class="sd">    the resolver will construct an absolute query name by appending the search</span>
+<span class="sd">    names one by one to the query name.</span>
+<span class="sd">    @type search: list of dns_name.Name objects</span>
+<span class="sd">    @ivar port: The port to which to send queries.  The default is 53.</span>
+<span class="sd">    @type port: int</span>
+<span class="sd">    @ivar timeout: The number of seconds to wait for a response from a</span>
+<span class="sd">    server, before timing out.</span>
+<span class="sd">    @type timeout: float</span>
+<span class="sd">    @ivar lifetime: The total number of seconds to spend trying to get an</span>
+<span class="sd">    answer to the question.  If the lifetime expires, a Timeout exception</span>
+<span class="sd">    will occur.</span>
+<span class="sd">    @type lifetime: float</span>
+<span class="sd">    @ivar keyring: The TSIG keyring to use.  The default is None.</span>
+<span class="sd">    @type keyring: dict</span>
+<span class="sd">    @ivar keyname: The TSIG keyname to use.  The default is None.</span>
+<span class="sd">    @type keyname: dns_name.Name object</span>
+<span class="sd">    @ivar keyalgorithm: The TSIG key algorithm to use.  The default is</span>
+<span class="sd">    dns_tsig.default_algorithm.</span>
+<span class="sd">    @type keyalgorithm: string</span>
+<span class="sd">    @ivar edns: The EDNS level to use.  The default is -1, no Edns.</span>
+<span class="sd">    @type edns: int</span>
+<span class="sd">    @ivar ednsflags: The EDNS flags</span>
+<span class="sd">    @type ednsflags: int</span>
+<span class="sd">    @ivar payload: The EDNS payload size.  The default is 0.</span>
+<span class="sd">    @type payload: int</span>
+<span class="sd">    @ivar cache: The cache to use.  The default is None.</span>
+<span class="sd">    @type cache: dns_resolver.Cache object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s">&#39;/etc/resolv.conf&#39;</span><span class="p">,</span> <span class="n">configure</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a resolver instance.</span>
+
+<span class="sd">        @param filename: The filename of a configuration file in</span>
+<span class="sd">        standard /etc/resolv.conf format.  This parameter is meaningful</span>
+<span class="sd">        only when I{configure} is true and the platform is POSIX.</span>
+<span class="sd">        @type filename: string or file object</span>
+<span class="sd">        @param configure: If True (the default), the resolver instance</span>
+<span class="sd">        is configured in the normal fashion for the operating system</span>
+<span class="sd">        the resolver is running on.  (I.e. a /etc/resolv.conf file on</span>
+<span class="sd">        POSIX systems and from the registry on Windows systems.)</span>
+<span class="sd">        @type configure: bool&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">configure</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s">&#39;win32&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">read_registry</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">filename</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">read_resolv_conf</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Resolver.reset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Resolver.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset all resolver configuration to the defaults.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> \
+            <span class="n">dns_name</span><span class="o">.</span><span class="n">Name</span><span class="p">(</span><span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">())[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">root</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">search</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="mi">53</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="mf">2.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lifetime</span> <span class="o">=</span> <span class="mf">30.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keyring</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keyname</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keyalgorithm</span> <span class="o">=</span> <span class="n">dns_tsig</span><span class="o">.</span><span class="n">default_algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edns</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ednsflags</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">payload</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="Resolver.read_resolv_conf"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Resolver.read_resolv_conf">[docs]</a>    <span class="k">def</span> <span class="nf">read_resolv_conf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Process f as a file in the /etc/resolv.conf format.  If f is</span>
+<span class="sd">        a string, it is used as the name of the file to open; otherwise it</span>
+<span class="sd">        is treated as the file itself.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                <span class="c"># /etc/resolv.conf doesn&#39;t exist, can&#39;t be read, etc.</span>
+                <span class="c"># We&#39;ll just use the default resolver configuration.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">]</span>
+                <span class="k">return</span>
+            <span class="n">want_close</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">want_close</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;#&#39;</span> <span class="ow">or</span> <span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;;&#39;</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">tokens</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;nameserver&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;domain&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;search&#39;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">search</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">suffix</span><span class="p">))</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">want_close</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_determine_split_char</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry</span><span class="p">):</span>
+        <span class="c">#</span>
+        <span class="c"># The windows registry irritatingly changes the list element</span>
+        <span class="c"># delimiter in between &#39; &#39; and &#39;,&#39; (and vice-versa) in various</span>
+        <span class="c"># versions of windows.</span>
+        <span class="c">#</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">split_char</span> <span class="o">=</span> <span class="s">&#39; &#39;</span>
+        <span class="k">elif</span> <span class="n">entry</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">split_char</span> <span class="o">=</span> <span class="s">&#39;,&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># probably a singleton; treat as a space-separated list.</span>
+            <span class="n">split_char</span> <span class="o">=</span> <span class="s">&#39; &#39;</span>
+        <span class="k">return</span> <span class="n">split_char</span>
+
+    <span class="k">def</span> <span class="nf">_config_win32_nameservers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nameservers</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure a NameServer registry entry.&quot;&quot;&quot;</span>
+        <span class="c"># we call str() on nameservers to convert it from unicode to ascii</span>
+        <span class="n">nameservers</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">nameservers</span><span class="p">)</span>
+        <span class="n">split_char</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_determine_split_char</span><span class="p">(</span><span class="n">nameservers</span><span class="p">)</span>
+        <span class="n">ns_list</span> <span class="o">=</span> <span class="n">nameservers</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">split_char</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="n">ns_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ns</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ns</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_config_win32_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure a Domain registry entry.&quot;&quot;&quot;</span>
+        <span class="c"># we call str() on domain to convert it from unicode to ascii</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">domain</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_config_win32_search</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">search</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure a Search registry entry.&quot;&quot;&quot;</span>
+        <span class="c"># we call str() on search to convert it from unicode to ascii</span>
+        <span class="n">search</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">search</span><span class="p">)</span>
+        <span class="n">split_char</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_determine_split_char</span><span class="p">(</span><span class="n">search</span><span class="p">)</span>
+        <span class="n">search_list</span> <span class="o">=</span> <span class="n">search</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">split_char</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">search_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">search</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">search</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_config_win32_fromkey</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract DNS info from a registry key.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">servers</span><span class="p">,</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s">&#39;NameServer&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">WindowsError</span><span class="p">:</span>
+            <span class="n">servers</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">servers</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_config_win32_nameservers</span><span class="p">(</span><span class="n">servers</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">dom</span><span class="p">,</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s">&#39;Domain&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">dom</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_config_win32_domain</span><span class="p">(</span><span class="n">dom</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">WindowsError</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">servers</span><span class="p">,</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s">&#39;DhcpNameServer&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">WindowsError</span><span class="p">:</span>
+                <span class="n">servers</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">if</span> <span class="n">servers</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_config_win32_nameservers</span><span class="p">(</span><span class="n">servers</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">dom</span><span class="p">,</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s">&#39;DhcpDomain&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">dom</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_config_win32_domain</span><span class="p">(</span><span class="n">dom</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">WindowsError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">search</span><span class="p">,</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s">&#39;SearchList&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">WindowsError</span><span class="p">:</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">search</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_config_win32_search</span><span class="p">(</span><span class="n">search</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Resolver.read_registry"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Resolver.read_registry">[docs]</a>    <span class="k">def</span> <span class="nf">read_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract resolver configuration from the Windows registry.&quot;&quot;&quot;</span>
+        <span class="n">lm</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">ConnectRegistry</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">HKEY_LOCAL_MACHINE</span><span class="p">)</span>
+        <span class="n">want_scan</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c"># XP, 2000</span>
+                <span class="n">tcp_params</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">OpenKey</span><span class="p">(</span><span class="n">lm</span><span class="p">,</span>
+                                             <span class="s">r&#39;SYSTEM\CurrentControlSet&#39;</span>
+                                             <span class="s">r&#39;\Services\Tcpip\Parameters&#39;</span><span class="p">)</span>
+                <span class="n">want_scan</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">except</span> <span class="ne">EnvironmentError</span><span class="p">:</span>
+                <span class="c"># ME</span>
+                <span class="n">tcp_params</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">OpenKey</span><span class="p">(</span><span class="n">lm</span><span class="p">,</span>
+                                             <span class="s">r&#39;SYSTEM\CurrentControlSet&#39;</span>
+                                             <span class="s">r&#39;\Services\VxD\MSTCP&#39;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_config_win32_fromkey</span><span class="p">(</span><span class="n">tcp_params</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="n">tcp_params</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">want_scan</span><span class="p">:</span>
+                <span class="n">interfaces</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">OpenKey</span><span class="p">(</span><span class="n">lm</span><span class="p">,</span>
+                                             <span class="s">r&#39;SYSTEM\CurrentControlSet&#39;</span>
+                                             <span class="s">r&#39;\Services\Tcpip\Parameters&#39;</span>
+                                             <span class="s">r&#39;\Interfaces&#39;</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">guid</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">EnumKey</span><span class="p">(</span><span class="n">interfaces</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                            <span class="n">key</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">OpenKey</span><span class="p">(</span><span class="n">interfaces</span><span class="p">,</span> <span class="n">guid</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_win32_is_nic_enabled</span><span class="p">(</span><span class="n">lm</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+                                <span class="k">continue</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_config_win32_fromkey</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                            <span class="k">finally</span><span class="p">:</span>
+                                <span class="n">key</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+                        <span class="k">except</span> <span class="ne">EnvironmentError</span><span class="p">:</span>
+                            <span class="k">break</span>
+                <span class="k">finally</span><span class="p">:</span>
+                    <span class="n">interfaces</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">lm</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+</div>
+    <span class="k">def</span> <span class="nf">_win32_is_nic_enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lm</span><span class="p">,</span> <span class="n">guid</span><span class="p">,</span> <span class="n">interface_key</span><span class="p">):</span>
+         <span class="c"># Look in the Windows Registry to determine whether the network</span>
+         <span class="c"># interface corresponding to the given guid is enabled.</span>
+         <span class="c">#</span>
+         <span class="c"># (Code contributed by Paul Marks, thanks!)</span>
+         <span class="c">#</span>
+         <span class="k">try</span><span class="p">:</span>
+             <span class="c"># This hard-coded location seems to be consistent, at least</span>
+             <span class="c"># from Windows 2000 through Vista.</span>
+             <span class="n">connection_key</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">OpenKey</span><span class="p">(</span>
+                 <span class="n">lm</span><span class="p">,</span>
+                 <span class="s">r&#39;SYSTEM\CurrentControlSet\Control\Network&#39;</span>
+                 <span class="s">r&#39;\{4D36E972-E325-11CE-BFC1-08002BE10318}&#39;</span>
+                 <span class="s">r&#39;\</span><span class="si">%s</span><span class="s">\Connection&#39;</span> <span class="o">%</span> <span class="n">guid</span><span class="p">)</span>
+
+             <span class="k">try</span><span class="p">:</span>
+                 <span class="c"># The PnpInstanceID points to a key inside Enum</span>
+                 <span class="p">(</span><span class="n">pnp_id</span><span class="p">,</span> <span class="n">ttype</span><span class="p">)</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span>
+                     <span class="n">connection_key</span><span class="p">,</span> <span class="s">&#39;PnpInstanceID&#39;</span><span class="p">)</span>
+
+                 <span class="k">if</span> <span class="n">ttype</span> <span class="o">!=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">REG_SZ</span><span class="p">:</span>
+                     <span class="k">raise</span> <span class="ne">ValueError</span>
+
+                 <span class="n">device_key</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">OpenKey</span><span class="p">(</span>
+                     <span class="n">lm</span><span class="p">,</span> <span class="s">r&#39;SYSTEM\CurrentControlSet\Enum\</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">pnp_id</span><span class="p">)</span>
+
+                 <span class="k">try</span><span class="p">:</span>
+                     <span class="c"># Get ConfigFlags for this device</span>
+                     <span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">ttype</span><span class="p">)</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span>
+                         <span class="n">device_key</span><span class="p">,</span> <span class="s">&#39;ConfigFlags&#39;</span><span class="p">)</span>
+
+                     <span class="k">if</span> <span class="n">ttype</span> <span class="o">!=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">REG_DWORD</span><span class="p">:</span>
+                         <span class="k">raise</span> <span class="ne">ValueError</span>
+
+                     <span class="c"># Based on experimentation, bit 0x1 indicates that the</span>
+                     <span class="c"># device is disabled.</span>
+                     <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0x1</span><span class="p">)</span>
+
+                 <span class="k">finally</span><span class="p">:</span>
+                     <span class="n">device_key</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+             <span class="k">finally</span><span class="p">:</span>
+                 <span class="n">connection_key</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+         <span class="k">except</span> <span class="p">(</span><span class="ne">EnvironmentError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+             <span class="c"># Pre-vista, enabled interfaces seem to have a non-empty</span>
+             <span class="c"># NTEContextList; this was how dnspython detected enabled</span>
+             <span class="c"># nics before the code above was contributed.  We&#39;ve retained</span>
+             <span class="c"># the old method since we don&#39;t know if the code above works</span>
+             <span class="c"># on Windows 95/98/ME.</span>
+             <span class="k">try</span><span class="p">:</span>
+                 <span class="p">(</span><span class="n">nte</span><span class="p">,</span> <span class="n">ttype</span><span class="p">)</span> <span class="o">=</span> <span class="n">_winreg</span><span class="o">.</span><span class="n">QueryValueEx</span><span class="p">(</span><span class="n">interface_key</span><span class="p">,</span>
+                                                     <span class="s">&#39;NTEContextList&#39;</span><span class="p">)</span>
+                 <span class="k">return</span> <span class="n">nte</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+             <span class="k">except</span> <span class="ne">WindowsError</span><span class="p">:</span>
+                 <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">_compute_timeout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">):</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">now</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">start</span> <span class="o">-</span> <span class="n">now</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c"># Time going backwards is bad.  Just give up.</span>
+                <span class="k">raise</span> <span class="n">Timeout</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># Time went backwards, but only a little.  This can</span>
+                <span class="c"># happen, e.g. under vmware with older linux kernels.</span>
+                <span class="c"># Pretend it didn&#39;t happen.</span>
+                <span class="n">now</span> <span class="o">=</span> <span class="n">start</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">now</span> <span class="o">-</span> <span class="n">start</span>
+        <span class="k">if</span> <span class="n">duration</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lifetime</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Timeout</span>
+        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lifetime</span> <span class="o">-</span> <span class="n">duration</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Resolver.query"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Resolver.query">[docs]</a>    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="n">rdclass</span><span class="o">=</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span>
+              <span class="n">tcp</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Query nameservers to find the answer to the question.</span>
+
+<span class="sd">        The I{qname}, I{rdtype}, and I{rdclass} parameters may be objects</span>
+<span class="sd">        of the appropriate type, or strings that can be converted into objects</span>
+<span class="sd">        of the appropriate type.  E.g. For I{rdtype} the integer 2 and the</span>
+<span class="sd">        the string &#39;NS&#39; both mean to query for records with DNS rdata type NS.</span>
+
+<span class="sd">        @param qname: the query name</span>
+<span class="sd">        @type qname: dns_name.Name object or string</span>
+<span class="sd">        @param rdtype: the query type</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param rdclass: the query class</span>
+<span class="sd">        @type rdclass: int or string</span>
+<span class="sd">        @param tcp: use TCP to make the query (default is False).</span>
+<span class="sd">        @type tcp: bool</span>
+<span class="sd">        @param source: bind to this IP address (defaults to machine default IP).</span>
+<span class="sd">        @type source: IP address in dotted quad notation</span>
+<span class="sd">        @rtype: dns_resolver.Answer instance</span>
+<span class="sd">        @raises Timeout: no answers could be found in the specified lifetime</span>
+<span class="sd">        @raises NXDOMAIN: the query name does not exist</span>
+<span class="sd">        @raises NoAnswer: the response did not contain an answer</span>
+<span class="sd">        @raises NoNameservers: no non-broken nameservers are available to</span>
+<span class="sd">        answer the question.&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">qname</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">qname</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">qname</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">rdclass</span> <span class="o">=</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">)</span>
+        <span class="n">qnames_to_try</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">qname</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="n">qnames_to_try</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">qname</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">qname</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">qnames_to_try</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">qname</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">dns_name</span><span class="o">.</span><span class="n">root</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">search</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">search</span><span class="p">:</span>
+                    <span class="n">qnames_to_try</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">qname</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">suffix</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">qnames_to_try</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">qname</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="p">))</span>
+        <span class="n">all_nxdomain</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">qname</span> <span class="ow">in</span> <span class="n">qnames_to_try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span>
+                <span class="n">answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">answer</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">answer</span>
+            <span class="n">request</span> <span class="o">=</span> <span class="n">dns_message</span><span class="o">.</span><span class="n">make_query</span><span class="p">(</span><span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">keyname</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">request</span><span class="o">.</span><span class="n">use_tsig</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keyring</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keyname</span><span class="p">,</span>
+                                 <span class="n">algorithm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">keyalgorithm</span><span class="p">)</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">use_edns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edns</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ednsflags</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="c">#</span>
+            <span class="c"># make a copy of the servers list so we can alter it later.</span>
+            <span class="c">#</span>
+            <span class="n">nameservers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nameservers</span><span class="p">[:]</span>
+            <span class="n">backoff</span> <span class="o">=</span> <span class="mf">0.10</span>
+            <span class="k">while</span> <span class="n">response</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nameservers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">NoNameservers</span>
+                <span class="k">for</span> <span class="n">nameserver</span> <span class="ow">in</span> <span class="n">nameservers</span><span class="p">[:]:</span>
+                    <span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_timeout</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">tcp</span><span class="p">:</span>
+                            <span class="n">response</span> <span class="o">=</span> <span class="n">dns_query</span><span class="o">.</span><span class="n">tcp</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">nameserver</span><span class="p">,</span>
+                                                     <span class="n">timeout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                                                     <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">response</span> <span class="o">=</span> <span class="n">dns_query</span><span class="o">.</span><span class="n">udp</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">nameserver</span><span class="p">,</span>
+                                                     <span class="n">timeout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                                                     <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">Timeout</span><span class="p">):</span>
+                        <span class="c">#</span>
+                        <span class="c"># Communication failure or timeout.  Go to the</span>
+                        <span class="c"># next server</span>
+                        <span class="c">#</span>
+                        <span class="n">response</span> <span class="o">=</span> <span class="bp">None</span>
+                        <span class="k">continue</span>
+                    <span class="k">except</span> <span class="n">dns_query</span><span class="o">.</span><span class="n">UnexpectedSource</span><span class="p">:</span>
+                        <span class="c">#</span>
+                        <span class="c"># Who knows?  Keep going.</span>
+                        <span class="c">#</span>
+                        <span class="n">response</span> <span class="o">=</span> <span class="bp">None</span>
+                        <span class="k">continue</span>
+                    <span class="k">except</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">:</span>
+                        <span class="c">#</span>
+                        <span class="c"># We don&#39;t understand what this server is</span>
+                        <span class="c"># saying.  Take it out of the mix and</span>
+                        <span class="c"># continue.</span>
+                        <span class="c">#</span>
+                        <span class="n">nameservers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">nameserver</span><span class="p">)</span>
+                        <span class="n">response</span> <span class="o">=</span> <span class="bp">None</span>
+                        <span class="k">continue</span>
+                    <span class="n">rcode</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">rcode</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">rcode</span> <span class="o">==</span> <span class="n">dns_rcode</span><span class="o">.</span><span class="n">NOERROR</span> <span class="ow">or</span> \
+                           <span class="n">rcode</span> <span class="o">==</span> <span class="n">dns_rcode</span><span class="o">.</span><span class="n">NXDOMAIN</span><span class="p">:</span>
+                        <span class="k">break</span>
+                    <span class="c">#</span>
+                    <span class="c"># We got a response, but we&#39;re not happy with the</span>
+                    <span class="c"># rcode in it.  Remove the server from the mix if</span>
+                    <span class="c"># the rcode isn&#39;t SERVFAIL.</span>
+                    <span class="c">#</span>
+                    <span class="k">if</span> <span class="n">rcode</span> <span class="o">!=</span> <span class="n">dns_rcode</span><span class="o">.</span><span class="n">SERVFAIL</span><span class="p">:</span>
+                        <span class="n">nameservers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">nameserver</span><span class="p">)</span>
+                    <span class="n">response</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="c">#</span>
+                <span class="c"># All nameservers failed!</span>
+                <span class="c">#</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nameservers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c">#</span>
+                    <span class="c"># But we still have servers to try.  Sleep a bit</span>
+                    <span class="c"># so we don&#39;t pound them!</span>
+                    <span class="c">#</span>
+                    <span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_timeout</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+                    <span class="n">sleep_time</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="n">backoff</span><span class="p">)</span>
+                    <span class="n">backoff</span> <span class="o">*=</span> <span class="mi">2</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sleep_time</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">rcode</span><span class="p">()</span> <span class="o">==</span> <span class="n">dns_rcode</span><span class="o">.</span><span class="n">NXDOMAIN</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">all_nxdomain</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">all_nxdomain</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NXDOMAIN</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="n">Answer</span><span class="p">(</span><span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">response</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">),</span> <span class="n">answer</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">answer</span>
+</div>
+<div class="viewcode-block" id="Resolver.use_tsig"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Resolver.use_tsig">[docs]</a>    <span class="k">def</span> <span class="nf">use_tsig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keyring</span><span class="p">,</span> <span class="n">keyname</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">algorithm</span><span class="o">=</span><span class="n">dns_tsig</span><span class="o">.</span><span class="n">default_algorithm</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a TSIG signature to the query.</span>
+
+<span class="sd">        @param keyring: The TSIG keyring to use; defaults to None.</span>
+<span class="sd">        @type keyring: dict</span>
+<span class="sd">        @param keyname: The name of the TSIG key to use; defaults to None.</span>
+<span class="sd">        The key must be defined in the keyring.  If a keyring is specified</span>
+<span class="sd">        but a keyname is not, then the key used will be the first key in the</span>
+<span class="sd">        keyring.  Note that the order of keys in a dictionary is not defined,</span>
+<span class="sd">        so applications should supply a keyname when a keyring is used, unless</span>
+<span class="sd">        they know the keyring contains only one key.</span>
+<span class="sd">        @param algorithm: The TSIG key algorithm to use.  The default</span>
+<span class="sd">        is dns_tsig.default_algorithm.</span>
+<span class="sd">        @type algorithm: string&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keyring</span> <span class="o">=</span> <span class="n">keyring</span>
+        <span class="k">if</span> <span class="n">keyname</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keyname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">keyring</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keyname</span> <span class="o">=</span> <span class="n">keyname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keyalgorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+</div>
+<div class="viewcode-block" id="Resolver.use_edns"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.Resolver.use_edns">[docs]</a>    <span class="k">def</span> <span class="nf">use_edns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edns</span><span class="p">,</span> <span class="n">ednsflags</span><span class="p">,</span> <span class="n">payload</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure Edns.</span>
+
+<span class="sd">        @param edns: The EDNS level to use.  The default is -1, no Edns.</span>
+<span class="sd">        @type edns: int</span>
+<span class="sd">        @param ednsflags: The EDNS flags</span>
+<span class="sd">        @type ednsflags: int</span>
+<span class="sd">        @param payload: The EDNS payload size.  The default is 0.</span>
+<span class="sd">        @type payload: int&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">edns</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">edns</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edns</span> <span class="o">=</span> <span class="n">edns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ednsflags</span> <span class="o">=</span> <span class="n">ednsflags</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span>
+</div></div>
+<span class="n">default_resolver</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="get_default_resolver"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.get_default_resolver">[docs]</a><span class="k">def</span> <span class="nf">get_default_resolver</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Get the default resolver, initializing it if necessary.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">default_resolver</span>
+    <span class="k">if</span> <span class="n">default_resolver</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">default_resolver</span> <span class="o">=</span> <span class="n">Resolver</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">default_resolver</span>
+</div>
+<div class="viewcode-block" id="query"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.query">[docs]</a><span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="n">rdclass</span><span class="o">=</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span>
+          <span class="n">tcp</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Query nameservers to find the answer to the question.</span>
+
+<span class="sd">    This is a convenience function that uses the default resolver</span>
+<span class="sd">    object to make the query.</span>
+<span class="sd">    @see: L{dns_resolver.Resolver.query} for more information on the</span>
+<span class="sd">    parameters.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">get_default_resolver</span><span class="p">()</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">tcp</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="zone_for_name"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.resolver.zone_for_name">[docs]</a><span class="k">def</span> <span class="nf">zone_for_name</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rdclass</span><span class="o">=</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span> <span class="n">tcp</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">resolver</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find the name of the zone which contains the specified name.</span>
+
+<span class="sd">    @param name: the query name</span>
+<span class="sd">    @type name: absolute dns_name.Name object or string</span>
+<span class="sd">    @param rdclass: The query class</span>
+<span class="sd">    @type rdclass: int</span>
+<span class="sd">    @param tcp: use TCP to make the query (default is False).</span>
+<span class="sd">    @type tcp: bool</span>
+<span class="sd">    @param resolver: the resolver to use</span>
+<span class="sd">    @type resolver: dns_resolver.Resolver object or None</span>
+<span class="sd">    @rtype: dns_name.Name&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">resolver</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">resolver</span> <span class="o">=</span> <span class="n">get_default_resolver</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">NotAbsolute</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">answer</span> <span class="o">=</span> <span class="n">resolver</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">SOA</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">tcp</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">answer</span><span class="o">.</span><span class="n">rrset</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">name</span>
+            <span class="c"># otherwise we were CNAMEd or DNAMEd and need to look higher</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">NXDOMAIN</span><span class="p">,</span> <span class="n">NoAnswer</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">parent</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">NoParent</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoRootSOA</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

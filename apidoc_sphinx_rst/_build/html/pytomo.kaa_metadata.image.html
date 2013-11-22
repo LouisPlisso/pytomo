@@ -1,0 +1,371 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>image Package &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="index.html" />
+    <link rel="up" title="kaa_metadata Package" href="pytomo.kaa_metadata.html" />
+    <link rel="next" title="misc Package" href="pytomo.kaa_metadata.misc.html" />
+    <link rel="prev" title="audio Package" href="pytomo.kaa_metadata.audio.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.misc.html" title="misc Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.audio.html" title="audio Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li>
+          <li><a href="pytomo.kaa_metadata.html" accesskey="U">kaa_metadata Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="image-package">
+<h1>image Package<a class="headerlink" href="#image-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">image</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pytomo.kaa_metadata.image"></span></div>
+<div class="section" id="module-pytomo.kaa_metadata.image.EXIF">
+<span id="exif-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">EXIF</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.EXIF" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">EXIF_header</tt><big>(</big><em>file</em>, <em>endian</em>, <em>offset</em>, <em>fake_exif</em>, <em>debug=0</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.canon_decode_tag">
+<tt class="descname">canon_decode_tag</tt><big>(</big><em>value</em>, <em>dict</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.canon_decode_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.canon_decode_tag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.decode_maker_note">
+<tt class="descname">decode_maker_note</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.decode_maker_note"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.decode_maker_note" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.dump_IFD">
+<tt class="descname">dump_IFD</tt><big>(</big><em>ifd</em>, <em>ifd_name</em>, <em>dict={36864: ('ExifVersion'</em>, <em>&lt;function make_string at 0x8fe69b0&gt;)</em>, <em>513: ('JPEGInterchangeFormat'</em>, <em>)</em>, <em>37378: ('ApertureValue'</em>, <em>)</em>, <em>36867: ('DateTimeOriginal'</em>, <em>)</em>, <em>36868: ('DateTimeDigitized'</em>, <em>)</em>, <em>37381: ('MaxApertureValue'</em>, <em>)</em>, <em>37382: ('SubjectDistance'</em>, <em>)</em>, <em>37383: ('MeteringMode'</em>, <em>{0: 'Unidentified'</em>, <em>1: 'Average'</em>, <em>2: 'CenterWeightedAverage'</em>, <em>3: 'Spot'</em>, <em>4: 'MultiSpot'})</em>, <em>37384: ('LightSource'</em>, <em>{0: 'Unknown'</em>, <em>1: 'Daylight'</em>, <em>2: 'Fluorescent'</em>, <em>3: 'Tungsten'</em>, <em>10: 'Flash'</em>, <em>17: 'Standard Light A'</em>, <em>18: 'Standard Light B'</em>, <em>19: 'Standard Light C'</em>, <em>20: 'D55'</em>, <em>21: 'D65'</em>, <em>22: 'D75'</em>, <em>255: 'Other'})</em>, <em>37385: ('Flash'</em>, <em>{0: 'No'</em>, <em>1: 'Fired'</em>, <em>5: 'Fired (?)'</em>, <em>7: 'Fired (!)'</em>, <em>9: 'Fill Fired'</em>, <em>13: 'Fill Fired (?)'</em>, <em>15: 'Fill Fired (!)'</em>, <em>16: 'Off'</em>, <em>24: 'Auto Off'</em>, <em>25: 'Auto Fired'</em>, <em>29: 'Auto Fired (?)'</em>, <em>31: 'Auto Fired (!)'</em>, <em>32: 'Not Available'})</em>, <em>37386: ('FocalLength'</em>, <em>)</em>, <em>41483: ('FlashEnergy'</em>, <em>)</em>, <em>41484: ('SpatialFrequencyResponse'</em>, <em>)</em>, <em>40962: ('ExifImageWidth'</em>, <em>)</em>, <em>41486: ('FocalPlaneXResolution'</em>, <em>)</em>, <em>41487: ('FocalPlaneYResolution'</em>, <em>)</em>, <em>41488: ('FocalPlaneResolutionUnit'</em>, <em>)</em>, <em>529: ('YCbCrCoefficients'</em>, <em>)</em>, <em>530: ('YCbCrSubSampling'</em>, <em>)</em>, <em>531: ('YCbCrPositioning'</em>, <em>)</em>, <em>532: ('ReferenceBlackWhite'</em>, <em>)</em>, <em>41493: ('ExposureIndex'</em>, <em>)</em>, <em>512: ('JPEGProc'</em>, <em>)</em>, <em>41495: ('SensingMethod'</em>, <em>)</em>, <em>37380: ('ExposureBiasValue'</em>, <em>)</em>, <em>40965: ('InteroperabilityOffset'</em>, <em>)</em>, <em>34850: ('ExposureProgram'</em>, <em>{0: 'Unidentified'</em>, <em>1: 'Manual'</em>, <em>2: 'Program Normal'</em>, <em>3: 'Aperture Priority'</em>, <em>4: 'Shutter Priority'</em>, <em>5: 'Program Creative'</em>, <em>6: 'Program Action'</em>, <em>7: 'Portrait Mode'</em>, <em>8: 'Landscape Mode'})</em>, <em>34852: ('SpectralSensitivity'</em>, <em>)</em>, <em>34853: ('GPSInfo'</em>, <em>)</em>, <em>34855: ('ISOSpeedRatings'</em>, <em>)</em>, <em>34856: ('OECF'</em>, <em>)</em>, <em>41991: ('GainControl'</em>, <em>)</em>, <em>41992: ('Contrast'</em>, <em>)</em>, <em>41993: ('Saturation'</em>, <em>)</em>, <em>41994: ('Sharpness'</em>, <em>)</em>, <em>41996: ('SubjectDistanceRange'</em>, <em>)</em>, <em>514: ('JPEGInterchangeFormatLength'</em>, <em>)</em>, <em>41492: ('SubjectLocation'</em>, <em>)</em>, <em>37500: ('MakerNote'</em>, <em>)</em>, <em>37510: ('UserComment'</em>, <em>&lt;function make_string_uc at 0x8fe6848&gt;)</em>, <em>33421: ('CFARepeatPatternDim'</em>, <em>)</em>, <em>33422: ('CFAPattern'</em>, <em>)</em>, <em>33423: ('BatteryLevel'</em>, <em>)</em>, <em>37520: ('SubSecTime'</em>, <em>)</em>, <em>37521: ('SubSecTimeOriginal'</em>, <em>)</em>, <em>37522: ('SubSecTimeDigitized'</em>, <em>)</em>, <em>33432: ('Copyright'</em>, <em>)</em>, <em>33434: ('ExposureTime'</em>, <em>)</em>, <em>33437: ('FNumber'</em>, <em>)</em>, <em>37121: ('ComponentsConfiguration'</em>, <em>{0: ''</em>, <em>1: 'Y'</em>, <em>2: 'Cb'</em>, <em>3: 'Cr'</em>, <em>4: 'Red'</em>, <em>5: 'Green'</em>, <em>6: 'Blue'})</em>, <em>37377: ('ShutterSpeedValue'</em>, <em>)</em>, <em>37122: ('CompressedBitsPerPixel'</em>, <em>)</em>, <em>37396: ('SubjectArea'</em>, <em>)</em>, <em>37379: ('BrightnessValue'</em>, <em>)</em>, <em>256: ('ImageWidth'</em>, <em>)</em>, <em>257: ('ImageLength'</em>, <em>)</em>, <em>258: ('BitsPerSample'</em>, <em>)</em>, <em>259: ('Compression'</em>, <em>{1: 'Uncompressed TIFF'</em>, <em>6: 'JPEG Compressed'})</em>, <em>262: ('PhotometricInterpretation'</em>, <em>)</em>, <em>266: ('FillOrder'</em>, <em>)</em>, <em>269: ('DocumentName'</em>, <em>)</em>, <em>270: ('ImageDescription'</em>, <em>)</em>, <em>271: ('Make'</em>, <em>)</em>, <em>272: ('Model'</em>, <em>)</em>, <em>273: ('StripOffsets'</em>, <em>)</em>, <em>274: ('Orientation'</em>, <em>{1: 'Horizontal (normal)'</em>, <em>2: 'Mirrored horizontal'</em>, <em>3: 'Rotated 180'</em>, <em>4: 'Mirrored vertical'</em>, <em>5: 'Mirrored horizontal then rotated 90 CCW'</em>, <em>6: 'Rotated 90 CW'</em>, <em>7: 'Mirrored horizontal then rotated 90 CW'</em>, <em>8: 'Rotated 90 CCW'})</em>, <em>277: ('SamplesPerPixel'</em>, <em>)</em>, <em>278: ('RowsPerStrip'</em>, <em>)</em>, <em>279: ('StripByteCounts'</em>, <em>)</em>, <em>282: ('XResolution'</em>, <em>)</em>, <em>283: ('YResolution'</em>, <em>)</em>, <em>284: ('PlanarConfiguration'</em>, <em>)</em>, <em>41728: ('FileSource'</em>, <em>{3: 'Digital Camera'})</em>, <em>40961: ('ColorSpace'</em>, <em>)</em>, <em>296: ('ResolutionUnit'</em>, <em>{1: 'Not Absolute'</em>, <em>2: 'Pixels/Inch'</em>, <em>3: 'Pixels/Centimeter'})</em>, <em>301: ('TransferFunction'</em>, <em>)</em>, <em>305: ('Software'</em>, <em>)</em>, <em>306: ('DateTime'</em>, <em>)</em>, <em>315: ('Artist'</em>, <em>)</em>, <em>41729: ('SceneType'</em>, <em>{1: 'Directly Photographed'})</em>, <em>318: ('WhitePoint'</em>, <em>)</em>, <em>319: ('PrimaryChromaticities'</em>, <em>)</em>, <em>41985: ('CustomRendered'</em>, <em>)</em>, <em>40960: ('FlashPixVersion'</em>, <em>&lt;function make_string at 0x8fe69b0&gt;)</em>, <em>342: ('TransferRange'</em>, <em>)</em>, <em>41730: ('CVAPattern'</em>, <em>)</em>, <em>40963: ('ExifImageLength'</em>, <em>)</em>, <em>41986: ('ExposureMode'</em>, <em>{0: 'Auto Exposure'</em>, <em>1: 'Manual Exposure'</em>, <em>2: 'Auto Bracket'})</em>, <em>34665: ('ExifOffset'</em>, <em>)</em>, <em>34675: ('InterColorProfile'</em>, <em>)</em>, <em>41987: ('WhiteBalance'</em>, <em>{0: 'Auto'</em>, <em>1: 'Manual'})</em>, <em>41988: ('DigitalZoomRatio'</em>, <em>)</em>, <em>33723: ('IPTC/NAA'</em>, <em>)</em>, <em>41989: ('FocalLengthIn35mm'</em>, <em>)</em>, <em>41990: ('SceneCaptureType'</em>, <em>)}</em>, <em>relative=0</em>, <em>stop_tag='UNDEF'</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.dump_IFD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.dump_IFD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.extract_TIFF_thumbnail">
+<tt class="descname">extract_TIFF_thumbnail</tt><big>(</big><em>thumb_ifd</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.extract_TIFF_thumbnail"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.extract_TIFF_thumbnail" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.first_IFD">
+<tt class="descname">first_IFD</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.first_IFD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.first_IFD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.list_IFDs">
+<tt class="descname">list_IFDs</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.list_IFDs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.list_IFDs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.n2s">
+<tt class="descname">n2s</tt><big>(</big><em>offset</em>, <em>length</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.n2s"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.n2s" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.next_IFD">
+<tt class="descname">next_IFD</tt><big>(</big><em>ifd</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.next_IFD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.next_IFD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.olympus_decode_tag">
+<tt class="descname">olympus_decode_tag</tt><big>(</big><em>value</em>, <em>dict</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.olympus_decode_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.olympus_decode_tag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.EXIF_header.s2n">
+<tt class="descname">s2n</tt><big>(</big><em>offset</em>, <em>length</em>, <em>signed=0</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#EXIF_header.s2n"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.EXIF_header.s2n" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.kaa_metadata.image.EXIF.IFD_Tag">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">IFD_Tag</tt><big>(</big><em>printable</em>, <em>tag</em>, <em>field_type</em>, <em>values</em>, <em>field_offset</em>, <em>field_length</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#IFD_Tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.IFD_Tag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="pytomo.kaa_metadata.image.EXIF.Ratio">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">Ratio</tt><big>(</big><em>num</em>, <em>den</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#Ratio"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.Ratio" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="pytomo.kaa_metadata.image.EXIF.Ratio.reduce">
+<tt class="descname">reduce</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#Ratio.reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.Ratio.reduce" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.gcd">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">gcd</tt><big>(</big><em>a</em>, <em>b</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#gcd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.gcd" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.make_string">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">make_string</tt><big>(</big><em>seq</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#make_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.make_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.make_string_uc">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">make_string_uc</tt><big>(</big><em>seq</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#make_string_uc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.make_string_uc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.nikon_ev_bias">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">nikon_ev_bias</tt><big>(</big><em>seq</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#nikon_ev_bias"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.nikon_ev_bias" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.olympus_special_mode">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">olympus_special_mode</tt><big>(</big><em>v</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#olympus_special_mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.olympus_special_mode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.process_file">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">process_file</tt><big>(</big><em>f</em>, <em>stop_tag='UNDEF'</em>, <em>details=True</em>, <em>debug=False</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#process_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.process_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.s2n_intel">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">s2n_intel</tt><big>(</big><em>str</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#s2n_intel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.s2n_intel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.s2n_motorola">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">s2n_motorola</tt><big>(</big><em>str</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#s2n_motorola"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.s2n_motorola" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.EXIF.usage">
+<tt class="descclassname">pytomo.kaa_metadata.image.EXIF.</tt><tt class="descname">usage</tt><big>(</big><em>exit_status</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/EXIF.html#usage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.EXIF.usage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.image.IPTC">
+<span id="iptc-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">IPTC</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.IPTC" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.IPTC.flatten">
+<tt class="descclassname">pytomo.kaa_metadata.image.IPTC.</tt><tt class="descname">flatten</tt><big>(</big><em>list</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/IPTC.html#flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.IPTC.flatten" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.image.IPTC.parseiptc">
+<tt class="descclassname">pytomo.kaa_metadata.image.IPTC.</tt><tt class="descname">parseiptc</tt><big>(</big><em>app</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/IPTC.html#parseiptc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.IPTC.parseiptc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.image.bmp">
+<span id="bmp-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">bmp</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.bmp" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.image.bmp.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.image.bmp.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.image.bmp.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">BMP</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.image.core">
+<span id="core-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">core</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.core" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.kaa_metadata.image.core.BinsParser">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.image.core.</tt><tt class="descname">BinsParser</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/core.html#BinsParser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.core.BinsParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/library/xml.sax.handler.html#xml.sax.handler.ContentHandler" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">xml.sax.handler.ContentHandler</span></tt></a></p>
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.core.BinsParser.characters">
+<tt class="descname">characters</tt><big>(</big><em>c</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/core.html#BinsParser.characters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.core.BinsParser.characters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.core.BinsParser.endElement">
+<tt class="descname">endElement</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/core.html#BinsParser.endElement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.core.BinsParser.endElement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.core.BinsParser.items">
+<tt class="descname">items</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/core.html#BinsParser.items"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.core.BinsParser.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.core.BinsParser.startElement">
+<tt class="descname">startElement</tt><big>(</big><em>name</em>, <em>attr</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/core.html#BinsParser.startElement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.core.BinsParser.startElement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.kaa_metadata.image.core.Image">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.image.core.</tt><tt class="descname">Image</tt><big>(</big><em>hash=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/core.html#Image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.core.Image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.kaa_metadata.html#pytomo.kaa_metadata.core.Media" title="pytomo.kaa_metadata.core.Media"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.kaa_metadata.core.Media</span></tt></a></p>
+<p>Digital Images, Photos, Pictures.</p>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.image.core.Image.media">
+<tt class="descname">media</tt><em class="property"> = 'MEDIA_IMAGE'</em><a class="headerlink" href="#pytomo.kaa_metadata.image.core.Image.media" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.image.core.Image.parse_external_files">
+<tt class="descname">parse_external_files</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/image/core.html#Image.parse_external_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.image.core.Image.parse_external_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse external files like bins and .comments.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="generic-module">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">generic</span></tt> Module<a class="headerlink" href="#generic-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.image.gif">
+<span id="gif-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">gif</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.gif" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.image.gif.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.image.gif.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.image.gif.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">GIF</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.image.jpg">
+<span id="jpg-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">jpg</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.jpg" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.image.jpg.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.image.jpg.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.image.jpg.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">JPG</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.image.png">
+<span id="png-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">png</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.png" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.image.png.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.image.png.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.image.png.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">PNG</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.image.tiff">
+<span id="tiff-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">tiff</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.image.tiff" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.image.tiff.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.image.tiff.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.image.tiff.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">TIFF</span></tt></p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">image Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">image</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.EXIF"><tt class="docutils literal"><span class="pre">EXIF</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.IPTC"><tt class="docutils literal"><span class="pre">IPTC</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.bmp"><tt class="docutils literal"><span class="pre">bmp</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li><a class="reference internal" href="#generic-module"><tt class="docutils literal"><span class="pre">generic</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.gif"><tt class="docutils literal"><span class="pre">gif</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.jpg"><tt class="docutils literal"><span class="pre">jpg</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.png"><tt class="docutils literal"><span class="pre">png</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.image.tiff"><tt class="docutils literal"><span class="pre">tiff</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pytomo.kaa_metadata.audio.html"
+                        title="previous chapter">audio Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pytomo.kaa_metadata.misc.html"
+                        title="next chapter">misc Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/pytomo.kaa_metadata.image.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.misc.html" title="misc Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.audio.html" title="audio Package"
+             >previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li>
+          <li><a href="pytomo.kaa_metadata.html" >kaa_metadata Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

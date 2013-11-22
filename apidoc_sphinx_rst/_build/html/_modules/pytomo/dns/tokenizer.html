@@ -1,0 +1,643 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.tokenizer &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.tokenizer</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;Tokenize DNS master file format&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">cStringIO</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">ttl</span> <span class="k">as</span> <span class="n">dns_ttl</span>
+
+<span class="n">_DELIMITERS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39; &#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;;&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;(&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;)&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;&quot;&#39;</span> <span class="p">:</span> <span class="bp">True</span> <span class="p">}</span>
+
+<span class="n">_QUOTING_DELIMITERS</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&#39;&quot;&#39;</span> <span class="p">:</span> <span class="bp">True</span> <span class="p">}</span>
+
+<span class="n">EOF</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">EOL</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">WHITESPACE</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">IDENTIFIER</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">QUOTED_STRING</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">COMMENT</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">DELIMITER</span> <span class="o">=</span> <span class="mi">6</span>
+
+<div class="viewcode-block" id="UngetBufferFull"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.UngetBufferFull">[docs]</a><span class="k">class</span> <span class="nc">UngetBufferFull</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised when an attempt is made to unget a token when the unget</span>
+<span class="sd">    buffer is full.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="Token"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token">[docs]</a><span class="k">class</span> <span class="nc">Token</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A DNS master file format token.</span>
+
+<span class="sd">    @ivar ttype: The token type</span>
+<span class="sd">    @type ttype: int</span>
+<span class="sd">    @ivar value: The token value</span>
+<span class="sd">    @type value: string</span>
+<span class="sd">    @ivar has_escape: Does the token value contain escapes?</span>
+<span class="sd">    @type has_escape: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ttype</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">has_escape</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a token instance.</span>
+
+<span class="sd">        @param ttype: The token type</span>
+<span class="sd">        @type ttype: int</span>
+<span class="sd">        @ivar value: The token value</span>
+<span class="sd">        @type value: string</span>
+<span class="sd">        @ivar has_escape: Does the token value contain escapes?</span>
+<span class="sd">        @type has_escape: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">=</span> <span class="n">ttype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_escape</span> <span class="o">=</span> <span class="n">has_escape</span>
+
+<div class="viewcode-block" id="Token.is_eof"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_eof">[docs]</a>    <span class="k">def</span> <span class="nf">is_eof</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">EOF</span>
+</div>
+<div class="viewcode-block" id="Token.is_eol"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_eol">[docs]</a>    <span class="k">def</span> <span class="nf">is_eol</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">EOL</span>
+</div>
+<div class="viewcode-block" id="Token.is_whitespace"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_whitespace">[docs]</a>    <span class="k">def</span> <span class="nf">is_whitespace</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">WHITESPACE</span>
+</div>
+<div class="viewcode-block" id="Token.is_identifier"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_identifier">[docs]</a>    <span class="k">def</span> <span class="nf">is_identifier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">IDENTIFIER</span>
+</div>
+<div class="viewcode-block" id="Token.is_quoted_string"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_quoted_string">[docs]</a>    <span class="k">def</span> <span class="nf">is_quoted_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">QUOTED_STRING</span>
+</div>
+<div class="viewcode-block" id="Token.is_comment"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_comment">[docs]</a>    <span class="k">def</span> <span class="nf">is_comment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">COMMENT</span>
+</div>
+<div class="viewcode-block" id="Token.is_delimiter"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_delimiter">[docs]</a>    <span class="k">def</span> <span class="nf">is_delimiter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">DELIMITER</span>
+</div>
+<div class="viewcode-block" id="Token.is_eol_or_eof"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.is_eol_or_eof">[docs]</a>    <span class="k">def</span> <span class="nf">is_eol_or_eof</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">EOL</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">EOF</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Token</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ttype</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Token</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ttype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">ttype</span> <span class="ow">or</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s"> &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ttype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Token.unescape"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Token.unescape">[docs]</a>    <span class="k">def</span> <span class="nf">unescape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_escape</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="n">unescaped</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">l</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">l</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">l</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+                    <span class="n">c2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">l</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+                    <span class="n">c3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">c2</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">and</span> <span class="n">c3</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()):</span>
+                        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">c2</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">c3</span><span class="p">))</span>
+            <span class="n">unescaped</span> <span class="o">+=</span> <span class="n">c</span>
+        <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ttype</span><span class="p">,</span> <span class="n">unescaped</span><span class="p">)</span>
+
+    <span class="c"># compatibility for old-style tuple tokens</span>
+</div>
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">2</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ttype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttype</span>
+        <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span>
+</div>
+<div class="viewcode-block" id="Tokenizer"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer">[docs]</a><span class="k">class</span> <span class="nc">Tokenizer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A DNS master file format tokenizer.</span>
+
+<span class="sd">    A token is a (type, value) tuple, where I{type} is an int, and</span>
+<span class="sd">    I{value} is a string.  The valid types are EOF, EOL, WHITESPACE,</span>
+<span class="sd">    IDENTIFIER, QUOTED_STRING, COMMENT, and DELIMITER.</span>
+
+<span class="sd">    @ivar file: The file to tokenize</span>
+<span class="sd">    @type file: file</span>
+<span class="sd">    @ivar ungotten_char: The most recently ungotten character, or None.</span>
+<span class="sd">    @type ungotten_char: string</span>
+<span class="sd">    @ivar ungotten_token: The most recently ungotten token, or None.</span>
+<span class="sd">    @type ungotten_token: (int, string) token tuple</span>
+<span class="sd">    @ivar multiline: The current multiline level.  This value is increased</span>
+<span class="sd">    by one every time a &#39;(&#39; delimiter is read, and decreased by one every time</span>
+<span class="sd">    a &#39;)&#39; delimiter is read.</span>
+<span class="sd">    @type multiline: int</span>
+<span class="sd">    @ivar quoting: This variable is true if the tokenizer is currently</span>
+<span class="sd">    reading a quoted string.</span>
+<span class="sd">    @type quoting: bool</span>
+<span class="sd">    @ivar eof: This variable is true if the tokenizer has encountered EOF.</span>
+<span class="sd">    @type eof: bool</span>
+<span class="sd">    @ivar delimiters: The current delimiter dictionary.</span>
+<span class="sd">    @type delimiters: dict</span>
+<span class="sd">    @ivar line_number: The current line number</span>
+<span class="sd">    @type line_number: int</span>
+<span class="sd">    @ivar filename: A filename that will be returned by the L{where} method.</span>
+<span class="sd">    @type filename: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a tokenizer instance.</span>
+
+<span class="sd">        @param f: The file to tokenize.  The default is sys.stdin.</span>
+<span class="sd">        This parameter may also be a string, in which case the tokenizer</span>
+<span class="sd">        will take its input from the contents of the string.</span>
+<span class="sd">        @type f: file or string</span>
+<span class="sd">        @param filename: the name of the filename that the L{where} method</span>
+<span class="sd">        will return.</span>
+<span class="sd">        @type filename: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">cStringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;&lt;string&gt;&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">:</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;&lt;stdin&gt;&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;&lt;file&gt;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_char</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_token</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quoting</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eof</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delimiters</span> <span class="o">=</span> <span class="n">_DELIMITERS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">line_number</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+
+    <span class="k">def</span> <span class="nf">_get_char</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read a character from input.</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_char</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">eof</span><span class="p">:</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">eof</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">line_number</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_char</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_char</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">c</span>
+
+<div class="viewcode-block" id="Tokenizer.where"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.where">[docs]</a>    <span class="k">def</span> <span class="nf">where</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the current location in the input.</span>
+
+<span class="sd">        @rtype: (string, int) tuple.  The first item is the filename of</span>
+<span class="sd">        the input, the second is the current line number.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_number</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_unget_char</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unget a character.</span>
+
+<span class="sd">        The unget buffer for characters is only one character large; it is</span>
+<span class="sd">        an error to try to unget a character when the unget buffer is not</span>
+<span class="sd">        empty.</span>
+
+<span class="sd">        @param c: the character to unget</span>
+<span class="sd">        @type c: string</span>
+<span class="sd">        @raises UngetBufferFull: there is already an ungotten char</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_char</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UngetBufferFull</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_char</span> <span class="o">=</span> <span class="n">c</span>
+
+<div class="viewcode-block" id="Tokenizer.skip_whitespace"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.skip_whitespace">[docs]</a>    <span class="k">def</span> <span class="nf">skip_whitespace</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Consume input until a non-whitespace character is encountered.</span>
+
+<span class="sd">        The non-whitespace character is then ungotten, and the number of</span>
+<span class="sd">        whitespace characters consumed is returned.</span>
+
+<span class="sd">        If the tokenizer is in multiline mode, then newlines are whitespace.</span>
+
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">skipped</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_char</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s">&#39; &#39;</span> <span class="ow">and</span> <span class="n">c</span> <span class="o">!=</span> <span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">c</span> <span class="o">!=</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_unget_char</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">skipped</span>
+            <span class="n">skipped</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">want_leading</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">want_comment</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the next token.</span>
+
+<span class="sd">        @param want_leading: If True, return a WHITESPACE token if the</span>
+<span class="sd">        first character read is whitespace.  The default is False.</span>
+<span class="sd">        @type want_leading: bool</span>
+<span class="sd">        @param want_comment: If True, return a COMMENT token if the</span>
+<span class="sd">        first token read is a comment.  The default is False.</span>
+<span class="sd">        @type want_comment: bool</span>
+<span class="sd">        @rtype: Token object</span>
+<span class="sd">        @raises dns_exception.UnexpectedEnd: input ended prematurely</span>
+<span class="sd">        @raises dns_exception.SyntaxError: input was badly formed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_token</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_token</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_token</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_whitespace</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">want_leading</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">token</span>
+            <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">is_comment</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">want_comment</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">token</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">token</span>
+        <span class="n">skipped</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_whitespace</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">want_leading</span> <span class="ow">and</span> <span class="n">skipped</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">WHITESPACE</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">)</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">ttype</span> <span class="o">=</span> <span class="n">IDENTIFIER</span>
+        <span class="n">has_escape</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_char</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span> <span class="ow">or</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">delimiters</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">quoting</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+                <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="s">&#39;&#39;</span> <span class="ow">and</span> <span class="n">ttype</span> <span class="o">!=</span> <span class="n">QUOTED_STRING</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;(&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">skip_whitespace</span><span class="p">()</span>
+                        <span class="k">continue</span>
+                    <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;)&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span> <span class="o">-=</span> <span class="mi">1</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">skip_whitespace</span><span class="p">()</span>
+                        <span class="k">continue</span>
+                    <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&quot;&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">quoting</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">quoting</span> <span class="o">=</span> <span class="bp">True</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">delimiters</span> <span class="o">=</span> <span class="n">_QUOTING_DELIMITERS</span>
+                            <span class="n">ttype</span> <span class="o">=</span> <span class="n">QUOTED_STRING</span>
+                            <span class="k">continue</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">quoting</span> <span class="o">=</span> <span class="bp">False</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">delimiters</span> <span class="o">=</span> <span class="n">_DELIMITERS</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">skip_whitespace</span><span class="p">()</span>
+                            <span class="k">continue</span>
+                    <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">EOL</span><span class="p">,</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;;&#39;</span><span class="p">:</span>
+                        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_char</span><span class="p">()</span>
+                            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+                                <span class="k">break</span>
+                            <span class="n">token</span> <span class="o">+=</span> <span class="n">c</span>
+                        <span class="k">if</span> <span class="n">want_comment</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_unget_char</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">COMMENT</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span><span class="p">:</span>
+                                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;unbalanced parentheses&#39;</span><span class="p">)</span>
+                            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">EOF</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">skip_whitespace</span><span class="p">()</span>
+                            <span class="n">token</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+                            <span class="k">continue</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">EOL</span><span class="p">,</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c"># This code exists in case we ever want a</span>
+                        <span class="c"># delimiter to be returned.  It never produces</span>
+                        <span class="c"># a token currently.</span>
+                        <span class="n">token</span> <span class="o">=</span> <span class="n">c</span>
+                        <span class="n">ttype</span> <span class="o">=</span> <span class="n">DELIMITER</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_unget_char</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">quoting</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span><span class="p">:</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_char</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+                    <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                        <span class="n">c2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_char</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">c2</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+                        <span class="n">c3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_char</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">c2</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">and</span> <span class="n">c3</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()):</span>
+                            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+                        <span class="n">c</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">c2</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">c3</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;newline in quoted string&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="c">#</span>
+                <span class="c"># It&#39;s an escape.  Put it and the next character into</span>
+                <span class="c"># the token; it will be checked later for goodness.</span>
+                <span class="c">#</span>
+                <span class="n">token</span> <span class="o">+=</span> <span class="n">c</span>
+                <span class="n">has_escape</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_char</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;&#39;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">UnexpectedEnd</span>
+            <span class="n">token</span> <span class="o">+=</span> <span class="n">c</span>
+        <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="s">&#39;&#39;</span> <span class="ow">and</span> <span class="n">ttype</span> <span class="o">!=</span> <span class="n">QUOTED_STRING</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiline</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;unbalanced parentheses&#39;</span><span class="p">)</span>
+            <span class="n">ttype</span> <span class="o">=</span> <span class="n">EOF</span>
+        <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">ttype</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">has_escape</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.unget"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.unget">[docs]</a>    <span class="k">def</span> <span class="nf">unget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unget a token.</span>
+
+<span class="sd">        The unget buffer for tokens is only one token large; it is</span>
+<span class="sd">        an error to try to unget a token when the unget buffer is not</span>
+<span class="sd">        empty.</span>
+
+<span class="sd">        @param token: the token to unget</span>
+<span class="sd">        @type token: Token object</span>
+<span class="sd">        @raises UngetBufferFull: there is already an ungotten token</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_token</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UngetBufferFull</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ungotten_token</span> <span class="o">=</span> <span class="n">token</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.next"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.next">[docs]</a>    <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the next item in an iteration.</span>
+<span class="sd">        @rtype: (int, string)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eof</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">StopIteration</span>
+        <span class="k">return</span> <span class="n">token</span>
+</div>
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="c"># Helpers</span>
+
+<div class="viewcode-block" id="Tokenizer.get_int"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_int">[docs]</a>    <span class="k">def</span> <span class="nf">get_int</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and interpret it as an integer.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting an identifier&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting an integer&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_uint8"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_uint8">[docs]</a>    <span class="k">def</span> <span class="nf">get_uint8</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and interpret it as an 8-bit unsigned</span>
+<span class="sd">        integer.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_int</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="mi">255</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%d</span><span class="s"> is not an unsigned 8-bit integer&#39;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_uint16"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_uint16">[docs]</a>    <span class="k">def</span> <span class="nf">get_uint16</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and interpret it as a 16-bit unsigned</span>
+<span class="sd">        integer.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_int</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="mi">65535</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%d</span><span class="s"> is not an unsigned 16-bit integer&#39;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_uint32"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_uint32">[docs]</a>    <span class="k">def</span> <span class="nf">get_uint32</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and interpret it as a 32-bit unsigned</span>
+<span class="sd">        integer.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting an identifier&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting an integer&#39;</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">long</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="il">4294967296L</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%d</span><span class="s"> is not an unsigned 32-bit integer&#39;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_string"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_string">[docs]</a>    <span class="k">def</span> <span class="nf">get_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and interpret it as a string.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">()</span> <span class="ow">or</span> <span class="n">token</span><span class="o">.</span><span class="n">is_quoted_string</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting a string&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_identifier"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_identifier">[docs]</a>    <span class="k">def</span> <span class="nf">get_identifier</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and raise an exception if it is not an identifier.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting an identifier&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_name"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and interpret it as a DNS name.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: dns_name.Name object&quot;&quot;&quot;</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting an identifier&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">origin</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_eol"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_eol">[docs]</a>    <span class="k">def</span> <span class="nf">get_eol</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the next token and raise an exception if it isn&#39;t EOL or</span>
+<span class="sd">        EOF.</span>
+
+<span class="sd">        @raises dns_exception.SyntaxError:</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eol_or_eof</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expected EOL or EOF, got </span><span class="si">%d</span><span class="s"> &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">ttype</span><span class="p">,</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Tokenizer.get_ttl"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tokenizer.Tokenizer.get_ttl">[docs]</a>    <span class="k">def</span> <span class="nf">get_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;expecting an identifier&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dns_ttl</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

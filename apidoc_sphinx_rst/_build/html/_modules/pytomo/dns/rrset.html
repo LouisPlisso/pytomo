@@ -1,0 +1,273 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.rrset &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.rrset</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS RRsets (an RRset is a named rdataset)&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdata</span> <span class="k">as</span> <span class="n">dns_rdata</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataset</span> <span class="k">as</span> <span class="n">dns_rdataset</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="c">#from . import renderer as dns_renderer</span>
+
+<div class="viewcode-block" id="RRset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.RRset">[docs]</a><span class="k">class</span> <span class="nc">RRset</span><span class="p">(</span><span class="n">dns_rdataset</span><span class="o">.</span><span class="n">Rdataset</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A DNS RRset (named rdataset).</span>
+
+<span class="sd">    RRset inherits from Rdataset, and RRsets can be treated as</span>
+<span class="sd">    Rdatasets in most cases.  There are, however, a few notable</span>
+<span class="sd">    exceptions.  RRsets have different to_wire() and to_text() method</span>
+<span class="sd">    arguments, reflecting the fact that RRsets always have an owner</span>
+<span class="sd">    name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;deleting&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span>
+                 <span class="n">deleting</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new RRset.&quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">RRset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deleting</span> <span class="o">=</span> <span class="n">deleting</span>
+
+    <span class="k">def</span> <span class="nf">_clone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">RRset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_clone</span><span class="p">()</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">deleting</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deleting</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covers</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">ctext</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ctext</span> <span class="o">=</span> <span class="s">&#39;(&#39;</span> <span class="o">+</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covers</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;)&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">deleting</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">dtext</span> <span class="o">=</span> <span class="s">&#39; delete=&#39;</span> <span class="o">+</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">deleting</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dtext</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;DNS &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39; &#39;</span> <span class="o">+</span> \
+               <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39; &#39;</span> <span class="o">+</span> \
+               <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span><span class="p">)</span> <span class="o">+</span> <span class="n">ctext</span> <span class="o">+</span> <span class="n">dtext</span> <span class="o">+</span> <span class="s">&#39; RRset&gt;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_text</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Two RRsets are equal if they have the same name and the same</span>
+<span class="sd">        rdataset</span>
+
+<span class="sd">        @rtype: bool&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">RRset</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">RRset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RRset.match"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.RRset.match">[docs]</a>    <span class="k">def</span> <span class="nf">match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">,</span> <span class="n">deleting</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns True if this rrset matches the specified class, type,</span>
+<span class="sd">        covers, and deletion state.&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">super</span><span class="p">(</span><span class="n">RRset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">deleting</span> <span class="o">!=</span> <span class="n">deleting</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="RRset.to_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.RRset.to_text">[docs]</a>    <span class="k">def</span> <span class="nf">to_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert the RRset into DNS master file format.</span>
+
+<span class="sd">        @see: L{dns_name.Name.choose_relativity} for more information</span>
+<span class="sd">        on how I{origin} and I{relativize} determine the way names</span>
+<span class="sd">        are emitted.</span>
+
+<span class="sd">        Any additional keyword arguments are passed on to the rdata</span>
+<span class="sd">        to_text() method.</span>
+
+<span class="sd">        @param origin: The origin for relative names, or None.</span>
+<span class="sd">        @type origin: dns_name.Name object</span>
+<span class="sd">        @param relativize: True if names should names be relativized</span>
+<span class="sd">        @type relativize: bool&quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">RRset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">relativize</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">deleting</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RRset.to_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.RRset.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">compress</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert the RRset to wire format.&quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">RRset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">compress</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">deleting</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RRset.to_rdataset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.RRset.to_rdataset">[docs]</a>    <span class="k">def</span> <span class="nf">to_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert an RRset into an Rdataset.</span>
+
+<span class="sd">        @rtype: dns_rdataset.Rdataset object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">dns_rdataset</span><span class="o">.</span><span class="n">from_rdata_list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ttl</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+</div></div>
+<div class="viewcode-block" id="from_text_list"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.from_text_list">[docs]</a><span class="k">def</span> <span class="nf">from_text_list</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">text_rdatas</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create an RRset with the specified name, TTL, class, and type, and with</span>
+<span class="sd">    the specified list of rdatas in text format.</span>
+
+<span class="sd">    @rtype: dns_rrset.RRset object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">rdclass</span> <span class="o">=</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">RRset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+    <span class="n">r</span><span class="o">.</span><span class="n">update_ttl</span><span class="p">(</span><span class="n">ttl</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">text_rdatas</span><span class="p">:</span>
+        <span class="n">rd</span> <span class="o">=</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">rdtype</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rd</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">r</span>
+</div>
+<div class="viewcode-block" id="from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.from_text">[docs]</a><span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="o">*</span><span class="n">text_rdatas</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create an RRset with the specified name, TTL, class, and type and with</span>
+<span class="sd">    the specified rdatas in text format.</span>
+
+<span class="sd">    @rtype: dns_rrset.RRset object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">from_text_list</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">text_rdatas</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="from_rdata_list"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.from_rdata_list">[docs]</a><span class="k">def</span> <span class="nf">from_rdata_list</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rdatas</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create an RRset with the specified name and TTL, and with</span>
+<span class="sd">    the specified list of rdata objects.</span>
+
+<span class="sd">    @rtype: dns_rrset.RRset object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rdatas</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;rdata list must not be empty&quot;</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">for</span> <span class="n">rd</span> <span class="ow">in</span> <span class="n">rdatas</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">RRset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rd</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rd</span><span class="o">.</span><span class="n">rdtype</span><span class="p">)</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">update_ttl</span><span class="p">(</span><span class="n">ttl</span><span class="p">)</span>
+            <span class="n">first_time</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rd</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">r</span>
+</div>
+<div class="viewcode-block" id="from_rdata"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rrset.from_rdata">[docs]</a><span class="k">def</span> <span class="nf">from_rdata</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="o">*</span><span class="n">rdatas</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create an RRset with the specified name and TTL, and with</span>
+<span class="sd">    the specified rdata objects.</span>
+
+<span class="sd">    @rtype: dns_rrset.RRset object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">from_rdata_list</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ttl</span><span class="p">,</span> <span class="n">rdatas</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

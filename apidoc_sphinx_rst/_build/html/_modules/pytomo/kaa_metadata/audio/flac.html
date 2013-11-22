@@ -1,0 +1,217 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.audio.flac &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.audio.flac</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># flac.py - flac file parser</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: flac.py 3219 2008-03-23 18:19:28Z tack $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="c"># import kaa_metadata.audio core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="c"># See: http://flac.sourceforge.net/format.html</span>
+
+<span class="k">class</span> <span class="nc">Flac</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="o">!=</span> <span class="s">&#39;fLaC&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="c"># http://wiki.xiph.org/index.php/MIME_Types_and_File_Extensions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;application/flac&#39;</span>
+
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">blockheader</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I&#39;</span><span class="p">,</span><span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))</span>
+            <span class="n">lastblock</span> <span class="o">=</span> <span class="p">(</span><span class="n">blockheader</span> <span class="o">&gt;&gt;</span> <span class="mi">31</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">1</span>
+            <span class="nb">type</span> <span class="o">=</span> <span class="p">(</span><span class="n">blockheader</span> <span class="o">&gt;&gt;</span> <span class="mi">24</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x7F</span>
+            <span class="n">numbytes</span> <span class="o">=</span> <span class="n">blockheader</span> <span class="o">&amp;</span> <span class="mh">0xFFFFFF</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Last?: </span><span class="si">%d</span><span class="s">, NumBytes: </span><span class="si">%d</span><span class="s">, Type: </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> \
+                      <span class="p">(</span><span class="n">lastblock</span><span class="p">,</span> <span class="n">numbytes</span><span class="p">,</span> <span class="nb">type</span><span class="p">))</span>
+            <span class="c"># Read this blocks the data</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">numbytes</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># STREAMINFO</span>
+                <span class="n">bits</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;L&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="mi">10</span><span class="p">:</span><span class="mi">14</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&gt;&gt;</span> <span class="mi">12</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFFFFF</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&gt;&gt;</span> <span class="mi">9</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">7</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">samplebits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x1F</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">md5</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">18</span><span class="p">:</span><span class="mi">34</span><span class="p">]</span>
+                <span class="c"># Number of samples is bits 108-144 in block.</span>
+                <span class="n">samples</span> <span class="o">=</span> <span class="p">((</span><span class="nb">ord</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">13</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x0f</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">32</span><span class="p">)</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;L&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="mi">14</span><span class="p">:</span><span class="mi">18</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span>
+            <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c"># PADDING</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="c"># APPLICATION</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="c"># SEEKTABLE</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="c"># VORBIS_COMMENT</span>
+                <span class="n">skip</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vendor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extractHeaderString</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">num</span><span class="p">,</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">skip</span><span class="p">:</span><span class="n">skip</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">skip</span><span class="o">+</span><span class="mi">4</span>
+                <span class="n">header</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+                    <span class="p">(</span><span class="n">nextlen</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extractHeaderString</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">start</span><span class="p">:])</span>
+                    <span class="n">start</span> <span class="o">+=</span> <span class="n">nextlen</span>
+                    <span class="n">a</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;=&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">)</span>
+                    <span class="n">header</span><span class="p">[(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span><span class="o">=</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="nb">map</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s">u&#39;TITLE&#39;</span><span class="p">:</span> <span class="s">&#39;title&#39;</span><span class="p">,</span> <span class="s">u&#39;ALBUM&#39;</span><span class="p">:</span> <span class="s">&#39;album&#39;</span><span class="p">,</span> <span class="s">u&#39;ARTIST&#39;</span><span class="p">:</span> <span class="s">&#39;artist&#39;</span><span class="p">,</span> <span class="s">u&#39;COMMENT&#39;</span><span class="p">:</span> <span class="s">&#39;comment&#39;</span><span class="p">,</span>
+                    <span class="s">u&#39;ENCODER&#39;</span><span class="p">:</span> <span class="s">&#39;encoder&#39;</span><span class="p">,</span> <span class="s">u&#39;TRACKNUMBER&#39;</span><span class="p">:</span> <span class="s">&#39;trackno&#39;</span><span class="p">,</span> <span class="s">u&#39;TRACKTOTAL&#39;</span><span class="p">:</span> <span class="s">&#39;trackof&#39;</span><span class="p">,</span>
+                    <span class="c"># FIXME: try to convert userdate to timestamp</span>
+                    <span class="s">u&#39;DATE&#39;</span><span class="p">:</span> <span class="s">&#39;userdate&#39;</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">attr</span> <span class="ow">in</span> <span class="nb">map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">header</span><span class="p">:</span>
+                        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">header</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;VORBISCOMMENT&#39;</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+                <span class="c"># CUESHEET</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># UNKNOWN TYPE</span>
+                <span class="k">pass</span>
+            <span class="k">if</span> <span class="n">lastblock</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span> <span class="nf">_extractHeaderString</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">header</span><span class="p">):</span>
+        <span class="nb">len</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span> <span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">header</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">len</span><span class="o">+</span><span class="mi">4</span><span class="p">,</span><span class="nb">unicode</span><span class="p">(</span><span class="n">header</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">4</span><span class="o">+</span><span class="nb">len</span><span class="p">],</span> <span class="s">&#39;utf-8&#39;</span><span class="p">))</span>
+
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">Flac</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

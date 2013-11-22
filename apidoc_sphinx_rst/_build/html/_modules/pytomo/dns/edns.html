@@ -1,0 +1,236 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.edns &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.edns</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2009 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;EDNS Options&quot;&quot;&quot;</span>
+
+<span class="n">NSID</span> <span class="o">=</span> <span class="mi">3</span>
+
+<div class="viewcode-block" id="Option"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.Option">[docs]</a><span class="k">class</span> <span class="nc">Option</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for all EDNS option types.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">otype</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize an option.</span>
+<span class="sd">        @param rdtype: The rdata type</span>
+<span class="sd">        @type rdtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">otype</span> <span class="o">=</span> <span class="n">otype</span>
+
+<div class="viewcode-block" id="Option.to_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.Option.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert an option to wire format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</div>
+<div class="viewcode-block" id="Option.from_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.Option.from_wire">[docs]</a>    <span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">otype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">olen</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build an EDNS option object from wire format</span>
+
+<span class="sd">        @param otype: The option type</span>
+<span class="sd">        @type otype: int</span>
+<span class="sd">        @param wire: The wire-format message</span>
+<span class="sd">        @type wire: string</span>
+<span class="sd">        @param current: The offet in wire of the beginning of the rdata.</span>
+<span class="sd">        @type current: int</span>
+<span class="sd">        @param olen: The length of the wire-format option data</span>
+<span class="sd">        @type olen: int</span>
+<span class="sd">        @rtype: dns_ends.Option instance&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</div>
+    <span class="n">from_wire</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_wire</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_cmp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compare an ENDS option with another option of the same type.</span>
+<span class="sd">        Return &lt; 0 if self &lt; other, 0 if self == other, and &gt; 0 if self &gt; other.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Option</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">otype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">otype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Option</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">otype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">otype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Option</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">otype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">otype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__le__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Option</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">otype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">otype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__ge__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Option</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">otype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">otype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__gt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Option</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">otype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">otype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+</div>
+<div class="viewcode-block" id="GenericOption"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.GenericOption">[docs]</a><span class="k">class</span> <span class="nc">GenericOption</span><span class="p">(</span><span class="n">Option</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate Rdata Class</span>
+
+<span class="sd">    This class is used for EDNS option types for which we have no better</span>
+<span class="sd">    implementation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">otype</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GenericOption</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">otype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+
+<div class="viewcode-block" id="GenericOption.to_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.GenericOption.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GenericOption.from_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.GenericOption.from_wire">[docs]</a>    <span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">otype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">olen</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">otype</span><span class="p">,</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span> <span class="p">:</span> <span class="n">current</span> <span class="o">+</span> <span class="n">olen</span><span class="p">])</span>
+</div>
+    <span class="n">from_wire</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_wire</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_cmp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+	<span class="k">return</span> <span class="nb">cmp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</div>
+<span class="n">_type_to_class</span> <span class="o">=</span> <span class="p">{</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="get_option_class"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.get_option_class">[docs]</a><span class="k">def</span> <span class="nf">get_option_class</span><span class="p">(</span><span class="n">otype</span><span class="p">):</span>
+    <span class="n">cls</span> <span class="o">=</span> <span class="n">_type_to_class</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">otype</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cls</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">cls</span> <span class="o">=</span> <span class="n">GenericOption</span>
+    <span class="k">return</span> <span class="n">cls</span>
+</div>
+<div class="viewcode-block" id="option_from_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.edns.option_from_wire">[docs]</a><span class="k">def</span> <span class="nf">option_from_wire</span><span class="p">(</span><span class="n">otype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">olen</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build an EDNS option object from wire format</span>
+
+<span class="sd">    @param otype: The option type</span>
+<span class="sd">    @type otype: int</span>
+<span class="sd">    @param wire: The wire-format message</span>
+<span class="sd">    @type wire: string</span>
+<span class="sd">    @param current: The offet in wire of the beginning of the rdata.</span>
+<span class="sd">    @type current: int</span>
+<span class="sd">    @param olen: The length of the wire-format option data</span>
+<span class="sd">    @type olen: int</span>
+<span class="sd">    @rtype: dns_ends.Option instance&quot;&quot;&quot;</span>
+
+    <span class="n">cls</span> <span class="o">=</span> <span class="n">get_option_class</span><span class="p">(</span><span class="n">otype</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cls</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">otype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">olen</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,406 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.audio.mp3 &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.audio.mp3</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># mp3.py - mp3 file parser using eyeD3</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: mp3.py 4042 2009-05-22 15:37:48Z tack $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="c">#import sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="c"># import kaa_metadata.audio core</span>
+<span class="kn">from</span> <span class="nn">..strutils</span> <span class="kn">import</span> <span class="n">str_to_unicode</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">ID3</span>
+
+<span class="c"># eyeD3 imports</span>
+<span class="kn">from</span> <span class="nn">.eyeD3</span> <span class="kn">import</span> <span class="n">tag</span> <span class="k">as</span> <span class="n">eyeD3_tag</span>
+<span class="kn">from</span> <span class="nn">.eyeD3</span> <span class="kn">import</span> <span class="n">frames</span> <span class="k">as</span> <span class="n">eyeD3_frames</span>
+
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="c"># http://www.omniscia.org/~vivake/python/MP3Info.py</span>
+
+<span class="n">MP3_INFO_TABLE</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&quot;LINK&quot;</span><span class="p">:</span> <span class="s">&quot;link&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TALB&quot;</span><span class="p">:</span> <span class="s">&quot;album&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TCOM&quot;</span><span class="p">:</span> <span class="s">&quot;composer&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TCOP&quot;</span><span class="p">:</span> <span class="s">&quot;copyright&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TDOR&quot;</span><span class="p">:</span> <span class="s">&quot;release&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TYER&quot;</span><span class="p">:</span> <span class="s">&quot;userdate&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TEXT&quot;</span><span class="p">:</span> <span class="s">&quot;text&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TIT2&quot;</span><span class="p">:</span> <span class="s">&quot;title&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TLAN&quot;</span><span class="p">:</span> <span class="s">&quot;language&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TLEN&quot;</span><span class="p">:</span> <span class="s">&quot;length&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TMED&quot;</span><span class="p">:</span> <span class="s">&quot;media_type&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TPE1&quot;</span><span class="p">:</span> <span class="s">&quot;artist&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TPE2&quot;</span><span class="p">:</span> <span class="s">&quot;artist&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TRCK&quot;</span><span class="p">:</span> <span class="s">&quot;trackno&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TPOS&quot;</span><span class="p">:</span> <span class="s">&quot;discs&quot;</span><span class="p">,</span>
+                   <span class="s">&quot;TPUB&quot;</span><span class="p">:</span> <span class="s">&quot;publisher&quot;</span><span class="p">}</span>
+
+<span class="n">_bitrates</span> <span class="o">=</span> <span class="p">[</span>
+   <span class="p">[</span> <span class="c"># MPEG-2 &amp; 2.5</span>
+   <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">48</span><span class="p">,</span><span class="mi">56</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span><span class="mi">112</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">144</span><span class="p">,</span><span class="mi">160</span><span class="p">,</span><span class="mi">176</span><span class="p">,</span><span class="mi">192</span><span class="p">,</span><span class="mi">224</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="bp">None</span><span class="p">],</span> <span class="c"># Layer 1</span>
+   <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span><span class="mi">16</span><span class="p">,</span><span class="mi">24</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">48</span><span class="p">,</span> <span class="mi">56</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span><span class="mi">112</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">144</span><span class="p">,</span><span class="mi">160</span><span class="p">,</span><span class="bp">None</span><span class="p">],</span> <span class="c"># Layer 2</span>
+   <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span><span class="mi">16</span><span class="p">,</span><span class="mi">24</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">48</span><span class="p">,</span> <span class="mi">56</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span><span class="mi">112</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">144</span><span class="p">,</span><span class="mi">160</span><span class="p">,</span><span class="bp">None</span><span class="p">]</span>  <span class="c"># Layer 3</span>
+   <span class="p">],</span>
+
+   <span class="p">[</span> <span class="c"># MPEG-1</span>
+   <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">64</span><span class="p">,</span><span class="mi">96</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">160</span><span class="p">,</span><span class="mi">192</span><span class="p">,</span><span class="mi">224</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">288</span><span class="p">,</span><span class="mi">320</span><span class="p">,</span><span class="mi">352</span><span class="p">,</span><span class="mi">384</span><span class="p">,</span><span class="mi">416</span><span class="p">,</span><span class="mi">448</span><span class="p">,</span><span class="bp">None</span><span class="p">],</span> <span class="c"># Layer 1</span>
+   <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">48</span><span class="p">,</span><span class="mi">56</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span><span class="mi">112</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">160</span><span class="p">,</span><span class="mi">192</span><span class="p">,</span><span class="mi">224</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">320</span><span class="p">,</span><span class="mi">384</span><span class="p">,</span><span class="bp">None</span><span class="p">],</span> <span class="c"># Layer 2</span>
+   <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">40</span><span class="p">,</span><span class="mi">48</span><span class="p">,</span> <span class="mi">56</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span><span class="mi">112</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">160</span><span class="p">,</span><span class="mi">192</span><span class="p">,</span><span class="mi">224</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">320</span><span class="p">,</span><span class="bp">None</span><span class="p">]</span>  <span class="c"># Layer 3</span>
+   <span class="p">]</span>
+   <span class="p">]</span>
+
+<span class="n">_samplerates</span> <span class="o">=</span> <span class="p">[</span>
+   <span class="p">[</span> <span class="mi">11025</span><span class="p">,</span> <span class="mi">12000</span><span class="p">,</span>  <span class="mi">8000</span><span class="p">,</span> <span class="bp">None</span><span class="p">],</span> <span class="c"># MPEG-2.5</span>
+   <span class="p">[</span>  <span class="bp">None</span><span class="p">,</span>  <span class="bp">None</span><span class="p">,</span>  <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">],</span> <span class="c"># reserved</span>
+   <span class="p">[</span> <span class="mi">22050</span><span class="p">,</span> <span class="mi">24000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">,</span> <span class="bp">None</span><span class="p">],</span> <span class="c"># MPEG-2</span>
+   <span class="p">[</span> <span class="mi">44100</span><span class="p">,</span> <span class="mi">48000</span><span class="p">,</span> <span class="mi">32000</span><span class="p">,</span> <span class="bp">None</span><span class="p">],</span> <span class="c"># MPEG-1</span>
+   <span class="p">]</span>
+
+<span class="n">_modes</span> <span class="o">=</span> <span class="p">[</span> <span class="s">&quot;stereo&quot;</span><span class="p">,</span> <span class="s">&quot;joint stereo&quot;</span><span class="p">,</span> <span class="s">&quot;dual channel&quot;</span><span class="p">,</span> <span class="s">&quot;mono&quot;</span> <span class="p">]</span>
+
+<span class="n">_MP3_HEADER_SEEK_LIMIT</span> <span class="o">=</span> <span class="mi">4096</span>
+
+<span class="k">class</span> <span class="nc">MP3</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="p">):</span>
+
+    <span class="n">fileName</span>       <span class="o">=</span> <span class="nb">str</span><span class="p">();</span>
+    <span class="n">fileSize</span>       <span class="o">=</span> <span class="nb">int</span><span class="p">();</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">tagVersion</span> <span class="o">=</span> <span class="n">eyeD3_tag</span><span class="o">.</span><span class="n">ID3_ANY_VERSION</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fileName</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="mh">0x0055</span> <span class="c"># fourcc code of mp3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;audio/mpeg&#39;</span>
+
+        <span class="c">#if not eyeD3_tag.isMp3File(file.name):</span>
+        <span class="c">#   raise core.ParseError()</span>
+
+        <span class="n">id3</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">id3</span> <span class="o">=</span> <span class="n">eyeD3_tag</span><span class="o">.</span><span class="n">Mp3AudioFile</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">eyeD3_tag</span><span class="o">.</span><span class="n">InvalidAudioFormatException</span><span class="p">:</span>
+            <span class="c"># File is not an MP3</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">eyeD3_tag</span><span class="o">.</span><span class="n">TagException</span><span class="p">:</span>
+            <span class="c"># The MP3 tag decoder crashed, assume the file is still</span>
+            <span class="c"># MP3 and try to play it anyway</span>
+            <span class="k">if</span> <span class="n">log</span><span class="o">.</span><span class="n">level</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;mp3 tag parsing </span><span class="si">%s</span><span class="s"> failed!&#39;</span> <span class="o">%</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="c"># The MP3 tag decoder crashed, assume the file is still</span>
+            <span class="c"># MP3 and try to play it anyway</span>
+            <span class="k">if</span> <span class="n">log</span><span class="o">.</span><span class="n">level</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;mp3 tag parsing </span><span class="si">%s</span><span class="s"> failed!&#39;</span> <span class="o">%</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">id3</span><span class="p">:</span>
+            <span class="c"># let&#39;s take a look at the header</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;ID3&#39;</span><span class="p">:</span>
+                <span class="c"># no id3 tag header, not good</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">r&#39;0*\xFF\xFB\xB0\x04$&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+                    <span class="c"># again, not good</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">r&#39;0*\xFF\xFA\xB0\x04$&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+                        <span class="c"># that&#39;s it, it is no mp3 at all</span>
+                        <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">id3</span> <span class="ow">and</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
+
+                <span class="c"># Grip unicode bug workaround: Grip stores text data as UTF-8</span>
+                <span class="c"># and flags it as latin-1.  This workaround tries to decode</span>
+                <span class="c"># these strings as utf-8 instead.</span>
+                <span class="c"># http://sourceforge.net/tracker/index.php?func=detail&amp;aid=1196919&amp;group_id=3714&amp;atid=103714</span>
+                <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="s">&#39;COMM&#39;</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="s">&quot;created by grip&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">comment</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="k">continue</span>
+                    <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s">&quot;text&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">):</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">frame</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;latin-1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+                            <span class="k">except</span> <span class="ne">UnicodeError</span><span class="p">:</span>
+                                <span class="k">pass</span>
+
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">MP3_INFO_TABLE</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="n">var</span><span class="p">,</span><span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="s">&#39;APIC&#39;</span><span class="p">]:</span>
+                    <span class="n">pic</span> <span class="o">=</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="s">&#39;APIC&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">pic</span><span class="o">.</span><span class="n">imageData</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span> <span class="o">=</span> <span class="n">pic</span><span class="o">.</span><span class="n">imageData</span>
+                <span class="k">if</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">getYear</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">userdate</span> <span class="o">=</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">getYear</span><span class="p">()</span>
+                <span class="n">tab</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">eyeD3_frames</span><span class="o">.</span><span class="n">TextFrame</span><span class="p">:</span>
+                        <span class="n">tab</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">text</span>
+                    <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">eyeD3_frames</span><span class="o">.</span><span class="n">UserTextFrame</span><span class="p">:</span>
+                        <span class="c">#userTextFrames : debug: id  starts with _</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="o">+</span><span class="n">f</span><span class="o">.</span><span class="n">description</span><span class="p">,</span><span class="n">f</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                        <span class="n">tab</span><span class="p">[</span><span class="s">&#39;_&#39;</span><span class="o">+</span><span class="n">f</span><span class="o">.</span><span class="n">description</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">text</span>
+                    <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">eyeD3_frames</span><span class="o">.</span><span class="n">DateFrame</span><span class="p">:</span>
+                        <span class="n">tab</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">date_str</span>
+                    <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">eyeD3_frames</span><span class="o">.</span><span class="n">CommentFrame</span><span class="p">:</span>
+                        <span class="n">tab</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">comment</span>
+                    <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">eyeD3_frames</span><span class="o">.</span><span class="n">URLFrame</span><span class="p">:</span>
+                        <span class="n">tab</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">url</span>
+                    <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">eyeD3_frames</span><span class="o">.</span><span class="n">UserURLFrame</span><span class="p">:</span>
+                        <span class="n">tab</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">url</span>
+                    <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">eyeD3_frames</span><span class="o">.</span><span class="n">ImageFrame</span><span class="p">:</span>
+                        <span class="n">tab</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">__class__</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;id3v2&#39;</span><span class="p">,</span> <span class="n">tab</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="s">&#39;TCON&#39;</span><span class="p">]:</span>
+                    <span class="n">genre</span> <span class="o">=</span> <span class="bp">None</span>
+                    <span class="n">tcon</span> <span class="o">=</span> <span class="n">id3</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="s">&#39;TCON&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span>
+                    <span class="c"># TODO: could handle id3v2 genre refinements.</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c"># Assume integer.</span>
+                        <span class="n">genre</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tcon</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="c"># Nope, maybe it&#39;s in &#39;(N)&#39; format.</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">genre</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tcon</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">tcon</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;)&#39;</span><span class="p">)])</span>
+                        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                            <span class="c"># Nope.  Treat as a string.</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">genre</span> <span class="o">=</span> <span class="n">str_to_unicode</span><span class="p">(</span><span class="n">tcon</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">genre</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">genre</span> <span class="o">=</span> <span class="n">ID3</span><span class="o">.</span><span class="n">GENRE_LIST</span><span class="p">[</span><span class="n">genre</span><span class="p">]</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="c"># Numeric genre specified but not one of the known genres,</span>
+                            <span class="c"># use &#39;Unknown&#39; as per ID3v1.</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">genre</span> <span class="o">=</span> <span class="s">u&#39;Unknown&#39;</span>
+
+                <span class="c"># and some tools store it as trackno/trackof in TRCK</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">trackof</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trackno</span> <span class="ow">and</span> \
+                       <span class="bp">self</span><span class="o">.</span><span class="n">trackno</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trackof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trackno</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">trackno</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trackno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trackno</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">trackno</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">id3</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">id3</span><span class="o">.</span><span class="n">getPlayTime</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">log</span><span class="o">.</span><span class="n">level</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;parse error&#39;</span><span class="p">)</span>
+
+        <span class="n">offset</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_header</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">offset</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">header</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parse_header</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">id3</span><span class="p">:</span>
+            <span class="c"># Note: information about variable bitrate or not should</span>
+            <span class="c"># be handled somehow.</span>
+            <span class="p">(</span><span class="n">vbr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitrate</span><span class="p">)</span> <span class="o">=</span> <span class="n">id3</span><span class="o">.</span><span class="n">getBitRate</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_find_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">amount_read</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c"># see if we get lucky with the first four bytes</span>
+        <span class="n">amt</span> <span class="o">=</span> <span class="mi">4</span>
+
+        <span class="k">while</span> <span class="n">amount_read</span> <span class="o">&lt;</span> <span class="n">_MP3_HEADER_SEEK_LIMIT</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">amt</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">amt</span><span class="p">:</span>
+                <span class="c"># awfully short file. just give up.</span>
+                <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">None</span>
+
+            <span class="n">amount_read</span> <span class="o">=</span> <span class="n">amount_read</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+
+            <span class="c"># on the next read, grab a lot more</span>
+            <span class="n">amt</span> <span class="o">=</span> <span class="mi">500</span>
+
+            <span class="c"># look for the sync byte</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="nb">chr</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">offset</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c"># looks good, make sure we have the next 3 bytes after this</span>
+            <span class="c"># because the header is 4 bytes including sync</span>
+            <span class="k">if</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">):</span>
+                <span class="n">more</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">more</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="c"># end of file. can&#39;t find a header</span>
+                    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">None</span>
+                <span class="n">amount_read</span> <span class="o">=</span> <span class="n">amount_read</span> <span class="o">+</span> <span class="mi">4</span>
+                <span class="n">header</span> <span class="o">=</span> <span class="n">header</span> <span class="o">+</span> <span class="n">more</span>
+
+            <span class="c"># the sync flag is also in the next byte, the first 3 bits</span>
+            <span class="c"># must also be set</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">header</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;&gt;</span> <span class="mi">5</span> <span class="o">!=</span> <span class="mi">7</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c"># ok, that&#39;s it, looks like we have the header</span>
+            <span class="k">return</span> <span class="n">amount_read</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">+</span> <span class="n">offset</span><span class="p">,</span> <span class="n">header</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+
+        <span class="c"># couldn&#39;t find the header</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_parse_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">header</span><span class="p">):</span>
+        <span class="c"># http://mpgedit.org/mpgedit/mpeg_format/MP3Format.html</span>
+        <span class="nb">bytes</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">header</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">mpeg_version</span> <span class="o">=</span>    <span class="p">(</span><span class="nb">bytes</span> <span class="o">&gt;&gt;</span> <span class="mi">19</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">3</span>
+        <span class="n">layer</span> <span class="o">=</span>           <span class="p">(</span><span class="nb">bytes</span> <span class="o">&gt;&gt;</span> <span class="mi">17</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">3</span>
+        <span class="n">bitrate</span> <span class="o">=</span>         <span class="p">(</span><span class="nb">bytes</span> <span class="o">&gt;&gt;</span> <span class="mi">12</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">15</span>
+        <span class="n">samplerate</span> <span class="o">=</span>      <span class="p">(</span><span class="nb">bytes</span> <span class="o">&gt;&gt;</span> <span class="mi">10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">3</span>
+        <span class="n">mode</span> <span class="o">=</span>            <span class="p">(</span><span class="nb">bytes</span> <span class="o">&gt;&gt;</span> <span class="mi">6</span><span class="p">)</span>  <span class="o">&amp;</span> <span class="mi">3</span>
+
+        <span class="k">if</span> <span class="n">mpeg_version</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="mf">2.5</span>
+        <span class="k">elif</span> <span class="n">mpeg_version</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="n">mpeg_version</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="n">layer</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">-</span> <span class="n">layer</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bitrate</span> <span class="o">=</span> <span class="n">_bitrates</span><span class="p">[</span><span class="n">mpeg_version</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">][</span><span class="n">layer</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">bitrate</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">_samplerates</span><span class="p">[</span><span class="n">mpeg_version</span><span class="p">][</span><span class="n">samplerate</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitrate</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;mode&#39;</span><span class="p">,</span> <span class="n">_modes</span><span class="p">[</span><span class="n">mode</span><span class="p">])</span>
+
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">MP3</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

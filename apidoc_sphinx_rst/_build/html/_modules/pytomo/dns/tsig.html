@@ -1,0 +1,319 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.tsig &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.tsig</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS TSIG support.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">hmac</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="nb">hash</span> <span class="k">as</span> <span class="n">dns_hash</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+
+<div class="viewcode-block" id="BadTime"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.BadTime">[docs]</a><span class="k">class</span> <span class="nc">BadTime</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if the current time is not within the TSIG&#39;s validity time.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="BadSignature"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.BadSignature">[docs]</a><span class="k">class</span> <span class="nc">BadSignature</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if the TSIG signature fails to verify.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="PeerError"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.PeerError">[docs]</a><span class="k">class</span> <span class="nc">PeerError</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for all TSIG errors generated by the remote peer&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="PeerBadKey"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.PeerBadKey">[docs]</a><span class="k">class</span> <span class="nc">PeerBadKey</span><span class="p">(</span><span class="n">PeerError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if the peer didn&#39;t know the key we used&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="PeerBadSignature"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.PeerBadSignature">[docs]</a><span class="k">class</span> <span class="nc">PeerBadSignature</span><span class="p">(</span><span class="n">PeerError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if the peer didn&#39;t like the signature we sent&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="PeerBadTime"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.PeerBadTime">[docs]</a><span class="k">class</span> <span class="nc">PeerBadTime</span><span class="p">(</span><span class="n">PeerError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if the peer didn&#39;t like the time we sent&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="PeerBadTruncation"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.PeerBadTruncation">[docs]</a><span class="k">class</span> <span class="nc">PeerBadTruncation</span><span class="p">(</span><span class="n">PeerError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if the peer didn&#39;t like amount of truncation in the TSIG we sent&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+
+<span class="c"># TSIG Algorithms</span>
+</div>
+<span class="n">HMAC_MD5</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s">&quot;HMAC-MD5.SIG-ALG.REG.INT&quot;</span><span class="p">)</span>
+<span class="n">HMAC_SHA1</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s">&quot;hmac-sha1&quot;</span><span class="p">)</span>
+<span class="n">HMAC_SHA224</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s">&quot;hmac-sha224&quot;</span><span class="p">)</span>
+<span class="n">HMAC_SHA256</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s">&quot;hmac-sha256&quot;</span><span class="p">)</span>
+<span class="n">HMAC_SHA384</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s">&quot;hmac-sha384&quot;</span><span class="p">)</span>
+<span class="n">HMAC_SHA512</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s">&quot;hmac-sha512&quot;</span><span class="p">)</span>
+
+<span class="n">default_algorithm</span> <span class="o">=</span> <span class="n">HMAC_MD5</span>
+
+<span class="n">BADSIG</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">BADKEY</span> <span class="o">=</span> <span class="mi">17</span>
+<span class="n">BADTIME</span> <span class="o">=</span> <span class="mi">18</span>
+<span class="n">BADTRUNC</span> <span class="o">=</span> <span class="mi">22</span>
+
+<div class="viewcode-block" id="sign"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.sign">[docs]</a><span class="k">def</span> <span class="nf">sign</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">fudge</span><span class="p">,</span> <span class="n">original_id</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span>
+         <span class="n">other_data</span><span class="p">,</span> <span class="n">request_mac</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">multi</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+         <span class="n">algorithm</span><span class="o">=</span><span class="n">default_algorithm</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return a (tsig_rdata, mac, ctx) tuple containing the HMAC TSIG rdata</span>
+<span class="sd">    for the input parameters, the HMAC MAC calculated by applying the</span>
+<span class="sd">    TSIG signature algorithm, and the TSIG digest context.</span>
+<span class="sd">    @rtype: (string, string, hmac.HMAC object)</span>
+<span class="sd">    @raises ValueError: I{other_data} is too long</span>
+<span class="sd">    @raises NotImplementedError: I{algorithm} is not supported</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="p">(</span><span class="n">algorithm_name</span><span class="p">,</span> <span class="n">digestmod</span><span class="p">)</span> <span class="o">=</span> <span class="n">get_algorithm</span><span class="p">(</span><span class="n">algorithm</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+        <span class="n">ctx</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">secret</span><span class="p">,</span> <span class="n">digestmod</span><span class="o">=</span><span class="n">digestmod</span><span class="p">)</span>
+        <span class="n">ml</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">request_mac</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ml</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="n">ml</span><span class="p">))</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">request_mac</span><span class="p">)</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="n">original_id</span><span class="p">)</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">wire</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+    <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">keyname</span><span class="o">.</span><span class="n">to_digestable</span><span class="p">())</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">ANY</span><span class="p">))</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!I&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">long_time</span> <span class="o">=</span> <span class="n">time</span> <span class="o">+</span> <span class="il">0L</span>
+    <span class="n">upper_time</span> <span class="o">=</span> <span class="p">(</span><span class="n">long_time</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xffff</span><span class="n">L</span>
+    <span class="n">lower_time</span> <span class="o">=</span> <span class="n">long_time</span> <span class="o">&amp;</span> <span class="mh">0xffffffff</span><span class="n">L</span>
+    <span class="n">time_mac</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HIH&#39;</span><span class="p">,</span> <span class="n">upper_time</span><span class="p">,</span> <span class="n">lower_time</span><span class="p">,</span> <span class="n">fudge</span><span class="p">)</span>
+    <span class="n">pre_mac</span> <span class="o">=</span> <span class="n">algorithm_name</span> <span class="o">+</span> <span class="n">time_mac</span>
+    <span class="n">ol</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other_data</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ol</span> <span class="o">&gt;</span> <span class="mi">65535</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;TSIG Other Data is &gt; 65535 bytes&#39;</span><span class="p">)</span>
+    <span class="n">post_mac</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HH&#39;</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">ol</span><span class="p">)</span> <span class="o">+</span> <span class="n">other_data</span>
+    <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pre_mac</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">post_mac</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">time_mac</span><span class="p">)</span>
+    <span class="n">mac</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+    <span class="n">mpack</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">mac</span><span class="p">))</span>
+    <span class="n">tsig_rdata</span> <span class="o">=</span> <span class="n">pre_mac</span> <span class="o">+</span> <span class="n">mpack</span> <span class="o">+</span> <span class="n">mac</span> <span class="o">+</span> <span class="nb">id</span> <span class="o">+</span> <span class="n">post_mac</span>
+    <span class="k">if</span> <span class="n">multi</span><span class="p">:</span>
+        <span class="n">ctx</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">secret</span><span class="p">)</span>
+        <span class="n">ml</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mac</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="n">ml</span><span class="p">))</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">mac</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ctx</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">tsig_rdata</span><span class="p">,</span> <span class="n">mac</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="hmac_md5"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.hmac_md5">[docs]</a><span class="k">def</span> <span class="nf">hmac_md5</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">fudge</span><span class="p">,</span> <span class="n">original_id</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span>
+             <span class="n">other_data</span><span class="p">,</span> <span class="n">request_mac</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">multi</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+             <span class="n">algorithm</span><span class="o">=</span><span class="n">default_algorithm</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">sign</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">fudge</span><span class="p">,</span> <span class="n">original_id</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span>
+                <span class="n">other_data</span><span class="p">,</span> <span class="n">request_mac</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">multi</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">algorithm</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="validate"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.validate">[docs]</a><span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">now</span><span class="p">,</span> <span class="n">request_mac</span><span class="p">,</span> <span class="n">tsig_start</span><span class="p">,</span> <span class="n">tsig_rdata</span><span class="p">,</span>
+             <span class="n">tsig_rdlen</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">multi</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validate the specified TSIG rdata against the other input parameters.</span>
+
+<span class="sd">    @raises FormError: The TSIG is badly formed.</span>
+<span class="sd">    @raises BadTime: There is too much time skew between the client and the</span>
+<span class="sd">    server.</span>
+<span class="sd">    @raises BadSignature: The TSIG signature did not validate</span>
+<span class="sd">    @rtype: hmac.HMAC object&quot;&quot;&quot;</span>
+
+    <span class="p">(</span><span class="n">adcount</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">wire</span><span class="p">[</span><span class="mi">10</span><span class="p">:</span><span class="mi">12</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">adcount</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span>
+    <span class="n">adcount</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">new_wire</span> <span class="o">=</span> <span class="n">wire</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">10</span><span class="p">]</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">adcount</span><span class="p">)</span> <span class="o">+</span> <span class="n">wire</span><span class="p">[</span><span class="mi">12</span><span class="p">:</span><span class="n">tsig_start</span><span class="p">]</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">tsig_rdata</span>
+    <span class="p">(</span><span class="n">aname</span><span class="p">,</span> <span class="n">used</span><span class="p">)</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">current</span> <span class="o">+</span> <span class="n">used</span>
+    <span class="p">(</span><span class="n">upper_time</span><span class="p">,</span> <span class="n">lower_time</span><span class="p">,</span> <span class="n">fudge</span><span class="p">,</span> <span class="n">mac_size</span><span class="p">)</span> <span class="o">=</span> \
+                 <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!HIHH&quot;</span><span class="p">,</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span><span class="p">:</span><span class="n">current</span> <span class="o">+</span> <span class="mi">10</span><span class="p">])</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="p">((</span><span class="n">upper_time</span> <span class="o">+</span> <span class="il">0L</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">32</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">lower_time</span> <span class="o">+</span> <span class="il">0L</span><span class="p">)</span>
+    <span class="n">current</span> <span class="o">+=</span> <span class="mi">10</span>
+    <span class="n">mac</span> <span class="o">=</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span><span class="p">:</span><span class="n">current</span> <span class="o">+</span> <span class="n">mac_size</span><span class="p">]</span>
+    <span class="n">current</span> <span class="o">+=</span> <span class="n">mac_size</span>
+    <span class="p">(</span><span class="n">original_id</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">other_size</span><span class="p">)</span> <span class="o">=</span> \
+                  <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!HHH&quot;</span><span class="p">,</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span><span class="p">:</span><span class="n">current</span> <span class="o">+</span> <span class="mi">6</span><span class="p">])</span>
+    <span class="n">current</span> <span class="o">+=</span> <span class="mi">6</span>
+    <span class="n">other_data</span> <span class="o">=</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span><span class="p">:</span><span class="n">current</span> <span class="o">+</span> <span class="n">other_size</span><span class="p">]</span>
+    <span class="n">current</span> <span class="o">+=</span> <span class="n">other_size</span>
+    <span class="k">if</span> <span class="n">current</span> <span class="o">!=</span> <span class="n">tsig_rdata</span> <span class="o">+</span> <span class="n">tsig_rdlen</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span>
+    <span class="k">if</span> <span class="n">error</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">error</span> <span class="o">==</span> <span class="n">BADSIG</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PeerBadSignature</span>
+        <span class="k">elif</span> <span class="n">error</span> <span class="o">==</span> <span class="n">BADKEY</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PeerBadKey</span>
+        <span class="k">elif</span> <span class="n">error</span> <span class="o">==</span> <span class="n">BADTIME</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PeerBadTime</span>
+        <span class="k">elif</span> <span class="n">error</span> <span class="o">==</span> <span class="n">BADTRUNC</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PeerBadTruncation</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PeerError</span><span class="p">(</span><span class="s">&#39;unknown TSIG error code </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">error</span><span class="p">)</span>
+    <span class="n">time_low</span> <span class="o">=</span> <span class="n">time</span> <span class="o">-</span> <span class="n">fudge</span>
+    <span class="n">time_high</span> <span class="o">=</span> <span class="n">time</span> <span class="o">+</span> <span class="n">fudge</span>
+    <span class="k">if</span> <span class="n">now</span> <span class="o">&lt;</span> <span class="n">time_low</span> <span class="ow">or</span> <span class="n">now</span> <span class="o">&gt;</span> <span class="n">time_high</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BadTime</span>
+    <span class="p">(</span><span class="n">junk</span><span class="p">,</span> <span class="n">our_mac</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span> <span class="o">=</span> <span class="n">sign</span><span class="p">(</span><span class="n">new_wire</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">fudge</span><span class="p">,</span>
+                                <span class="n">original_id</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">other_data</span><span class="p">,</span>
+                                <span class="n">request_mac</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">multi</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">aname</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">our_mac</span> <span class="o">!=</span> <span class="n">mac</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">BadSignature</span>
+    <span class="k">return</span> <span class="n">ctx</span>
+</div>
+<span class="n">_hashes</span> <span class="o">=</span> <span class="bp">None</span>
+
+<span class="k">def</span> <span class="nf">_maybe_add_hash</span><span class="p">(</span><span class="n">tsig_alg</span><span class="p">,</span> <span class="n">hash_alg</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">_hashes</span><span class="p">[</span><span class="n">tsig_alg</span><span class="p">]</span> <span class="o">=</span> <span class="n">dns_hash</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hash_alg</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">_setup_hashes</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">_hashes</span>
+    <span class="n">_hashes</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">_maybe_add_hash</span><span class="p">(</span><span class="n">HMAC_SHA224</span><span class="p">,</span> <span class="s">&#39;SHA224&#39;</span><span class="p">)</span>
+    <span class="n">_maybe_add_hash</span><span class="p">(</span><span class="n">HMAC_SHA256</span><span class="p">,</span> <span class="s">&#39;SHA256&#39;</span><span class="p">)</span>
+    <span class="n">_maybe_add_hash</span><span class="p">(</span><span class="n">HMAC_SHA384</span><span class="p">,</span> <span class="s">&#39;SHA384&#39;</span><span class="p">)</span>
+    <span class="n">_maybe_add_hash</span><span class="p">(</span><span class="n">HMAC_SHA512</span><span class="p">,</span> <span class="s">&#39;SHA512&#39;</span><span class="p">)</span>
+    <span class="n">_maybe_add_hash</span><span class="p">(</span><span class="n">HMAC_SHA1</span><span class="p">,</span> <span class="s">&#39;SHA1&#39;</span><span class="p">)</span>
+    <span class="n">_maybe_add_hash</span><span class="p">(</span><span class="n">HMAC_MD5</span><span class="p">,</span> <span class="s">&#39;MD5&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="get_algorithm"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.tsig.get_algorithm">[docs]</a><span class="k">def</span> <span class="nf">get_algorithm</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the wire format string and the hash module to use for the</span>
+<span class="sd">    specified TSIG algorithm</span>
+
+<span class="sd">    @rtype: (string, hash constructor)</span>
+<span class="sd">    @raises NotImplementedError: I{algorithm} is not supported</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">global</span> <span class="n">_hashes</span>
+    <span class="k">if</span> <span class="n">_hashes</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">_setup_hashes</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">algorithm</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">algorithm</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">algorithm</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">hexversion</span> <span class="o">&lt;</span> <span class="mh">0x02050200</span> <span class="ow">and</span> \
+       <span class="p">(</span><span class="n">algorithm</span> <span class="o">==</span> <span class="n">HMAC_SHA384</span> <span class="ow">or</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="n">HMAC_SHA512</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;TSIG algorithm &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">algorithm</span><span class="p">)</span> <span class="o">+</span>
+                                  <span class="s">&quot; requires Python 2.5.2 or later&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">algorithm</span><span class="o">.</span><span class="n">to_digestable</span><span class="p">(),</span> <span class="n">_hashes</span><span class="p">[</span><span class="n">algorithm</span><span class="p">])</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;TSIG algorithm &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">algorithm</span><span class="p">)</span> <span class="o">+</span>
+                                  <span class="s">&quot; is not supported&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

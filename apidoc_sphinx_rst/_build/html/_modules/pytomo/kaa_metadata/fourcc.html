@@ -1,0 +1,922 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.fourcc &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.fourcc</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">struct</span><span class="o">,</span> <span class="nn">string</span><span class="o">,</span> <span class="nn">re</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span> <span class="s">&#39;resolve&#39;</span> <span class="p">]</span>
+
+<div class="viewcode-block" id="resolve"><a class="viewcode-back" href="../../../pytomo.kaa_metadata.html#pytomo.kaa_metadata.fourcc.resolve">[docs]</a><span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="n">code</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transform a twocc or fourcc code into a name.  Returns a 2-tuple of (cc,</span>
+<span class="sd">    codec) where both are strings and cc is a string in the form &#39;0xXX&#39; if it&#39;s</span>
+<span class="sd">    a twocc, or &#39;ABCD&#39; if it&#39;s a fourcc.  If the given code is not a known</span>
+<span class="sd">    twocc or fourcc, the return value will be (None, &#39;Unknown&#39;), unless the</span>
+<span class="sd">    code is otherwise a printable string in which case it will be returned as</span>
+<span class="sd">    the codec.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span>
+        <span class="n">codec</span> <span class="o">=</span> <span class="s">u&#39;Unknown&#39;</span>
+        <span class="c"># Check for twocc</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">r&#39;^0x[\da-f]{1,4}$&#39;</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">):</span>
+            <span class="c"># Twocc in hex form</span>
+            <span class="k">return</span> <span class="n">code</span><span class="p">,</span> <span class="n">TWOCC</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span> <span class="n">codec</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">code</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="nb">int</span><span class="p">(</span><span class="n">code</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mh">0xff</span><span class="p">:</span>
+            <span class="c"># Twocc in decimal form</span>
+            <span class="k">return</span> <span class="nb">hex</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">code</span><span class="p">)),</span> <span class="n">TWOCC</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">code</span><span class="p">),</span> <span class="n">codec</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">code</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">code</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;H&#39;</span><span class="p">,</span> <span class="n">code</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="nb">hex</span><span class="p">(</span><span class="n">code</span><span class="p">),</span> <span class="n">TWOCC</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">codec</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">code</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">([</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">code</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">string</span><span class="o">.</span><span class="n">printable</span> <span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c"># Code is a printable string.</span>
+            <span class="n">codec</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">code</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;MS&#39;</span> <span class="ow">and</span> <span class="n">code</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">FOURCC</span><span class="p">:</span>
+            <span class="n">code</span> <span class="o">=</span> <span class="n">code</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">code</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">FOURCC</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">code</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">FOURCC</span><span class="p">[</span><span class="n">code</span><span class="o">.</span><span class="n">upper</span><span class="p">()])</span>
+        <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="n">codec</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">long</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="nb">hex</span><span class="p">(</span><span class="n">code</span><span class="p">),</span> <span class="n">TWOCC</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="s">u&#39;Unknown&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="s">u&#39;Unknown&#39;</span>
+
+</div>
+<span class="n">TWOCC</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mh">0x0000</span><span class="p">:</span> <span class="s">&#39;Unknown Wave Format&#39;</span><span class="p">,</span>
+    <span class="mh">0x0001</span><span class="p">:</span> <span class="s">&#39;PCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0002</span><span class="p">:</span> <span class="s">&#39;Microsoft ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0003</span><span class="p">:</span> <span class="s">&#39;IEEE Float&#39;</span><span class="p">,</span>
+    <span class="mh">0x0004</span><span class="p">:</span> <span class="s">&#39;Compaq Computer VSELP&#39;</span><span class="p">,</span>
+    <span class="mh">0x0005</span><span class="p">:</span> <span class="s">&#39;IBM CVSD&#39;</span><span class="p">,</span>
+    <span class="mh">0x0006</span><span class="p">:</span> <span class="s">&#39;A-Law&#39;</span><span class="p">,</span>
+    <span class="mh">0x0007</span><span class="p">:</span> <span class="s">&#39;mu-Law&#39;</span><span class="p">,</span>
+    <span class="mh">0x0008</span><span class="p">:</span> <span class="s">&#39;Microsoft DTS&#39;</span><span class="p">,</span>
+    <span class="mh">0x0009</span><span class="p">:</span> <span class="s">&#39;Microsoft DRM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0010</span><span class="p">:</span> <span class="s">&#39;OKI ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0011</span><span class="p">:</span> <span class="s">&#39;Intel DVI/IMA ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0012</span><span class="p">:</span> <span class="s">&#39;Videologic MediaSpace ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0013</span><span class="p">:</span> <span class="s">&#39;Sierra Semiconductor ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0014</span><span class="p">:</span> <span class="s">&#39;Antex Electronics G.723 ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0015</span><span class="p">:</span> <span class="s">&#39;DSP Solutions DigiSTD&#39;</span><span class="p">,</span>
+    <span class="mh">0x0016</span><span class="p">:</span> <span class="s">&#39;DSP Solutions DigiFIX&#39;</span><span class="p">,</span>
+    <span class="mh">0x0017</span><span class="p">:</span> <span class="s">&#39;Dialogic OKI ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0018</span><span class="p">:</span> <span class="s">&#39;MediaVision ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0019</span><span class="p">:</span> <span class="s">&#39;Hewlett-Packard CU&#39;</span><span class="p">,</span>
+    <span class="mh">0x0020</span><span class="p">:</span> <span class="s">&#39;Yamaha ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0021</span><span class="p">:</span> <span class="s">&#39;Speech Compression Sonarc&#39;</span><span class="p">,</span>
+    <span class="mh">0x0022</span><span class="p">:</span> <span class="s">&#39;DSP Group TrueSpeech&#39;</span><span class="p">,</span>
+    <span class="mh">0x0023</span><span class="p">:</span> <span class="s">&#39;Echo Speech EchoSC1&#39;</span><span class="p">,</span>
+    <span class="mh">0x0024</span><span class="p">:</span> <span class="s">&#39;Audiofile AF36&#39;</span><span class="p">,</span>
+    <span class="mh">0x0025</span><span class="p">:</span> <span class="s">&#39;Audio Processing Technology APTX&#39;</span><span class="p">,</span>
+    <span class="mh">0x0026</span><span class="p">:</span> <span class="s">&#39;AudioFile AF10&#39;</span><span class="p">,</span>
+    <span class="mh">0x0027</span><span class="p">:</span> <span class="s">&#39;Prosody 1612&#39;</span><span class="p">,</span>
+    <span class="mh">0x0028</span><span class="p">:</span> <span class="s">&#39;LRC&#39;</span><span class="p">,</span>
+    <span class="mh">0x0030</span><span class="p">:</span> <span class="s">&#39;Dolby AC2&#39;</span><span class="p">,</span>
+    <span class="mh">0x0031</span><span class="p">:</span> <span class="s">&#39;Microsoft GSM 6.10&#39;</span><span class="p">,</span>
+    <span class="mh">0x0032</span><span class="p">:</span> <span class="s">&#39;MSNAudio&#39;</span><span class="p">,</span>
+    <span class="mh">0x0033</span><span class="p">:</span> <span class="s">&#39;Antex Electronics ADPCME&#39;</span><span class="p">,</span>
+    <span class="mh">0x0034</span><span class="p">:</span> <span class="s">&#39;Control Resources VQLPC&#39;</span><span class="p">,</span>
+    <span class="mh">0x0035</span><span class="p">:</span> <span class="s">&#39;DSP Solutions DigiREAL&#39;</span><span class="p">,</span>
+    <span class="mh">0x0036</span><span class="p">:</span> <span class="s">&#39;DSP Solutions DigiADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0037</span><span class="p">:</span> <span class="s">&#39;Control Resources CR10&#39;</span><span class="p">,</span>
+    <span class="mh">0x0038</span><span class="p">:</span> <span class="s">&#39;Natural MicroSystems VBXADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0039</span><span class="p">:</span> <span class="s">&#39;Crystal Semiconductor IMA ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x003A</span><span class="p">:</span> <span class="s">&#39;EchoSC3&#39;</span><span class="p">,</span>
+    <span class="mh">0x003B</span><span class="p">:</span> <span class="s">&#39;Rockwell ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x003C</span><span class="p">:</span> <span class="s">&#39;Rockwell Digit LK&#39;</span><span class="p">,</span>
+    <span class="mh">0x003D</span><span class="p">:</span> <span class="s">&#39;Xebec&#39;</span><span class="p">,</span>
+    <span class="mh">0x0040</span><span class="p">:</span> <span class="s">&#39;Antex Electronics G.721 ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0041</span><span class="p">:</span> <span class="s">&#39;G.728 CELP&#39;</span><span class="p">,</span>
+    <span class="mh">0x0042</span><span class="p">:</span> <span class="s">&#39;MSG723&#39;</span><span class="p">,</span>
+    <span class="mh">0x0043</span><span class="p">:</span> <span class="s">&#39;IBM AVC ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0045</span><span class="p">:</span> <span class="s">&#39;ITU-T G.726 ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0050</span><span class="p">:</span> <span class="s">&#39;MPEG 1, Layer 1,2&#39;</span><span class="p">,</span>
+    <span class="mh">0x0052</span><span class="p">:</span> <span class="s">&#39;RT24&#39;</span><span class="p">,</span>
+    <span class="mh">0x0053</span><span class="p">:</span> <span class="s">&#39;PAC&#39;</span><span class="p">,</span>
+    <span class="mh">0x0055</span><span class="p">:</span> <span class="s">&#39;MPEG Layer 3&#39;</span><span class="p">,</span>
+    <span class="mh">0x0059</span><span class="p">:</span> <span class="s">&#39;Lucent G.723&#39;</span><span class="p">,</span>
+    <span class="mh">0x0060</span><span class="p">:</span> <span class="s">&#39;Cirrus&#39;</span><span class="p">,</span>
+    <span class="mh">0x0061</span><span class="p">:</span> <span class="s">&#39;ESPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0062</span><span class="p">:</span> <span class="s">&#39;Voxware&#39;</span><span class="p">,</span>
+    <span class="mh">0x0063</span><span class="p">:</span> <span class="s">&#39;Canopus Atrac&#39;</span><span class="p">,</span>
+    <span class="mh">0x0064</span><span class="p">:</span> <span class="s">&#39;G.726 ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0065</span><span class="p">:</span> <span class="s">&#39;G.722 ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0066</span><span class="p">:</span> <span class="s">&#39;DSAT&#39;</span><span class="p">,</span>
+    <span class="mh">0x0067</span><span class="p">:</span> <span class="s">&#39;DSAT Display&#39;</span><span class="p">,</span>
+    <span class="mh">0x0069</span><span class="p">:</span> <span class="s">&#39;Voxware Byte Aligned&#39;</span><span class="p">,</span>
+    <span class="mh">0x0070</span><span class="p">:</span> <span class="s">&#39;Voxware AC8&#39;</span><span class="p">,</span>
+    <span class="mh">0x0071</span><span class="p">:</span> <span class="s">&#39;Voxware AC10&#39;</span><span class="p">,</span>
+    <span class="mh">0x0072</span><span class="p">:</span> <span class="s">&#39;Voxware AC16&#39;</span><span class="p">,</span>
+    <span class="mh">0x0073</span><span class="p">:</span> <span class="s">&#39;Voxware AC20&#39;</span><span class="p">,</span>
+    <span class="mh">0x0074</span><span class="p">:</span> <span class="s">&#39;Voxware MetaVoice&#39;</span><span class="p">,</span>
+    <span class="mh">0x0075</span><span class="p">:</span> <span class="s">&#39;Voxware MetaSound&#39;</span><span class="p">,</span>
+    <span class="mh">0x0076</span><span class="p">:</span> <span class="s">&#39;Voxware RT29HW&#39;</span><span class="p">,</span>
+    <span class="mh">0x0077</span><span class="p">:</span> <span class="s">&#39;Voxware VR12&#39;</span><span class="p">,</span>
+    <span class="mh">0x0078</span><span class="p">:</span> <span class="s">&#39;Voxware VR18&#39;</span><span class="p">,</span>
+    <span class="mh">0x0079</span><span class="p">:</span> <span class="s">&#39;Voxware TQ40&#39;</span><span class="p">,</span>
+    <span class="mh">0x0080</span><span class="p">:</span> <span class="s">&#39;Softsound&#39;</span><span class="p">,</span>
+    <span class="mh">0x0081</span><span class="p">:</span> <span class="s">&#39;Voxware TQ60&#39;</span><span class="p">,</span>
+    <span class="mh">0x0082</span><span class="p">:</span> <span class="s">&#39;MSRT24&#39;</span><span class="p">,</span>
+    <span class="mh">0x0083</span><span class="p">:</span> <span class="s">&#39;G.729A&#39;</span><span class="p">,</span>
+    <span class="mh">0x0084</span><span class="p">:</span> <span class="s">&#39;MVI MV12&#39;</span><span class="p">,</span>
+    <span class="mh">0x0085</span><span class="p">:</span> <span class="s">&#39;DF G.726&#39;</span><span class="p">,</span>
+    <span class="mh">0x0086</span><span class="p">:</span> <span class="s">&#39;DF GSM610&#39;</span><span class="p">,</span>
+    <span class="mh">0x0088</span><span class="p">:</span> <span class="s">&#39;ISIAudio&#39;</span><span class="p">,</span>
+    <span class="mh">0x0089</span><span class="p">:</span> <span class="s">&#39;Onlive&#39;</span><span class="p">,</span>
+    <span class="mh">0x0091</span><span class="p">:</span> <span class="s">&#39;SBC24&#39;</span><span class="p">,</span>
+    <span class="mh">0x0092</span><span class="p">:</span> <span class="s">&#39;Dolby AC3 SPDIF&#39;</span><span class="p">,</span>
+    <span class="mh">0x0093</span><span class="p">:</span> <span class="s">&#39;MediaSonic G.723&#39;</span><span class="p">,</span>
+    <span class="mh">0x0094</span><span class="p">:</span> <span class="s">&#39;Aculab PLC Prosody 8KBPS&#39;</span><span class="p">,</span>
+    <span class="mh">0x0097</span><span class="p">:</span> <span class="s">&#39;ZyXEL ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0098</span><span class="p">:</span> <span class="s">&#39;Philips LPCBB&#39;</span><span class="p">,</span>
+    <span class="mh">0x0099</span><span class="p">:</span> <span class="s">&#39;Packed&#39;</span><span class="p">,</span>
+    <span class="mh">0x00A0</span><span class="p">:</span> <span class="s">&#39;Malden Electronics PHONYTALK&#39;</span><span class="p">,</span>
+    <span class="mh">0x00FF</span><span class="p">:</span> <span class="s">&#39;AAC&#39;</span><span class="p">,</span>
+    <span class="mh">0x0100</span><span class="p">:</span> <span class="s">&#39;Rhetorex ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0101</span><span class="p">:</span> <span class="s">&#39;IBM mu-law&#39;</span><span class="p">,</span>
+    <span class="mh">0x0102</span><span class="p">:</span> <span class="s">&#39;IBM A-law&#39;</span><span class="p">,</span>
+    <span class="mh">0x0103</span><span class="p">:</span> <span class="s">&#39;IBM AVC Adaptive Differential Pulse Code Modulation&#39;</span><span class="p">,</span>
+    <span class="mh">0x0111</span><span class="p">:</span> <span class="s">&#39;Vivo G.723&#39;</span><span class="p">,</span>
+    <span class="mh">0x0112</span><span class="p">:</span> <span class="s">&#39;Vivo Siren&#39;</span><span class="p">,</span>
+    <span class="mh">0x0123</span><span class="p">:</span> <span class="s">&#39;Digital G.723&#39;</span><span class="p">,</span>
+    <span class="mh">0x0125</span><span class="p">:</span> <span class="s">&#39;Sanyo LD ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0130</span><span class="p">:</span> <span class="s">&#39;Sipro Lab Telecom ACELP.net&#39;</span><span class="p">,</span>
+    <span class="mh">0x0131</span><span class="p">:</span> <span class="s">&#39;Sipro Lab Telecom ACELP.4800&#39;</span><span class="p">,</span>
+    <span class="mh">0x0132</span><span class="p">:</span> <span class="s">&#39;Sipro Lab Telecom ACELP.8V3&#39;</span><span class="p">,</span>
+    <span class="mh">0x0133</span><span class="p">:</span> <span class="s">&#39;Sipro Lab Telecom ACELP.G.729&#39;</span><span class="p">,</span>
+    <span class="mh">0x0134</span><span class="p">:</span> <span class="s">&#39;Sipro Lab Telecom ACELP.G.729A&#39;</span><span class="p">,</span>
+    <span class="mh">0x0135</span><span class="p">:</span> <span class="s">&#39;Sipro Lab Telecom ACELP.KELVIN&#39;</span><span class="p">,</span>
+    <span class="mh">0x0140</span><span class="p">:</span> <span class="s">&#39;Windows Media Video V8&#39;</span><span class="p">,</span>
+    <span class="mh">0x0150</span><span class="p">:</span> <span class="s">&#39;Qualcomm PureVoice&#39;</span><span class="p">,</span>
+    <span class="mh">0x0151</span><span class="p">:</span> <span class="s">&#39;Qualcomm HalfRate&#39;</span><span class="p">,</span>
+    <span class="mh">0x0155</span><span class="p">:</span> <span class="s">&#39;Ring Zero Systems TUB GSM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0160</span><span class="p">:</span> <span class="s">&#39;Windows Media Audio V1 / DivX audio (WMA)&#39;</span><span class="p">,</span>
+    <span class="mh">0x0161</span><span class="p">:</span> <span class="s">&#39;Windows Media Audio V7 / V8 / V9&#39;</span><span class="p">,</span>
+    <span class="mh">0x0162</span><span class="p">:</span> <span class="s">&#39;Windows Media Audio Professional V9&#39;</span><span class="p">,</span>
+    <span class="mh">0x0163</span><span class="p">:</span> <span class="s">&#39;Windows Media Audio Lossless V9&#39;</span><span class="p">,</span>
+    <span class="mh">0x0170</span><span class="p">:</span> <span class="s">&#39;UNISYS NAP ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0171</span><span class="p">:</span> <span class="s">&#39;UNISYS NAP ULAW&#39;</span><span class="p">,</span>
+    <span class="mh">0x0172</span><span class="p">:</span> <span class="s">&#39;UNISYS NAP ALAW&#39;</span><span class="p">,</span>
+    <span class="mh">0x0173</span><span class="p">:</span> <span class="s">&#39;UNISYS NAP 16K&#39;</span><span class="p">,</span>
+    <span class="mh">0x0200</span><span class="p">:</span> <span class="s">&#39;Creative Labs ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0202</span><span class="p">:</span> <span class="s">&#39;Creative Labs Fastspeech8&#39;</span><span class="p">,</span>
+    <span class="mh">0x0203</span><span class="p">:</span> <span class="s">&#39;Creative Labs Fastspeech10&#39;</span><span class="p">,</span>
+    <span class="mh">0x0210</span><span class="p">:</span> <span class="s">&#39;UHER Informatic ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0215</span><span class="p">:</span> <span class="s">&#39;Ulead DV ACM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0216</span><span class="p">:</span> <span class="s">&#39;Ulead DV ACM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0220</span><span class="p">:</span> <span class="s">&#39;Quarterdeck&#39;</span><span class="p">,</span>
+    <span class="mh">0x0230</span><span class="p">:</span> <span class="s">&#39;I-link Worldwide ILINK VC&#39;</span><span class="p">,</span>
+    <span class="mh">0x0240</span><span class="p">:</span> <span class="s">&#39;Aureal Semiconductor RAW SPORT&#39;</span><span class="p">,</span>
+    <span class="mh">0x0241</span><span class="p">:</span> <span class="s">&#39;ESST AC3&#39;</span><span class="p">,</span>
+    <span class="mh">0x0250</span><span class="p">:</span> <span class="s">&#39;Interactive Products HSX&#39;</span><span class="p">,</span>
+    <span class="mh">0x0251</span><span class="p">:</span> <span class="s">&#39;Interactive Products RPELP&#39;</span><span class="p">,</span>
+    <span class="mh">0x0260</span><span class="p">:</span> <span class="s">&#39;Consistent Software CS2&#39;</span><span class="p">,</span>
+    <span class="mh">0x0270</span><span class="p">:</span> <span class="s">&#39;Sony ATRAC3 (SCX, same as MiniDisk LP2)&#39;</span><span class="p">,</span>
+    <span class="mh">0x0300</span><span class="p">:</span> <span class="s">&#39;Fujitsu FM Towns Snd&#39;</span><span class="p">,</span>
+    <span class="mh">0x0400</span><span class="p">:</span> <span class="s">&#39;BTV Digital&#39;</span><span class="p">,</span>
+    <span class="mh">0x0401</span><span class="p">:</span> <span class="s">&#39;Intel Music Coder (IMC)&#39;</span><span class="p">,</span>
+    <span class="mh">0x0402</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Audio&#39;</span><span class="p">,</span>
+    <span class="mh">0x0450</span><span class="p">:</span> <span class="s">&#39;QDesign Music&#39;</span><span class="p">,</span>
+    <span class="mh">0x0680</span><span class="p">:</span> <span class="s">&#39;VME VMPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x0681</span><span class="p">:</span> <span class="s">&#39;AT&amp;T Labs TPC&#39;</span><span class="p">,</span>
+    <span class="mh">0x0700</span><span class="p">:</span> <span class="s">&#39;YMPEG Alpha&#39;</span><span class="p">,</span>
+    <span class="mh">0x08AE</span><span class="p">:</span> <span class="s">&#39;ClearJump LiteWave&#39;</span><span class="p">,</span>
+    <span class="mh">0x1000</span><span class="p">:</span> <span class="s">&#39;Olivetti GSM&#39;</span><span class="p">,</span>
+    <span class="mh">0x1001</span><span class="p">:</span> <span class="s">&#39;Olivetti ADPCM&#39;</span><span class="p">,</span>
+    <span class="mh">0x1002</span><span class="p">:</span> <span class="s">&#39;Olivetti CELP&#39;</span><span class="p">,</span>
+    <span class="mh">0x1003</span><span class="p">:</span> <span class="s">&#39;Olivetti SBC&#39;</span><span class="p">,</span>
+    <span class="mh">0x1004</span><span class="p">:</span> <span class="s">&#39;Olivetti OPR&#39;</span><span class="p">,</span>
+    <span class="mh">0x1100</span><span class="p">:</span> <span class="s">&#39;Lernout &amp; Hauspie LH Codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1101</span><span class="p">:</span> <span class="s">&#39;Lernout &amp; Hauspie CELP codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1102</span><span class="p">:</span> <span class="s">&#39;Lernout &amp; Hauspie SBC codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1103</span><span class="p">:</span> <span class="s">&#39;Lernout &amp; Hauspie SBC codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1104</span><span class="p">:</span> <span class="s">&#39;Lernout &amp; Hauspie SBC codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1400</span><span class="p">:</span> <span class="s">&#39;Norris&#39;</span><span class="p">,</span>
+    <span class="mh">0x1401</span><span class="p">:</span> <span class="s">&#39;AT&amp;T ISIAudio&#39;</span><span class="p">,</span>
+    <span class="mh">0x1500</span><span class="p">:</span> <span class="s">&#39;Soundspace Music Compression&#39;</span><span class="p">,</span>
+    <span class="mh">0x181C</span><span class="p">:</span> <span class="s">&#39;VoxWare RT24 speech codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x181E</span><span class="p">:</span> <span class="s">&#39;Lucent elemedia AX24000P Music codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1C07</span><span class="p">:</span> <span class="s">&#39;Lucent SX8300P speech codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1C0C</span><span class="p">:</span> <span class="s">&#39;Lucent SX5363S G.723 compliant codec&#39;</span><span class="p">,</span>
+    <span class="mh">0x1F03</span><span class="p">:</span> <span class="s">&#39;CUseeMe DigiTalk (ex-Rocwell)&#39;</span><span class="p">,</span>
+    <span class="mh">0x1FC4</span><span class="p">:</span> <span class="s">&#39;NCT Soft ALF2CD ACM&#39;</span><span class="p">,</span>
+    <span class="mh">0x2000</span><span class="p">:</span> <span class="s">&#39;AC3&#39;</span><span class="p">,</span>
+    <span class="mh">0x2001</span><span class="p">:</span> <span class="s">&#39;Dolby DTS (Digital Theater System)&#39;</span><span class="p">,</span>
+    <span class="mh">0x2002</span><span class="p">:</span> <span class="s">&#39;RealAudio 1 / 2 14.4&#39;</span><span class="p">,</span>
+    <span class="mh">0x2003</span><span class="p">:</span> <span class="s">&#39;RealAudio 1 / 2 28.8&#39;</span><span class="p">,</span>
+    <span class="mh">0x2004</span><span class="p">:</span> <span class="s">&#39;RealAudio G2 / 8 Cook (low bitrate)&#39;</span><span class="p">,</span>
+    <span class="mh">0x2005</span><span class="p">:</span> <span class="s">&#39;RealAudio 3 / 4 / 5 Music (DNET)&#39;</span><span class="p">,</span>
+    <span class="mh">0x2006</span><span class="p">:</span> <span class="s">&#39;RealAudio 10 AAC (RAAC)&#39;</span><span class="p">,</span>
+    <span class="mh">0x2007</span><span class="p">:</span> <span class="s">&#39;RealAudio 10 AAC+ (RACP)&#39;</span><span class="p">,</span>
+    <span class="mh">0x3313</span><span class="p">:</span> <span class="s">&#39;makeAVIS&#39;</span><span class="p">,</span>
+    <span class="mh">0x4143</span><span class="p">:</span> <span class="s">&#39;Divio MPEG-4 AAC audio&#39;</span><span class="p">,</span>
+    <span class="mh">0x434C</span><span class="p">:</span> <span class="s">&#39;LEAD Speech&#39;</span><span class="p">,</span>
+    <span class="mh">0x564C</span><span class="p">:</span> <span class="s">&#39;LEAD Vorbis&#39;</span><span class="p">,</span>
+    <span class="mh">0x674F</span><span class="p">:</span> <span class="s">&#39;Ogg Vorbis (mode 1)&#39;</span><span class="p">,</span>
+    <span class="mh">0x6750</span><span class="p">:</span> <span class="s">&#39;Ogg Vorbis (mode 2)&#39;</span><span class="p">,</span>
+    <span class="mh">0x6751</span><span class="p">:</span> <span class="s">&#39;Ogg Vorbis (mode 3)&#39;</span><span class="p">,</span>
+    <span class="mh">0x676F</span><span class="p">:</span> <span class="s">&#39;Ogg Vorbis (mode 1+)&#39;</span><span class="p">,</span>
+    <span class="mh">0x6770</span><span class="p">:</span> <span class="s">&#39;Ogg Vorbis (mode 2+)&#39;</span><span class="p">,</span>
+    <span class="mh">0x6771</span><span class="p">:</span> <span class="s">&#39;Ogg Vorbis (mode 3+)&#39;</span><span class="p">,</span>
+    <span class="mh">0x7A21</span><span class="p">:</span> <span class="s">&#39;GSM-AMR (CBR, no SID)&#39;</span><span class="p">,</span>
+    <span class="mh">0x7A22</span><span class="p">:</span> <span class="s">&#39;GSM-AMR (VBR, including SID)&#39;</span><span class="p">,</span>
+    <span class="mh">0xDFAC</span><span class="p">:</span> <span class="s">&#39;DebugMode SonicFoundry Vegas FrameServer ACM Codec&#39;</span><span class="p">,</span>
+    <span class="mh">0xF1AC</span><span class="p">:</span> <span class="s">&#39;Free Lossless Audio Codec FLAC&#39;</span><span class="p">,</span>
+    <span class="mh">0xFFFE</span><span class="p">:</span> <span class="s">&#39;Extensible wave format&#39;</span><span class="p">,</span>
+    <span class="mh">0xFFFF</span><span class="p">:</span> <span class="s">&#39;development&#39;</span>
+<span class="p">}</span>
+
+
+<span class="n">FOURCC</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;1978&#39;</span><span class="p">:</span> <span class="s">&#39;A.M.Paredes predictor (LossLess)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;2VUY&#39;</span><span class="p">:</span> <span class="s">&#39;Optibase VideoPump 8-bit 4:2:2 Component YCbCr&#39;</span><span class="p">,</span>
+    <span class="s">&#39;3IV0&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG4-based codec 3ivx&#39;</span><span class="p">,</span>
+    <span class="s">&#39;3IV1&#39;</span><span class="p">:</span> <span class="s">&#39;3ivx v1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;3IV2&#39;</span><span class="p">:</span> <span class="s">&#39;3ivx v2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;3IVD&#39;</span><span class="p">:</span> <span class="s">&#39;FFmpeg DivX ;-) (MS MPEG-4 v3)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;3IVX&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG4-based codec 3ivx&#39;</span><span class="p">,</span>
+    <span class="s">&#39;8BPS&#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickTime Planar RGB with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AAS4&#39;</span><span class="p">:</span> <span class="s">&#39;Autodesk Animator codec (RLE)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AASC&#39;</span><span class="p">:</span> <span class="s">&#39;Autodesk Animator&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ABYR&#39;</span><span class="p">:</span> <span class="s">&#39;Kensington ABYR&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ACTL&#39;</span><span class="p">:</span> <span class="s">&#39;Streambox ACT-L2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ADV1&#39;</span><span class="p">:</span> <span class="s">&#39;Loronix WaveCodec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ADVJ&#39;</span><span class="p">:</span> <span class="s">&#39;Avid M-JPEG Avid Technology Also known as AVRn&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AEIK&#39;</span><span class="p">:</span> <span class="s">&#39;Intel Indeo Video 3.2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AEMI&#39;</span><span class="p">:</span> <span class="s">&#39;Array VideoONE MPEG1-I Capture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AFLC&#39;</span><span class="p">:</span> <span class="s">&#39;Autodesk Animator FLC&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AFLI&#39;</span><span class="p">:</span> <span class="s">&#39;Autodesk Animator FLI&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AHDV&#39;</span><span class="p">:</span> <span class="s">&#39;CineForm 10-bit Visually Perfect HD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AJPG&#39;</span><span class="p">:</span> <span class="s">&#39;22fps JPEG-based codec for digital cameras&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AMPG&#39;</span><span class="p">:</span> <span class="s">&#39;Array VideoONE MPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ANIM&#39;</span><span class="p">:</span> <span class="s">&#39;Intel RDX (ANIM)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AP41&#39;</span><span class="p">:</span> <span class="s">&#39;AngelPotion Definitive&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AP42&#39;</span><span class="p">:</span> <span class="s">&#39;AngelPotion Definitive&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ASLC&#39;</span><span class="p">:</span> <span class="s">&#39;AlparySoft Lossless Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ASV1&#39;</span><span class="p">:</span> <span class="s">&#39;Asus Video v1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ASV2&#39;</span><span class="p">:</span> <span class="s">&#39;Asus Video v2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ASVX&#39;</span><span class="p">:</span> <span class="s">&#39;Asus Video 2.0 (audio)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ATM4&#39;</span><span class="p">:</span> <span class="s">&#39;Ahead Nero Digital MPEG-4 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AUR2&#39;</span><span class="p">:</span> <span class="s">&#39;Aura 2 Codec - YUV 4:2:2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AURA&#39;</span><span class="p">:</span> <span class="s">&#39;Aura 1 Codec - YUV 4:1:1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AV1X&#39;</span><span class="p">:</span> <span class="s">&#39;Avid 1:1x (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVC1&#39;</span><span class="p">:</span> <span class="s">&#39;H.264 AVC&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVD1&#39;</span><span class="p">:</span> <span class="s">&#39;Avid DV (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVDJ&#39;</span><span class="p">:</span> <span class="s">&#39;Avid Meridien JFIF with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVDN&#39;</span><span class="p">:</span> <span class="s">&#39;Avid DNxHD (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVDV&#39;</span><span class="p">:</span> <span class="s">&#39;Avid DV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVI1&#39;</span><span class="p">:</span> <span class="s">&#39;MainConcept Motion JPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVI2&#39;</span><span class="p">:</span> <span class="s">&#39;MainConcept Motion JPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVID&#39;</span><span class="p">:</span> <span class="s">&#39;Avid Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVIS&#39;</span><span class="p">:</span> <span class="s">&#39;Wrapper for AviSynth&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVMP&#39;</span><span class="p">:</span> <span class="s">&#39;Avid IMX (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVR &#39;</span><span class="p">:</span> <span class="s">&#39;Avid ABVB/NuVista MJPEG with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVRN&#39;</span><span class="p">:</span> <span class="s">&#39;Avid Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVUI&#39;</span><span class="p">:</span> <span class="s">&#39;Avid Meridien Uncompressed with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AVUP&#39;</span><span class="p">:</span> <span class="s">&#39;Avid 10bit Packed (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AYUV&#39;</span><span class="p">:</span> <span class="s">&#39;4:4:4 YUV (AYUV)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AZPR&#39;</span><span class="p">:</span> <span class="s">&#39;Quicktime Apple Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AZRP&#39;</span><span class="p">:</span> <span class="s">&#39;Quicktime Apple Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BGR &#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed BGR32 8:8:8:8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BGR(15)&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed BGR15 5:5:5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BGR(16)&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed BGR16 5:6:5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BGR(24)&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed BGR24 8:8:8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BHIV&#39;</span><span class="p">:</span> <span class="s">&#39;BeHere iVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BINK&#39;</span><span class="p">:</span> <span class="s">&#39;RAD Game Tools Bink Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BIT &#39;</span><span class="p">:</span> <span class="s">&#39;BI_BITFIELDS (Raw RGB)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BITM&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft H.261&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BLOX&#39;</span><span class="p">:</span> <span class="s">&#39;Jan Jezabek BLOX MPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BLZ0&#39;</span><span class="p">:</span> <span class="s">&#39;DivX for Blizzard Decoder Filter&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BT20&#39;</span><span class="p">:</span> <span class="s">&#39;Conexant Prosumer Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BTCV&#39;</span><span class="p">:</span> <span class="s">&#39;Conexant Composite Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BTVC&#39;</span><span class="p">:</span> <span class="s">&#39;Conexant Composite Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BW00&#39;</span><span class="p">:</span> <span class="s">&#39;BergWave (Wavelet)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BW10&#39;</span><span class="p">:</span> <span class="s">&#39;Data Translation Broadway MPEG Capture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BXBG&#39;</span><span class="p">:</span> <span class="s">&#39;BOXX BGR&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BXRG&#39;</span><span class="p">:</span> <span class="s">&#39;BOXX RGB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BXY2&#39;</span><span class="p">:</span> <span class="s">&#39;BOXX 10-bit YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;BXYV&#39;</span><span class="p">:</span> <span class="s">&#39;BOXX YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CC12&#39;</span><span class="p">:</span> <span class="s">&#39;Intel YUV12&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CDV5&#39;</span><span class="p">:</span> <span class="s">&#39;Canopus SD50/DVHD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CDVC&#39;</span><span class="p">:</span> <span class="s">&#39;Canopus DV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CDVH&#39;</span><span class="p">:</span> <span class="s">&#39;Canopus SD50/DVHD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CFCC&#39;</span><span class="p">:</span> <span class="s">&#39;Digital Processing Systems DPS Perception&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CFHD&#39;</span><span class="p">:</span> <span class="s">&#39;CineForm 10-bit Visually Perfect HD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CGDI&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft Office 97 Camcorder Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CHAM&#39;</span><span class="p">:</span> <span class="s">&#39;Winnov Caviara Champagne&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CJPG&#39;</span><span class="p">:</span> <span class="s">&#39;Creative WebCam JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CLJR&#39;</span><span class="p">:</span> <span class="s">&#39;Cirrus Logic YUV 4 pixels&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CLLC&#39;</span><span class="p">:</span> <span class="s">&#39;Canopus LossLess&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CLPL&#39;</span><span class="p">:</span> <span class="s">&#39;YV12&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CMYK&#39;</span><span class="p">:</span> <span class="s">&#39;Common Data Format in Printing&#39;</span><span class="p">,</span>
+    <span class="s">&#39;COL0&#39;</span><span class="p">:</span> <span class="s">&#39;FFmpeg DivX ;-) (MS MPEG-4 v3)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;COL1&#39;</span><span class="p">:</span> <span class="s">&#39;FFmpeg DivX ;-) (MS MPEG-4 v3)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CPLA&#39;</span><span class="p">:</span> <span class="s">&#39;Weitek 4:2:0 YUV Planar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CRAM&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft Video 1 (CRAM)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CSCD&#39;</span><span class="p">:</span> <span class="s">&#39;RenderSoft CamStudio lossless Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CTRX&#39;</span><span class="p">:</span> <span class="s">&#39;Citrix Scalable Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CUVC&#39;</span><span class="p">:</span> <span class="s">&#39;Canopus HQ&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CVID&#39;</span><span class="p">:</span> <span class="s">&#39;Radius Cinepak&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CWLT&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft Color WLT DIB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CYUV&#39;</span><span class="p">:</span> <span class="s">&#39;Creative Labs YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;CYUY&#39;</span><span class="p">:</span> <span class="s">&#39;ATI YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;D261&#39;</span><span class="p">:</span> <span class="s">&#39;H.261&#39;</span><span class="p">,</span>
+    <span class="s">&#39;D263&#39;</span><span class="p">:</span> <span class="s">&#39;H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DAVC&#39;</span><span class="p">:</span> <span class="s">&#39;Dicas MPEGable H.264/MPEG-4 AVC base profile codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DC25&#39;</span><span class="p">:</span> <span class="s">&#39;MainConcept ProDV Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DCAP&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle DV25 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DCL1&#39;</span><span class="p">:</span> <span class="s">&#39;Data Connection Conferencing Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DCT0&#39;</span><span class="p">:</span> <span class="s">&#39;WniWni Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DFSC&#39;</span><span class="p">:</span> <span class="s">&#39;DebugMode FrameServer VFW Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIB &#39;</span><span class="p">:</span> <span class="s">&#39;Full Frames (Uncompressed)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIV1&#39;</span><span class="p">:</span> <span class="s">&#39;FFmpeg-4 V1 (hacked MS MPEG-4 V1)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIV2&#39;</span><span class="p">:</span> <span class="s">&#39;MS MPEG-4 V2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIV3&#39;</span><span class="p">:</span> <span class="s">&#39;DivX v3 MPEG-4 Low-Motion&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIV4&#39;</span><span class="p">:</span> <span class="s">&#39;DivX v3 MPEG-4 Fast-Motion&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIV5&#39;</span><span class="p">:</span> <span class="s">&#39;DIV5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIV6&#39;</span><span class="p">:</span> <span class="s">&#39;DivX MPEG-4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DIVX&#39;</span><span class="p">:</span> <span class="s">&#39;DivX&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DM4V&#39;</span><span class="p">:</span> <span class="s">&#39;Dicas MPEGable MPEG-4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DMB1&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox Rainbow Runner hardware MJPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DMB2&#39;</span><span class="p">:</span> <span class="s">&#39;Paradigm MJPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DMK2&#39;</span><span class="p">:</span> <span class="s">&#39;ViewSonic V36 PDA Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DP02&#39;</span><span class="p">:</span> <span class="s">&#39;DynaPel MPEG-4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DPS0&#39;</span><span class="p">:</span> <span class="s">&#39;DPS Reality Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DPSC&#39;</span><span class="p">:</span> <span class="s">&#39;DPS PAR Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DRWX&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle DV25 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DSVD&#39;</span><span class="p">:</span> <span class="s">&#39;DSVD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DTMT&#39;</span><span class="p">:</span> <span class="s">&#39;Media-100 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DTNT&#39;</span><span class="p">:</span> <span class="s">&#39;Media-100 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DUCK&#39;</span><span class="p">:</span> <span class="s">&#39;Duck True Motion 1.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DV10&#39;</span><span class="p">:</span> <span class="s">&#39;BlueFish444 (lossless RGBA, YUV 10-bit)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DV25&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox DVCPRO codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DV50&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox DVCPRO50 codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVAN&#39;</span><span class="p">:</span> <span class="s">&#39;DVAN&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVC &#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickTime DV (DVCPRO NTSC)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVCP&#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickTime DV (DVCPRO PAL)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVCS&#39;</span><span class="p">:</span> <span class="s">&#39;MainConcept DV Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVE2&#39;</span><span class="p">:</span> <span class="s">&#39;InSoft DVE-2 Videoconferencing&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVH1&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle DVHD100&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVHD&#39;</span><span class="p">:</span> <span class="s">&#39;DV 1125 lines at 30.00 Hz or 1250 lines at 25.00 Hz&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVIS&#39;</span><span class="p">:</span> <span class="s">&#39;VSYNC DualMoon Iris DV codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVL &#39;</span><span class="p">:</span> <span class="s">&#39;Radius SoftDV 16:9 NTSC&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVLP&#39;</span><span class="p">:</span> <span class="s">&#39;Radius SoftDV 16:9 PAL&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVMA&#39;</span><span class="p">:</span> <span class="s">&#39;Darim Vision DVMPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVOR&#39;</span><span class="p">:</span> <span class="s">&#39;BlueFish444 (lossless RGBA, YUV 10-bit)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVPN&#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickTime DV (DV NTSC)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVPP&#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickTime DV (DV PAL)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVR1&#39;</span><span class="p">:</span> <span class="s">&#39;TARGA2000 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVRS&#39;</span><span class="p">:</span> <span class="s">&#39;VSYNC DualMoon Iris DV codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVSD&#39;</span><span class="p">:</span> <span class="s">&#39;DV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVSL&#39;</span><span class="p">:</span> <span class="s">&#39;DV compressed in SD (SDL)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVX1&#39;</span><span class="p">:</span> <span class="s">&#39;DVX1000SP Video Decoder&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVX2&#39;</span><span class="p">:</span> <span class="s">&#39;DVX2000S Video Decoder&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DVX3&#39;</span><span class="p">:</span> <span class="s">&#39;DVX3000S Video Decoder&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DX50&#39;</span><span class="p">:</span> <span class="s">&#39;DivX v5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXGM&#39;</span><span class="p">:</span> <span class="s">&#39;Electronic Arts Game Video codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXSB&#39;</span><span class="p">:</span> <span class="s">&#39;DivX Subtitles Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXT1&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft DirectX Compressed Texture (DXT1)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXT2&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft DirectX Compressed Texture (DXT2)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXT3&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft DirectX Compressed Texture (DXT3)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXT4&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft DirectX Compressed Texture (DXT4)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXT5&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft DirectX Compressed Texture (DXT5)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXTC&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft DirectX Compressed Texture (DXTC)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DXTN&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft DirectX Compressed Texture (DXTn)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;EKQ0&#39;</span><span class="p">:</span> <span class="s">&#39;Elsa EKQ0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ELK0&#39;</span><span class="p">:</span> <span class="s">&#39;Elsa ELK0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;EM2V&#39;</span><span class="p">:</span> <span class="s">&#39;Etymonix MPEG-2 I-frame&#39;</span><span class="p">,</span>
+    <span class="s">&#39;EQK0&#39;</span><span class="p">:</span> <span class="s">&#39;Elsa graphics card quick codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ESCP&#39;</span><span class="p">:</span> <span class="s">&#39;Eidos Escape&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ETV1&#39;</span><span class="p">:</span> <span class="s">&#39;eTreppid Video ETV1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ETV2&#39;</span><span class="p">:</span> <span class="s">&#39;eTreppid Video ETV2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ETVC&#39;</span><span class="p">:</span> <span class="s">&#39;eTreppid Video ETVC&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FFDS&#39;</span><span class="p">:</span> <span class="s">&#39;FFDShow supported&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FFV1&#39;</span><span class="p">:</span> <span class="s">&#39;FFDShow supported&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FFVH&#39;</span><span class="p">:</span> <span class="s">&#39;FFVH codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FLIC&#39;</span><span class="p">:</span> <span class="s">&#39;Autodesk FLI/FLC Animation&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FLJP&#39;</span><span class="p">:</span> <span class="s">&#39;D-Vision Field Encoded Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FLV1&#39;</span><span class="p">:</span> <span class="s">&#39;FLV1 codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FMJP&#39;</span><span class="p">:</span> <span class="s">&#39;D-Vision fieldbased ISO MJPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FRLE&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK Y16 + Alpha RLE&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FRWA&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-Nsk Forward Motion JPEG w/ alpha channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FRWD&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-Nsk Forward Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FRWT&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK Vision Forward Motion JPEG with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FRWU&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK Vision Forward Uncompressed&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FVF1&#39;</span><span class="p">:</span> <span class="s">&#39;Iterated Systems Fractal Video Frame&#39;</span><span class="p">,</span>
+    <span class="s">&#39;FVFW&#39;</span><span class="p">:</span> <span class="s">&#39;ff MPEG-4 based on XviD codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GEPJ&#39;</span><span class="p">:</span> <span class="s">&#39;White Pine (ex Paradigm Matrix) Motion JPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GJPG&#39;</span><span class="p">:</span> <span class="s">&#39;Grand Tech GT891x Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GLCC&#39;</span><span class="p">:</span> <span class="s">&#39;GigaLink AV Capture codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GLZW&#39;</span><span class="p">:</span> <span class="s">&#39;Motion LZW&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GPEG&#39;</span><span class="p">:</span> <span class="s">&#39;Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GPJM&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle ReelTime MJPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GREY&#39;</span><span class="p">:</span> <span class="s">&#39;Apparently a duplicate of Y800&#39;</span><span class="p">,</span>
+    <span class="s">&#39;GWLT&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft Greyscale WLT DIB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H260&#39;</span><span class="p">:</span> <span class="s">&#39;H.260&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H261&#39;</span><span class="p">:</span> <span class="s">&#39;H.261&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H262&#39;</span><span class="p">:</span> <span class="s">&#39;H.262&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H263&#39;</span><span class="p">:</span> <span class="s">&#39;H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H264&#39;</span><span class="p">:</span> <span class="s">&#39;H.264 AVC&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H265&#39;</span><span class="p">:</span> <span class="s">&#39;H.265&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H266&#39;</span><span class="p">:</span> <span class="s">&#39;H.266&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H267&#39;</span><span class="p">:</span> <span class="s">&#39;H.267&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H268&#39;</span><span class="p">:</span> <span class="s">&#39;H.268&#39;</span><span class="p">,</span>
+    <span class="s">&#39;H269&#39;</span><span class="p">:</span> <span class="s">&#39;H.269&#39;</span><span class="p">,</span>
+    <span class="s">&#39;HD10&#39;</span><span class="p">:</span> <span class="s">&#39;BlueFish444 (lossless RGBA, YUV 10-bit)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;HDX4&#39;</span><span class="p">:</span> <span class="s">&#39;Jomigo HDX4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;HFYU&#39;</span><span class="p">:</span> <span class="s">&#39;Huffman Lossless Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;HMCR&#39;</span><span class="p">:</span> <span class="s">&#39;Rendition Motion Compensation Format (HMCR)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;HMRR&#39;</span><span class="p">:</span> <span class="s">&#39;Rendition Motion Compensation Format (HMRR)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;I263&#39;</span><span class="p">:</span> <span class="s">&#39;Intel ITU H.263 Videoconferencing (i263)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;I420&#39;</span><span class="p">:</span> <span class="s">&#39;Intel Indeo 4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IAN &#39;</span><span class="p">:</span> <span class="s">&#39;Intel RDX&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ICLB&#39;</span><span class="p">:</span> <span class="s">&#39;InSoft CellB Videoconferencing&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IDM0&#39;</span><span class="p">:</span> <span class="s">&#39;IDM Motion Wavelets 2.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IF09&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft H.261&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IGOR&#39;</span><span class="p">:</span> <span class="s">&#39;Power DVD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IJPG&#39;</span><span class="p">:</span> <span class="s">&#39;Intergraph JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ILVC&#39;</span><span class="p">:</span> <span class="s">&#39;Intel Layered Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ILVR&#39;</span><span class="p">:</span> <span class="s">&#39;ITU-T H.263+&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IMC1&#39;</span><span class="p">:</span> <span class="s">&#39;IMC1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IMC2&#39;</span><span class="p">:</span> <span class="s">&#39;IMC2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IMC3&#39;</span><span class="p">:</span> <span class="s">&#39;IMC3&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IMC4&#39;</span><span class="p">:</span> <span class="s">&#39;IMC4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IMJG&#39;</span><span class="p">:</span> <span class="s">&#39;Accom SphereOUS MJPEG with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IPDV&#39;</span><span class="p">:</span> <span class="s">&#39;I-O Data Device Giga AVI DV Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IPJ2&#39;</span><span class="p">:</span> <span class="s">&#39;Image Power JPEG2000&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IR21&#39;</span><span class="p">:</span> <span class="s">&#39;Intel Indeo 2.1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IRAW&#39;</span><span class="p">:</span> <span class="s">&#39;Intel YUV Uncompressed&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IUYV&#39;</span><span class="p">:</span> <span class="s">&#39;Interlaced version of UYVY (line order 0,2,4 then 1,3,5 etc)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV30&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV31&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV32&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV33&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.3&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV34&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV35&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV36&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.6&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV37&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.7&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV38&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV39&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo 3.9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV40&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV41&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV42&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV43&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.3&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV44&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV45&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV46&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.6&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV47&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.7&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV48&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV49&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 4.9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IV50&#39;</span><span class="p">:</span> <span class="s">&#39;Ligos Indeo Interactive 5.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IY41&#39;</span><span class="p">:</span> <span class="s">&#39;Interlaced version of Y41P (line order 0,2,4,...,1,3,5...)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IYU1&#39;</span><span class="p">:</span> <span class="s">&#39;12 bit format used in mode 2 of the IEEE 1394 Digital Camera 1.04 spec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IYU2&#39;</span><span class="p">:</span> <span class="s">&#39;24 bit format used in mode 2 of the IEEE 1394 Digital Camera 1.04 spec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IYUV&#39;</span><span class="p">:</span> <span class="s">&#39;Intel Indeo iYUV 4:2:0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;JBYR&#39;</span><span class="p">:</span> <span class="s">&#39;Kensington JBYR&#39;</span><span class="p">,</span>
+    <span class="s">&#39;JFIF&#39;</span><span class="p">:</span> <span class="s">&#39;Motion JPEG (FFmpeg)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;JPEG&#39;</span><span class="p">:</span> <span class="s">&#39;Still Image JPEG DIB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;JPG &#39;</span><span class="p">:</span> <span class="s">&#39;JPEG compressed&#39;</span><span class="p">,</span>
+    <span class="s">&#39;JPGL&#39;</span><span class="p">:</span> <span class="s">&#39;Webcam JPEG Light&#39;</span><span class="p">,</span>
+    <span class="s">&#39;KMVC&#39;</span><span class="p">:</span> <span class="s">&#39;Karl Morton</span><span class="se">\&#39;</span><span class="s">s Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;KPCD&#39;</span><span class="p">:</span> <span class="s">&#39;Kodak Photo CD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;L261&#39;</span><span class="p">:</span> <span class="s">&#39;Lead Technologies H.261&#39;</span><span class="p">,</span>
+    <span class="s">&#39;L263&#39;</span><span class="p">:</span> <span class="s">&#39;Lead Technologies H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LAGS&#39;</span><span class="p">:</span> <span class="s">&#39;Lagarith LossLess&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LBYR&#39;</span><span class="p">:</span> <span class="s">&#39;Creative WebCam codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LCMW&#39;</span><span class="p">:</span> <span class="s">&#39;Lead Technologies Motion CMW Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LCW2&#39;</span><span class="p">:</span> <span class="s">&#39;LEADTools MCMW 9Motion Wavelet)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LEAD&#39;</span><span class="p">:</span> <span class="s">&#39;LEAD Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LGRY&#39;</span><span class="p">:</span> <span class="s">&#39;Lead Technologies Grayscale Image&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LJ2K&#39;</span><span class="p">:</span> <span class="s">&#39;LEADTools JPEG2000&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LJPG&#39;</span><span class="p">:</span> <span class="s">&#39;LEAD MJPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LMP2&#39;</span><span class="p">:</span> <span class="s">&#39;LEADTools MPEG2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LOCO&#39;</span><span class="p">:</span> <span class="s">&#39;LOCO Lossless Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LSCR&#39;</span><span class="p">:</span> <span class="s">&#39;LEAD Screen Capture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LSVM&#39;</span><span class="p">:</span> <span class="s">&#39;Vianet Lighting Strike Vmail (Streaming)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LZO1&#39;</span><span class="p">:</span> <span class="s">&#39;LZO compressed (lossless codec)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;M261&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft H.261&#39;</span><span class="p">,</span>
+    <span class="s">&#39;M263&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;M4CC&#39;</span><span class="p">:</span> <span class="s">&#39;ESS MPEG4 Divio codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;M4S2&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft MPEG-4 (M4S2)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MC12&#39;</span><span class="p">:</span> <span class="s">&#39;ATI Motion Compensation Format (MC12)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MC24&#39;</span><span class="p">:</span> <span class="s">&#39;MainConcept Motion JPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MCAM&#39;</span><span class="p">:</span> <span class="s">&#39;ATI Motion Compensation Format (MCAM)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MCZM&#39;</span><span class="p">:</span> <span class="s">&#39;Theory MicroCosm Lossless 64bit RGB with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MDVD&#39;</span><span class="p">:</span> <span class="s">&#39;Alex MicroDVD Video (hacked MS MPEG-4)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MDVF&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle DV/DV50/DVHD100&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MHFY&#39;</span><span class="p">:</span> <span class="s">&#39;A.M.Paredes mhuffyYUV (LossLess)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MJ2C&#39;</span><span class="p">:</span> <span class="s">&#39;Morgan Multimedia Motion JPEG2000&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MJPA&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle ReelTime MJPG hardware codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MJPB&#39;</span><span class="p">:</span> <span class="s">&#39;Motion JPEG codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MJPG&#39;</span><span class="p">:</span> <span class="s">&#39;Motion JPEG DIB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MJPX&#39;</span><span class="p">:</span> <span class="s">&#39;Pegasus PICVideo Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MMES&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MPEG-2 I-frame&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MNVD&#39;</span><span class="p">:</span> <span class="s">&#39;MindBend MindVid LossLess&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP2A&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG-2 Audio&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP2T&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG-2 Transport Stream&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP2V&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG-2 Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP41&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft MPEG-4 V1 (enhansed H263)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP42&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft MPEG-4 (low-motion)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP43&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft MPEG-4 (fast-motion)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP4A&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG-4 Audio&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP4S&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft MPEG-4 (MP4S)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP4T&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG-4 Transport Stream&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MP4V&#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickTime MPEG-4 native&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MPEG&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG-1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MPG1&#39;</span><span class="p">:</span> <span class="s">&#39;FFmpeg-1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MPG2&#39;</span><span class="p">:</span> <span class="s">&#39;FFmpeg-1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MPG3&#39;</span><span class="p">:</span> <span class="s">&#39;Same as Low motion DivX MPEG-4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MPG4&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft MPEG-4 Video High Speed Compressor&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MPGI&#39;</span><span class="p">:</span> <span class="s">&#39;Sigma Designs MPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MPNG&#39;</span><span class="p">:</span> <span class="s">&#39;Motion PNG codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MRCA&#39;</span><span class="p">:</span> <span class="s">&#39;Martin Regen Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MRLE&#39;</span><span class="p">:</span> <span class="s">&#39;Run Length Encoding&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MSS1&#39;</span><span class="p">:</span> <span class="s">&#39;Windows Screen Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MSS2&#39;</span><span class="p">:</span> <span class="s">&#39;Windows Media 9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MSUC&#39;</span><span class="p">:</span> <span class="s">&#39;MSU LossLess&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MSVC&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft Video 1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MSZH&#39;</span><span class="p">:</span> <span class="s">&#39;Lossless codec (ZIP compression)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTGA&#39;</span><span class="p">:</span> <span class="s">&#39;Motion TGA images (24, 32 bpp)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX1&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX2&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX3&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX3&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX4&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX5&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX6&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX6&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX7&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX7&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX8&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MTX9&#39;</span><span class="p">:</span> <span class="s">&#39;Matrox MTX9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MV12&#39;</span><span class="p">:</span> <span class="s">&#39;MV12&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MVI1&#39;</span><span class="p">:</span> <span class="s">&#39;Motion Pixels MVI&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MVI2&#39;</span><span class="p">:</span> <span class="s">&#39;Motion Pixels MVI&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MWV1&#39;</span><span class="p">:</span> <span class="s">&#39;Aware Motion Wavelets&#39;</span><span class="p">,</span>
+    <span class="s">&#39;MYUV&#39;</span><span class="p">:</span> <span class="s">&#39;Media-100 844/X Uncompressed&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NAVI&#39;</span><span class="p">:</span> <span class="s">&#39;nAVI&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NDIG&#39;</span><span class="p">:</span> <span class="s">&#39;Ahead Nero Digital MPEG-4 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NHVU&#39;</span><span class="p">:</span> <span class="s">&#39;NVidia Texture Format (GEForce 3)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NO16&#39;</span><span class="p">:</span> <span class="s">&#39;Theory None16 64bit uncompressed RAW&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NT00&#39;</span><span class="p">:</span> <span class="s">&#39;NewTek LigtWave HDTV YUV with Alpha-channel&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NTN1&#39;</span><span class="p">:</span> <span class="s">&#39;Nogatech Video Compression 1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NTN2&#39;</span><span class="p">:</span> <span class="s">&#39;Nogatech Video Compression 2 (GrabBee hardware coder)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NUV1&#39;</span><span class="p">:</span> <span class="s">&#39;NuppelVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NV12&#39;</span><span class="p">:</span> <span class="s">&#39;8-bit Y plane followed by an interleaved U/V plane with 2x2 subsampling&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NV21&#39;</span><span class="p">:</span> <span class="s">&#39;As NV12 with U and V reversed in the interleaved plane&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVDS&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia Texture Format&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVHS&#39;</span><span class="p">:</span> <span class="s">&#39;NVidia Texture Format (GEForce 3)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVS0&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVS1&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVS2&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVS3&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVS4&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVS5&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVT0&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVT1&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVT2&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVT3&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVT4&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;NVT5&#39;</span><span class="p">:</span> <span class="s">&#39;nVidia GeForce Texture&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PDVC&#39;</span><span class="p">:</span> <span class="s">&#39;I-O Data Device Digital Video Capture DV codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PGVV&#39;</span><span class="p">:</span> <span class="s">&#39;Radius Video Vision&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PHMO&#39;</span><span class="p">:</span> <span class="s">&#39;IBM Photomotion&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PIM1&#39;</span><span class="p">:</span> <span class="s">&#39;Pegasus Imaging&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PIM2&#39;</span><span class="p">:</span> <span class="s">&#39;Pegasus Imaging&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PIMJ&#39;</span><span class="p">:</span> <span class="s">&#39;Pegasus Imaging Lossless JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PIXL&#39;</span><span class="p">:</span> <span class="s">&#39;MiroVideo XL (Motion JPEG)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PNG &#39;</span><span class="p">:</span> <span class="s">&#39;Apple PNG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PNG1&#39;</span><span class="p">:</span> <span class="s">&#39;Corecodec.org CorePNG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PVEZ&#39;</span><span class="p">:</span> <span class="s">&#39;Horizons Technology PowerEZ&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PVMM&#39;</span><span class="p">:</span> <span class="s">&#39;PacketVideo Corporation MPEG-4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PVW2&#39;</span><span class="p">:</span> <span class="s">&#39;Pegasus Imaging Wavelet Compression&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PVWV&#39;</span><span class="p">:</span> <span class="s">&#39;Pegasus Imaging Wavelet 2000&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PXLT&#39;</span><span class="p">:</span> <span class="s">&#39;Apple Pixlet (Wavelet)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Q1.0&#39;</span><span class="p">:</span> <span class="s">&#39;Q-Team QPEG 1.0 (www.q-team.de)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Q1.1&#39;</span><span class="p">:</span> <span class="s">&#39;Q-Team QPEG 1.1 (www.q-team.de)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;QDGX&#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickDraw GX&#39;</span><span class="p">,</span>
+    <span class="s">&#39;QPEG&#39;</span><span class="p">:</span> <span class="s">&#39;Q-Team QPEG 1.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;QPEQ&#39;</span><span class="p">:</span> <span class="s">&#39;Q-Team QPEG 1.1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;R210&#39;</span><span class="p">:</span> <span class="s">&#39;BlackMagic YUV (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;R411&#39;</span><span class="p">:</span> <span class="s">&#39;Radius DV NTSC YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;R420&#39;</span><span class="p">:</span> <span class="s">&#39;Radius DV PAL YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RAVI&#39;</span><span class="p">:</span> <span class="s">&#39;GroupTRON ReferenceAVI codec (dummy for MPEG compressor)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RAV_&#39;</span><span class="p">:</span> <span class="s">&#39;GroupTRON ReferenceAVI codec (dummy for MPEG compressor)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RAW &#39;</span><span class="p">:</span> <span class="s">&#39;Full Frames (Uncompressed)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGB &#39;</span><span class="p">:</span> <span class="s">&#39;Full Frames (Uncompressed)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGB(15)&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB15 5:5:5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGB(16)&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB16 5:6:5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGB(24)&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB24 8:8:8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGB1&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB332 3:3:2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGBA&#39;</span><span class="p">:</span> <span class="s">&#39;Raw RGB with alpha&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGBO&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB555 5:5:5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGBP&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB565 5:6:5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGBQ&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB555X 5:5:5 BE&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGBR&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed RGB565X 5:6:5 BE&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RGBT&#39;</span><span class="p">:</span> <span class="s">&#39;Computer Concepts 32-bit support&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RL4 &#39;</span><span class="p">:</span> <span class="s">&#39;RLE 4bpp RGB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RL8 &#39;</span><span class="p">:</span> <span class="s">&#39;RLE 8bpp RGB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RLE &#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft Run Length Encoder&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RLE4&#39;</span><span class="p">:</span> <span class="s">&#39;Run Length Encoded 4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RLE8&#39;</span><span class="p">:</span> <span class="s">&#39;Run Length Encoded 8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RMP4&#39;</span><span class="p">:</span> <span class="s">&#39;REALmagic MPEG-4 Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ROQV&#39;</span><span class="p">:</span> <span class="s">&#39;Id RoQ File Video Decoder&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RPZA&#39;</span><span class="p">:</span> <span class="s">&#39;Apple Video 16 bit &quot;road pizza&quot;&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RT21&#39;</span><span class="p">:</span> <span class="s">&#39;Intel Real Time Video 2.1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RTV0&#39;</span><span class="p">:</span> <span class="s">&#39;NewTek VideoToaster&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RUD0&#39;</span><span class="p">:</span> <span class="s">&#39;Rududu video codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RV10&#39;</span><span class="p">:</span> <span class="s">&#39;RealVideo codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RV13&#39;</span><span class="p">:</span> <span class="s">&#39;RealVideo codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RV20&#39;</span><span class="p">:</span> <span class="s">&#39;RealVideo G2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RV30&#39;</span><span class="p">:</span> <span class="s">&#39;RealVideo 8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RV40&#39;</span><span class="p">:</span> <span class="s">&#39;RealVideo 9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;RVX &#39;</span><span class="p">:</span> <span class="s">&#39;Intel RDX (RVX )&#39;</span><span class="p">,</span>
+    <span class="s">&#39;S263&#39;</span><span class="p">:</span> <span class="s">&#39;Sorenson Vision H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;S422&#39;</span><span class="p">:</span> <span class="s">&#39;Tekram VideoCap C210 YUV 4:2:2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SAMR&#39;</span><span class="p">:</span> <span class="s">&#39;Adaptive Multi-Rate (AMR) audio codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SAN3&#39;</span><span class="p">:</span> <span class="s">&#39;MPEG-4 codec (direct copy of DivX 3.11a)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SDCC&#39;</span><span class="p">:</span> <span class="s">&#39;Sun Communication Digital Camera Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SEDG&#39;</span><span class="p">:</span> <span class="s">&#39;Samsung MPEG-4 codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SFMC&#39;</span><span class="p">:</span> <span class="s">&#39;CrystalNet Surface Fitting Method&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR0&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR1&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR2&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR3&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR4&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR5&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR6&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SHR7&#39;</span><span class="p">:</span> <span class="s">&#39;BitJazz SheerVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SJPG&#39;</span><span class="p">:</span> <span class="s">&#39;CUseeMe Networks Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SL25&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK DVCPRO&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SL50&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK DVCPRO50&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SLDV&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK Forward DV Draw codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SLIF&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK MPEG2 I-frames&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SLMJ&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK Forward MJPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SMC &#39;</span><span class="p">:</span> <span class="s">&#39;Apple Graphics (SMC) codec (256 color)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SMSC&#39;</span><span class="p">:</span> <span class="s">&#39;Radius SMSC&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SMSD&#39;</span><span class="p">:</span> <span class="s">&#39;Radius SMSD&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SMSV&#39;</span><span class="p">:</span> <span class="s">&#39;WorldConnect Wavelet Video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SNOW&#39;</span><span class="p">:</span> <span class="s">&#39;SNOW codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP40&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP44&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus Aiptek MegaCam Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP53&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus Aiptek MegaCam Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP54&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus Aiptek MegaCam Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP55&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus Aiptek MegaCam Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP56&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus Aiptek MegaCam Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP57&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus Aiptek MegaCam Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SP58&#39;</span><span class="p">:</span> <span class="s">&#39;SunPlus Aiptek MegaCam Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SPIG&#39;</span><span class="p">:</span> <span class="s">&#39;Radius Spigot&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SPLC&#39;</span><span class="p">:</span> <span class="s">&#39;Splash Studios ACM Audio Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SPRK&#39;</span><span class="p">:</span> <span class="s">&#39;Sorenson Spark&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SQZ2&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft VXTreme Video Codec V2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;STVA&#39;</span><span class="p">:</span> <span class="s">&#39;ST CMOS Imager Data (Bayer)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;STVB&#39;</span><span class="p">:</span> <span class="s">&#39;ST CMOS Imager Data (Nudged Bayer)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;STVC&#39;</span><span class="p">:</span> <span class="s">&#39;ST CMOS Imager Data (Bunched)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;STVX&#39;</span><span class="p">:</span> <span class="s">&#39;ST CMOS Imager Data (Extended CODEC Data Format)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;STVY&#39;</span><span class="p">:</span> <span class="s">&#39;ST CMOS Imager Data (Extended CODEC Data Format with Correction Data)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SV10&#39;</span><span class="p">:</span> <span class="s">&#39;Sorenson Video R1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SVQ1&#39;</span><span class="p">:</span> <span class="s">&#39;Sorenson Video R3&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SVQ3&#39;</span><span class="p">:</span> <span class="s">&#39;Sorenson Video 3 (Apple Quicktime 5)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SWC1&#39;</span><span class="p">:</span> <span class="s">&#39;MainConcept Motion JPEG Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;T420&#39;</span><span class="p">:</span> <span class="s">&#39;Toshiba YUV 4:2:0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TGA &#39;</span><span class="p">:</span> <span class="s">&#39;Apple TGA (with Alpha-channel)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;THEO&#39;</span><span class="p">:</span> <span class="s">&#39;FFVFW Supported Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TIFF&#39;</span><span class="p">:</span> <span class="s">&#39;Apple TIFF (with Alpha-channel)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TIM2&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle RAL DVI&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TLMS&#39;</span><span class="p">:</span> <span class="s">&#39;TeraLogic Motion Intraframe Codec (TLMS)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TLST&#39;</span><span class="p">:</span> <span class="s">&#39;TeraLogic Motion Intraframe Codec (TLST)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TM20&#39;</span><span class="p">:</span> <span class="s">&#39;Duck TrueMotion 2.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TM2A&#39;</span><span class="p">:</span> <span class="s">&#39;Duck TrueMotion Archiver 2.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TM2X&#39;</span><span class="p">:</span> <span class="s">&#39;Duck TrueMotion 2X&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TMIC&#39;</span><span class="p">:</span> <span class="s">&#39;TeraLogic Motion Intraframe Codec (TMIC)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TMOT&#39;</span><span class="p">:</span> <span class="s">&#39;Horizons Technology TrueMotion S&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TR20&#39;</span><span class="p">:</span> <span class="s">&#39;Duck TrueMotion RealTime 2.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TRLE&#39;</span><span class="p">:</span> <span class="s">&#39;Akula Alpha Pro Custom AVI (LossLess)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TSCC&#39;</span><span class="p">:</span> <span class="s">&#39;TechSmith Screen Capture Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TV10&#39;</span><span class="p">:</span> <span class="s">&#39;Tecomac Low-Bit Rate Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TVJP&#39;</span><span class="p">:</span> <span class="s">&#39;TrueVision Field Encoded Motion JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TVMJ&#39;</span><span class="p">:</span> <span class="s">&#39;Truevision TARGA MJPEG Hardware Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TY0N&#39;</span><span class="p">:</span> <span class="s">&#39;Trident TY0N&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TY2C&#39;</span><span class="p">:</span> <span class="s">&#39;Trident TY2C&#39;</span><span class="p">,</span>
+    <span class="s">&#39;TY2N&#39;</span><span class="p">:</span> <span class="s">&#39;Trident TY2N&#39;</span><span class="p">,</span>
+    <span class="s">&#39;U263&#39;</span><span class="p">:</span> <span class="s">&#39;UB Video StreamForce H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;U&lt;Y &#39;</span><span class="p">:</span> <span class="s">&#39;Discreet UC YUV 4:2:2:4 10 bit&#39;</span><span class="p">,</span>
+    <span class="s">&#39;U&lt;YA&#39;</span><span class="p">:</span> <span class="s">&#39;Discreet UC YUV 4:2:2:4 10 bit (with Alpha-channel)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;UCOD&#39;</span><span class="p">:</span> <span class="s">&#39;eMajix.com ClearVideo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ULTI&#39;</span><span class="p">:</span> <span class="s">&#39;IBM Ultimotion&#39;</span><span class="p">,</span>
+    <span class="s">&#39;UMP4&#39;</span><span class="p">:</span> <span class="s">&#39;UB Video MPEG 4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;UYNV&#39;</span><span class="p">:</span> <span class="s">&#39;UYVY&#39;</span><span class="p">,</span>
+    <span class="s">&#39;UYVP&#39;</span><span class="p">:</span> <span class="s">&#39;YCbCr 4:2:2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;UYVU&#39;</span><span class="p">:</span> <span class="s">&#39;SoftLab-NSK Forward YUV codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;UYVY&#39;</span><span class="p">:</span> <span class="s">&#39;UYVY 4:2:2 byte ordering&#39;</span><span class="p">,</span>
+    <span class="s">&#39;V210&#39;</span><span class="p">:</span> <span class="s">&#39;Optibase VideoPump 10-bit 4:2:2 Component YCbCr&#39;</span><span class="p">,</span>
+    <span class="s">&#39;V261&#39;</span><span class="p">:</span> <span class="s">&#39;Lucent VX2000S&#39;</span><span class="p">,</span>
+    <span class="s">&#39;V422&#39;</span><span class="p">:</span> <span class="s">&#39;24 bit YUV 4:2:2 Format&#39;</span><span class="p">,</span>
+    <span class="s">&#39;V655&#39;</span><span class="p">:</span> <span class="s">&#39;16 bit YUV 4:2:2 Format&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VBLE&#39;</span><span class="p">:</span> <span class="s">&#39;MarcFD VBLE Lossless Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR1&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 1.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR2&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 2.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR3&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 3.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR4&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 4.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR5&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 5.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR6&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 6.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR7&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 7.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR8&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 8.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VCR9&#39;</span><span class="p">:</span> <span class="s">&#39;ATI VCR 9.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VDCT&#39;</span><span class="p">:</span> <span class="s">&#39;Video Maker Pro DIB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VDOM&#39;</span><span class="p">:</span> <span class="s">&#39;VDOnet VDOWave&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VDOW&#39;</span><span class="p">:</span> <span class="s">&#39;VDOnet VDOLive (H.263)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VDST&#39;</span><span class="p">:</span> <span class="s">&#39;VirtualDub remote frameclient ICM driver&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VDTZ&#39;</span><span class="p">:</span> <span class="s">&#39;Darim Vison VideoTizer YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VGPX&#39;</span><span class="p">:</span> <span class="s">&#39;VGPixel Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VIDM&#39;</span><span class="p">:</span> <span class="s">&#39;DivX 5.0 Pro Supported Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VIDS&#39;</span><span class="p">:</span> <span class="s">&#39;YUV 4:2:2 CCIR 601 for V422&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VIFP&#39;</span><span class="p">:</span> <span class="s">&#39;VIFP&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VIV1&#39;</span><span class="p">:</span> <span class="s">&#39;Vivo H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VIV2&#39;</span><span class="p">:</span> <span class="s">&#39;Vivo H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VIVO&#39;</span><span class="p">:</span> <span class="s">&#39;Vivo H.263 v2.00&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VIXL&#39;</span><span class="p">:</span> <span class="s">&#39;Miro Video XL&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VLV1&#39;</span><span class="p">:</span> <span class="s">&#39;Videologic VLCAP.DRV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP30&#39;</span><span class="p">:</span> <span class="s">&#39;On2 VP3.0&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP31&#39;</span><span class="p">:</span> <span class="s">&#39;On2 VP3.1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP40&#39;</span><span class="p">:</span> <span class="s">&#39;On2 TrueCast VP4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP50&#39;</span><span class="p">:</span> <span class="s">&#39;On2 TrueCast VP5&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP60&#39;</span><span class="p">:</span> <span class="s">&#39;On2 TrueCast VP6&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP61&#39;</span><span class="p">:</span> <span class="s">&#39;On2 TrueCast VP6.1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP62&#39;</span><span class="p">:</span> <span class="s">&#39;On2 TrueCast VP6.2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VP70&#39;</span><span class="p">:</span> <span class="s">&#39;On2 TrueMotion VP7&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VQC1&#39;</span><span class="p">:</span> <span class="s">&#39;Vector-quantised codec 1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VQC2&#39;</span><span class="p">:</span> <span class="s">&#39;Vector-quantised codec 2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VR21&#39;</span><span class="p">:</span> <span class="s">&#39;BlackMagic YUV (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VSSH&#39;</span><span class="p">:</span> <span class="s">&#39;Vanguard VSS H.264&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VSSV&#39;</span><span class="p">:</span> <span class="s">&#39;Vanguard Software Solutions Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VSSW&#39;</span><span class="p">:</span> <span class="s">&#39;Vanguard VSS H.264&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VTLP&#39;</span><span class="p">:</span> <span class="s">&#39;Alaris VideoGramPixel Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VX1K&#39;</span><span class="p">:</span> <span class="s">&#39;VX1000S Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VX2K&#39;</span><span class="p">:</span> <span class="s">&#39;VX2000S Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VXSP&#39;</span><span class="p">:</span> <span class="s">&#39;VX1000SP Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VYU9&#39;</span><span class="p">:</span> <span class="s">&#39;ATI Technologies YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VYUY&#39;</span><span class="p">:</span> <span class="s">&#39;ATI Packed YUV Data&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WBVC&#39;</span><span class="p">:</span> <span class="s">&#39;Winbond W9960&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WHAM&#39;</span><span class="p">:</span> <span class="s">&#39;Microsoft Video 1 (WHAM)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WINX&#39;</span><span class="p">:</span> <span class="s">&#39;Winnov Software Compression&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WJPG&#39;</span><span class="p">:</span> <span class="s">&#39;AverMedia Winbond JPEG&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WMV1&#39;</span><span class="p">:</span> <span class="s">&#39;Windows Media Video V7&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WMV2&#39;</span><span class="p">:</span> <span class="s">&#39;Windows Media Video V8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WMV3&#39;</span><span class="p">:</span> <span class="s">&#39;Windows Media Video V9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WMVA&#39;</span><span class="p">:</span> <span class="s">&#39;WMVA codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WMVP&#39;</span><span class="p">:</span> <span class="s">&#39;Windows Media Video V9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WNIX&#39;</span><span class="p">:</span> <span class="s">&#39;WniWni Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WNV1&#39;</span><span class="p">:</span> <span class="s">&#39;Winnov Hardware Compression&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WNVA&#39;</span><span class="p">:</span> <span class="s">&#39;Winnov hw compress&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WRLE&#39;</span><span class="p">:</span> <span class="s">&#39;Apple QuickTime BMP Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WRPR&#39;</span><span class="p">:</span> <span class="s">&#39;VideoTools VideoServer Client Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WV1F&#39;</span><span class="p">:</span> <span class="s">&#39;WV1F codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WVLT&#39;</span><span class="p">:</span> <span class="s">&#39;IllusionHope Wavelet 9/7&#39;</span><span class="p">,</span>
+    <span class="s">&#39;WVP2&#39;</span><span class="p">:</span> <span class="s">&#39;WVP2 codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;X263&#39;</span><span class="p">:</span> <span class="s">&#39;Xirlink H.263&#39;</span><span class="p">,</span>
+    <span class="s">&#39;X264&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave GNU GPL x264 MPEG-4 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XLV0&#39;</span><span class="p">:</span> <span class="s">&#39;NetXL Video Decoder&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XMPG&#39;</span><span class="p">:</span> <span class="s">&#39;Xing MPEG (I-Frame only)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XVID&#39;</span><span class="p">:</span> <span class="s">&#39;XviD MPEG-4&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XVIX&#39;</span><span class="p">:</span> <span class="s">&#39;Based on XviD MPEG-4 codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV0&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV1&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV2&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV3&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec (Xi-3 Video)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV4&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV5&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV6&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV7&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV8&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XWV9&#39;</span><span class="p">:</span> <span class="s">&#39;XiWave Video Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XXAN&#39;</span><span class="p">:</span> <span class="s">&#39;XXAN&#39;</span><span class="p">,</span>
+    <span class="s">&#39;XYZP&#39;</span><span class="p">:</span> <span class="s">&#39;Extended PAL format XYZ palette&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y211&#39;</span><span class="p">:</span> <span class="s">&#39;YUV 2:1:1 Packed&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y216&#39;</span><span class="p">:</span> <span class="s">&#39;Pinnacle TARGA CineWave YUV (Quick Time)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y411&#39;</span><span class="p">:</span> <span class="s">&#39;YUV 4:1:1 Packed&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y41B&#39;</span><span class="p">:</span> <span class="s">&#39;YUV 4:1:1 Planar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y41P&#39;</span><span class="p">:</span> <span class="s">&#39;PC1 4:1:1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y41T&#39;</span><span class="p">:</span> <span class="s">&#39;PC1 4:1:1 with transparency&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y422&#39;</span><span class="p">:</span> <span class="s">&#39;Y422&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y42B&#39;</span><span class="p">:</span> <span class="s">&#39;YUV 4:2:2 Planar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y42T&#39;</span><span class="p">:</span> <span class="s">&#39;PCI 4:2:2 with transparency&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y444&#39;</span><span class="p">:</span> <span class="s">&#39;IYU2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y8  &#39;</span><span class="p">:</span> <span class="s">&#39;Grayscale video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Y800&#39;</span><span class="p">:</span> <span class="s">&#39;Simple grayscale video&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YC12&#39;</span><span class="p">:</span> <span class="s">&#39;Intel YUV12 Codec&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YMPG&#39;</span><span class="p">:</span> <span class="s">&#39;YMPEG Alpha&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YU12&#39;</span><span class="p">:</span> <span class="s">&#39;ATI YV12 4:2:0 Planar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YU92&#39;</span><span class="p">:</span> <span class="s">&#39;Intel - YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YUNV&#39;</span><span class="p">:</span> <span class="s">&#39;YUNV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YUV2&#39;</span><span class="p">:</span> <span class="s">&#39;Apple Component Video (YUV 4:2:2)&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YUV8&#39;</span><span class="p">:</span> <span class="s">&#39;Winnov Caviar YUV8&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YUV9&#39;</span><span class="p">:</span> <span class="s">&#39;Intel YUV9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YUVP&#39;</span><span class="p">:</span> <span class="s">&#39;YCbCr 4:2:2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YUY2&#39;</span><span class="p">:</span> <span class="s">&#39;Uncompressed YUV 4:2:2&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YUYV&#39;</span><span class="p">:</span> <span class="s">&#39;Canopus YUV&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YV12&#39;</span><span class="p">:</span> <span class="s">&#39;YVU12 Planar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YV16&#39;</span><span class="p">:</span> <span class="s">&#39;Elecard YUV 4:2:2 Planar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YV92&#39;</span><span class="p">:</span> <span class="s">&#39;Intel Smart Video Recorder YVU9&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YVU9&#39;</span><span class="p">:</span> <span class="s">&#39;Intel YVU9 Planar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;YVYU&#39;</span><span class="p">:</span> <span class="s">&#39;YVYU 4:2:2 byte ordering&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ZLIB&#39;</span><span class="p">:</span> <span class="s">&#39;ZLIB&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ZPEG&#39;</span><span class="p">:</span> <span class="s">&#39;Metheus Video Zipper&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ZYGO&#39;</span><span class="p">:</span> <span class="s">&#39;ZyGo Video Codec&#39;</span>
+<span class="p">}</span>
+
+<span class="c"># make it fool prove</span>
+<span class="k">for</span> <span class="n">code</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">FOURCC</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">code</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">FOURCC</span><span class="p">:</span>
+        <span class="n">FOURCC</span><span class="p">[</span><span class="n">code</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">if</span> <span class="n">code</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">):</span>
+        <span class="n">FOURCC</span><span class="p">[</span><span class="n">code</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,290 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.audio.m4a &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.audio.m4a</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># m4a.py - m4a file parser</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: m4a.py 3996 2009-05-16 14:12:36Z tack $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Aubin Paul &lt;aubin@outlyer.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># Based on a sample implementation posted to daap-dev mailing list by</span>
+<span class="c"># Bob Ippolito &lt;bob@redivi.com&gt;</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="c"># import kaa_metadata.audio core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="n">FLAGS</span><span class="o">=</span> <span class="n">CONTAINER</span><span class="p">,</span> <span class="n">SKIPPER</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">,</span> <span class="n">IGNORE</span><span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="n">_</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">4</span><span class="p">)]</span>
+
+<span class="c"># CONTAINER: datum contains other boxes</span>
+<span class="c"># SKIPPER: ignore first 4 bytes of datum</span>
+<span class="c"># TAGITEM: &quot;official&quot; tag item</span>
+<span class="n">CALLBACK</span><span class="o">=</span> <span class="n">TAGITEM</span>
+<span class="n">FLAGS</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CALLBACK</span><span class="p">)</span>
+
+<span class="n">TAGTYPES</span><span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span><span class="s">&#39;ftyp&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;mvhd&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;moov&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;mdat&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;udta&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;meta&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="o">|</span><span class="n">SKIPPER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;ilst&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">ART&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">nam&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">too&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">alb&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">day&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">gen&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">wrt&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">cmt&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;trkn&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;trak&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;mdia&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;mdhd&#39;</span><span class="p">,</span> <span class="n">TAGITEM</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;minf&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;dinf&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+    <span class="p">(</span><span class="s">&#39;stbl&#39;</span><span class="p">,</span> <span class="n">CONTAINER</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">flagged</span><span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">flag</span> <span class="ow">in</span> <span class="n">FLAGS</span><span class="p">:</span>
+    <span class="n">flagged</span><span class="p">[</span><span class="n">flag</span><span class="p">]</span><span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">TAGTYPES</span> <span class="k">if</span> <span class="n">_</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">flag</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_analyse</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">offset0</span><span class="p">,</span> <span class="n">offset1</span><span class="p">):</span>
+    <span class="s">&quot;Walk the atom tree in a mp4 file&quot;</span>
+    <span class="n">offset</span><span class="o">=</span> <span class="n">offset0</span>
+    <span class="k">while</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="n">offset1</span><span class="p">:</span>
+        <span class="n">fp</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+        <span class="n">atomsize</span><span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!i&quot;</span><span class="p">,</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">atomtype</span><span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">atomsize</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="p">:</span>
+            <span class="c"># This logic is not likely correct, but at least avoids</span>
+            <span class="c"># an exception from fp.read() below.</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">atomtype</span> <span class="ow">in</span> <span class="n">flagged</span><span class="p">[</span><span class="n">CONTAINER</span><span class="p">]:</span>
+            <span class="n">data</span><span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="k">for</span> <span class="n">reply</span> <span class="ow">in</span> <span class="n">_analyse</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">offset</span><span class="o">+</span><span class="p">(</span><span class="n">atomtype</span> <span class="ow">in</span> <span class="n">flagged</span><span class="p">[</span><span class="n">SKIPPER</span><span class="p">]</span> <span class="ow">and</span> <span class="mi">12</span> <span class="ow">or</span> <span class="mi">8</span><span class="p">),</span>
+                <span class="n">offset</span><span class="o">+</span><span class="n">atomsize</span><span class="p">):</span>
+                <span class="k">yield</span> <span class="n">reply</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fp</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">offset</span><span class="o">+</span><span class="mi">8</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">atomtype</span> <span class="ow">in</span> <span class="n">flagged</span><span class="p">[</span><span class="n">TAGITEM</span><span class="p">]:</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">atomsize</span><span class="o">-</span><span class="mi">8</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">atomsize</span><span class="o">-</span><span class="mi">8</span><span class="p">,</span> <span class="mi">32</span><span class="p">))</span>
+            <span class="c">#print `atomtype`, `data`</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">atomtype</span> <span class="ow">in</span> <span class="n">flagged</span><span class="p">[</span><span class="n">IGNORE</span><span class="p">]:</span> <span class="k">yield</span> <span class="n">atomtype</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">,</span> <span class="n">data</span>
+        <span class="n">offset</span><span class="o">+=</span> <span class="n">atomsize</span>
+
+<span class="k">def</span> <span class="nf">mp4_atoms</span><span class="p">(</span><span class="n">fp</span><span class="p">):</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">size</span><span class="o">=</span><span class="n">fp</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">_analyse</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">atom</span>
+
+<span class="k">class</span> <span class="nc">M4ATags</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+    <span class="s">&quot;An class reading .m4a tags&quot;</span>
+    <span class="n">convtag</span><span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;ftyp&#39;</span><span class="p">:</span> <span class="s">&#39;FileType&#39;</span><span class="p">,</span>
+        <span class="s">&#39;trkn&#39;</span><span class="p">:</span> <span class="s">&#39;Track&#39;</span><span class="p">,</span>
+        <span class="s">&#39;length&#39;</span><span class="p">:</span> <span class="s">&#39;Length&#39;</span><span class="p">,</span>
+        <span class="s">&#39;samplerate&#39;</span><span class="p">:</span> <span class="s">&#39;SampleRate&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">ART&#39;</span><span class="p">:</span> <span class="s">&#39;Artist&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">nam&#39;</span><span class="p">:</span> <span class="s">&#39;Title&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">alb&#39;</span><span class="p">:</span> <span class="s">&#39;Album&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">day&#39;</span><span class="p">:</span> <span class="s">&#39;Year&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">gen&#39;</span><span class="p">:</span> <span class="s">&#39;Genre&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">cmt&#39;</span><span class="p">:</span> <span class="s">&#39;Comment&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">wrt&#39;</span><span class="p">:</span> <span class="s">&#39;Writer&#39;</span><span class="p">,</span>
+        <span class="s">&#39;</span><span class="se">\xa9</span><span class="s">too&#39;</span><span class="p">:</span> <span class="s">&#39;Tool&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s">&#39;FileType&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;unknown&#39;</span>
+        <span class="n">fp</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">size</span><span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!i&quot;</span><span class="p">,</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span> <span class="n">struct</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+            <span class="c"># EOF.</span>
+            <span class="k">return</span>
+        <span class="nb">type</span><span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        <span class="c">#check for ftyp identification</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s">&#39;ftyp&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">atomtype</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">,</span> <span class="n">atomdata</span> <span class="ow">in</span> <span class="n">mp4_atoms</span><span class="p">(</span><span class="n">fp</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">atom2tag</span><span class="p">(</span><span class="n">atomtype</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">atom2tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atomtype</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">):</span>
+        <span class="s">&quot;Insert items using descriptive key instead of atomtype&quot;</span>
+        <span class="k">if</span> <span class="n">atomtype</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\xa9</span><span class="s">&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">key</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convtag</span><span class="p">[</span><span class="n">atomtype</span><span class="p">]</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span> <span class="n">atomdata</span><span class="p">[</span><span class="mi">16</span><span class="p">:]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;mdhd&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">atomdata</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c">#if version is 1 then date and duration values are 8 bytes in length</span>
+                <span class="n">timescale</span><span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!Q&quot;</span><span class="p">,</span><span class="n">atomdata</span><span class="p">[</span><span class="mi">20</span><span class="p">:</span><span class="mi">24</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">duration</span><span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!Q&quot;</span><span class="p">,</span><span class="n">atomdata</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">30</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">timescale</span><span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!i&quot;</span><span class="p">,</span><span class="n">atomdata</span><span class="p">[</span><span class="mi">12</span><span class="p">:</span><span class="mi">16</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">duration</span><span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!i&quot;</span><span class="p">,</span><span class="n">atomdata</span><span class="p">[</span><span class="mi">16</span><span class="p">:</span><span class="mi">20</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">convtag</span><span class="p">[</span><span class="s">&#39;length&#39;</span><span class="p">]]</span><span class="o">=</span> <span class="n">duration</span><span class="o">/</span><span class="n">timescale</span>
+            <span class="bp">self</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">convtag</span><span class="p">[</span><span class="s">&#39;samplerate&#39;</span><span class="p">]]</span><span class="o">=</span> <span class="n">timescale</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;trkn&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">convtag</span><span class="p">[</span><span class="n">atomtype</span><span class="p">]]</span><span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!i&quot;</span><span class="p">,</span><span class="n">atomdata</span><span class="p">[</span><span class="mi">16</span><span class="p">:</span><span class="mi">20</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;ftyp&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">convtag</span><span class="p">[</span><span class="n">atomtype</span><span class="p">]]</span><span class="o">=</span> <span class="n">atomdata</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&quot;utf-8&quot;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">Mpeg4Audio</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">valid</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">returnval</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">M4ATags</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;FileType&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;M4A &#39;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;Title&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">artist</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;Artist&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">album</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;Album&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trackno</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;Track&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;Year&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;Tool&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;Length&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="s">&#39;SampleRate&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">valid</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;audio/mp4&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="n">returnval</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">Mpeg4Audio</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

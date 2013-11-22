@@ -1,0 +1,21 @@
+include README.txt
+include pytomo.man
+
+include pytomo*.spec
+include MANIFEST.in
+
+include templates/*_template.html
+graft templates/doc
+include images/Orange_logo.jpg
+
+include pytomo/rrdtool_win_x86_DLLs/*
+include MANIFEST_windows.in
+include setup_windows.py
+
+include apidoc_sphinx_rst/*.rst
+include apidoc_sphinx_rst/conf.py
+include apidoc_sphinx_rst/README.txt
+include apidoc_sphinx_rst/Makefile
+include apidoc_sphinx_rst/make.bat
+
+include pytomo/lib_general_download.py

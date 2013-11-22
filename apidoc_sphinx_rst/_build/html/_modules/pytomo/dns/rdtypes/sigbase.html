@@ -1,0 +1,265 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.rdtypes.sigbase &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.rdtypes.sigbase</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2004-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">calendar</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">dnssec</span> <span class="k">as</span> <span class="n">dns_dnssec</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">rdata</span> <span class="k">as</span> <span class="n">dns_rdata</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+
+<div class="viewcode-block" id="BadSigTime"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.BadSigTime">[docs]</a><span class="k">class</span> <span class="nc">BadSigTime</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised when a SIG or RRSIG RR&#39;s time cannot be parsed.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="sigtime_to_posixtime"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.sigtime_to_posixtime">[docs]</a><span class="k">def</span> <span class="nf">sigtime_to_posixtime</span><span class="p">(</span><span class="n">what</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">what</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">14</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BadSigTime</span>
+    <span class="n">year</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">what</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">month</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">what</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">6</span><span class="p">])</span>
+    <span class="n">day</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">what</span><span class="p">[</span><span class="mi">6</span><span class="p">:</span><span class="mi">8</span><span class="p">])</span>
+    <span class="n">hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">what</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">10</span><span class="p">])</span>
+    <span class="n">minute</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">what</span><span class="p">[</span><span class="mi">10</span><span class="p">:</span><span class="mi">12</span><span class="p">])</span>
+    <span class="n">second</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">what</span><span class="p">[</span><span class="mi">12</span><span class="p">:</span><span class="mi">14</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">calendar</span><span class="o">.</span><span class="n">timegm</span><span class="p">((</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">day</span><span class="p">,</span> <span class="n">hour</span><span class="p">,</span> <span class="n">minute</span><span class="p">,</span> <span class="n">second</span><span class="p">,</span>
+                            <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="posixtime_to_sigtime"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.posixtime_to_sigtime">[docs]</a><span class="k">def</span> <span class="nf">posixtime_to_sigtime</span><span class="p">(</span><span class="n">what</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&#39;%Y%m</span><span class="si">%d</span><span class="s">%H%M%S&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">gmtime</span><span class="p">(</span><span class="n">what</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SIGBase"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.SIGBase">[docs]</a><span class="k">class</span> <span class="nc">SIGBase</span><span class="p">(</span><span class="n">dns_rdata</span><span class="o">.</span><span class="n">Rdata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SIG-like record base</span>
+
+<span class="sd">    @ivar type_covered: the rdata type this signature covers</span>
+<span class="sd">    @type type_covered: int</span>
+<span class="sd">    @ivar algorithm: the algorithm used for the sig</span>
+<span class="sd">    @type algorithm: int</span>
+<span class="sd">    @ivar labels: number of labels</span>
+<span class="sd">    @type labels: int</span>
+<span class="sd">    @ivar original_ttl: the original TTL</span>
+<span class="sd">    @type original_ttl: long</span>
+<span class="sd">    @ivar expiration: signature expiration time</span>
+<span class="sd">    @type expiration: long</span>
+<span class="sd">    @ivar inception: signature inception time</span>
+<span class="sd">    @type inception: long</span>
+<span class="sd">    @ivar key_tag: the key tag</span>
+<span class="sd">    @type key_tag: int</span>
+<span class="sd">    @ivar signer: the signer</span>
+<span class="sd">    @type signer: dns_name.Name object</span>
+<span class="sd">    @ivar signature: the signature</span>
+<span class="sd">    @type signature: string&quot;&quot;&quot;</span>
+
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;type_covered&#39;</span><span class="p">,</span> <span class="s">&#39;algorithm&#39;</span><span class="p">,</span> <span class="s">&#39;labels&#39;</span><span class="p">,</span> <span class="s">&#39;original_ttl&#39;</span><span class="p">,</span>
+                 <span class="s">&#39;expiration&#39;</span><span class="p">,</span> <span class="s">&#39;inception&#39;</span><span class="p">,</span> <span class="s">&#39;key_tag&#39;</span><span class="p">,</span> <span class="s">&#39;signer&#39;</span><span class="p">,</span>
+                 <span class="s">&#39;signature&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">type_covered</span><span class="p">,</span> <span class="n">algorithm</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span>
+                 <span class="n">original_ttl</span><span class="p">,</span> <span class="n">expiration</span><span class="p">,</span> <span class="n">inception</span><span class="p">,</span> <span class="n">key_tag</span><span class="p">,</span> <span class="n">signer</span><span class="p">,</span>
+                 <span class="n">signature</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SIGBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_covered</span> <span class="o">=</span> <span class="n">type_covered</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">original_ttl</span> <span class="o">=</span> <span class="n">original_ttl</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span> <span class="o">=</span> <span class="n">expiration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inception</span> <span class="o">=</span> <span class="n">inception</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_tag</span> <span class="o">=</span> <span class="n">key_tag</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signer</span> <span class="o">=</span> <span class="n">signer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signature</span> <span class="o">=</span> <span class="n">signature</span>
+
+<div class="viewcode-block" id="SIGBase.covers"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.SIGBase.covers">[docs]</a>    <span class="k">def</span> <span class="nf">covers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_covered</span>
+</div>
+<div class="viewcode-block" id="SIGBase.to_text"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.SIGBase.to_text">[docs]</a>    <span class="k">def</span> <span class="nf">to_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s"> </span><span class="si">%d</span><span class="s"> </span><span class="si">%d</span><span class="s"> </span><span class="si">%d</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="si">%d</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">type_covered</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">original_ttl</span><span class="p">,</span>
+            <span class="n">posixtime_to_sigtime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expiration</span><span class="p">),</span>
+            <span class="n">posixtime_to_sigtime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inception</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">key_tag</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">signer</span><span class="p">,</span>
+            <span class="n">dns_rdata</span><span class="o">.</span><span class="n">_base64ify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signature</span><span class="p">)</span>
+            <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SIGBase.from_text"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.SIGBase.from_text">[docs]</a>    <span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="n">type_covered</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">get_string</span><span class="p">())</span>
+        <span class="n">algorithm</span> <span class="o">=</span> <span class="n">dns_dnssec</span><span class="o">.</span><span class="n">algorithm_from_text</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">get_string</span><span class="p">())</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get_int</span><span class="p">()</span>
+        <span class="n">original_ttl</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get_ttl</span><span class="p">()</span>
+        <span class="n">expiration</span> <span class="o">=</span> <span class="n">sigtime_to_posixtime</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">get_string</span><span class="p">())</span>
+        <span class="n">inception</span> <span class="o">=</span> <span class="n">sigtime_to_posixtime</span><span class="p">(</span><span class="n">tok</span><span class="o">.</span><span class="n">get_string</span><span class="p">())</span>
+        <span class="n">key_tag</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get_int</span><span class="p">()</span>
+        <span class="n">signer</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span>
+        <span class="n">signer</span> <span class="o">=</span> <span class="n">signer</span><span class="o">.</span><span class="n">choose_relativity</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">relativize</span><span class="p">)</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">is_eol_or_eof</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">b64</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+        <span class="n">signature</span> <span class="o">=</span> <span class="n">b64</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;base64_codec&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">type_covered</span><span class="p">,</span> <span class="n">algorithm</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span>
+                   <span class="n">original_ttl</span><span class="p">,</span> <span class="n">expiration</span><span class="p">,</span> <span class="n">inception</span><span class="p">,</span> <span class="n">key_tag</span><span class="p">,</span> <span class="n">signer</span><span class="p">,</span>
+                   <span class="n">signature</span><span class="p">)</span>
+</div>
+    <span class="n">from_text</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_text</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SIGBase.to_wire"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.SIGBase.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">compress</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HBBIIIH&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_covered</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">original_ttl</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">inception</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_tag</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signer</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">origin</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signature</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SIGBase.from_wire"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.SIGBase.from_wire">[docs]</a>    <span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">rdlen</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!HBBIIIH&#39;</span><span class="p">,</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span> <span class="p">:</span> <span class="n">current</span> <span class="o">+</span> <span class="mi">18</span><span class="p">])</span>
+        <span class="n">current</span> <span class="o">+=</span> <span class="mi">18</span>
+        <span class="n">rdlen</span> <span class="o">-=</span> <span class="mi">18</span>
+        <span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">cused</span><span class="p">)</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">wire</span><span class="p">[:</span> <span class="n">current</span> <span class="o">+</span> <span class="n">rdlen</span><span class="p">],</span> <span class="n">current</span><span class="p">)</span>
+        <span class="n">current</span> <span class="o">+=</span> <span class="n">cused</span>
+        <span class="n">rdlen</span> <span class="o">-=</span> <span class="n">cused</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">signer</span> <span class="o">=</span> <span class="n">signer</span><span class="o">.</span><span class="n">relativize</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+        <span class="n">signature</span> <span class="o">=</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span> <span class="p">:</span> <span class="n">current</span> <span class="o">+</span> <span class="n">rdlen</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">header</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">header</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                   <span class="n">header</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">header</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">header</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">header</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">signer</span><span class="p">,</span>
+                   <span class="n">signature</span><span class="p">)</span>
+</div>
+    <span class="n">from_wire</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_wire</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SIGBase.choose_relativity"><a class="viewcode-back" href="../../../../pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.sigbase.SIGBase.choose_relativity">[docs]</a>    <span class="k">def</span> <span class="nf">choose_relativity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signer</span><span class="o">.</span><span class="n">choose_relativity</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">relativize</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_cmp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">hs</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HBBIIIH&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_covered</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">original_ttl</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">inception</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_tag</span><span class="p">)</span>
+        <span class="n">ho</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HBBIIIH&#39;</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">type_covered</span><span class="p">,</span>
+                         <span class="n">other</span><span class="o">.</span><span class="n">algorithm</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span>
+                         <span class="n">other</span><span class="o">.</span><span class="n">original_ttl</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">expiration</span><span class="p">,</span>
+                         <span class="n">other</span><span class="o">.</span><span class="n">inception</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">key_tag</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="nb">cmp</span><span class="p">(</span><span class="n">hs</span><span class="p">,</span> <span class="n">ho</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="nb">cmp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signer</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">signer</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="nb">cmp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signature</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">signature</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,468 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.dnssec &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.dnssec</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2003-2007, 2009 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;Common DNSSEC-related functions and constants.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">cStringIO</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="nb">hash</span> <span class="k">as</span> <span class="n">dns_hash</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">node</span> <span class="k">as</span> <span class="n">dns_node</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataset</span> <span class="k">as</span> <span class="n">dns_rdataset</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdata</span> <span class="k">as</span> <span class="n">dns_rdata</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+
+<div class="viewcode-block" id="UnsupportedAlgorithm"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.dnssec.UnsupportedAlgorithm">[docs]</a><span class="k">class</span> <span class="nc">UnsupportedAlgorithm</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if an algorithm is not supported.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="ValidationFailure"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.dnssec.ValidationFailure">[docs]</a><span class="k">class</span> <span class="nc">ValidationFailure</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The DNSSEC signature is invalid.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<span class="n">RSAMD5</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">DH</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">DSA</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">ECC</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">RSASHA1</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">DSANSEC3SHA1</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="n">RSASHA1NSEC3SHA1</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="n">RSASHA256</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">RSASHA512</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">INDIRECT</span> <span class="o">=</span> <span class="mi">252</span>
+<span class="n">PRIVATEDNS</span> <span class="o">=</span> <span class="mi">253</span>
+<span class="n">PRIVATEOID</span> <span class="o">=</span> <span class="mi">254</span>
+
+<span class="n">_algorithm_by_text</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;RSAMD5&#39;</span> <span class="p">:</span> <span class="n">RSAMD5</span><span class="p">,</span>
+    <span class="s">&#39;DH&#39;</span> <span class="p">:</span> <span class="n">DH</span><span class="p">,</span>
+    <span class="s">&#39;DSA&#39;</span> <span class="p">:</span> <span class="n">DSA</span><span class="p">,</span>
+    <span class="s">&#39;ECC&#39;</span> <span class="p">:</span> <span class="n">ECC</span><span class="p">,</span>
+    <span class="s">&#39;RSASHA1&#39;</span> <span class="p">:</span> <span class="n">RSASHA1</span><span class="p">,</span>
+    <span class="s">&#39;DSANSEC3SHA1&#39;</span> <span class="p">:</span> <span class="n">DSANSEC3SHA1</span><span class="p">,</span>
+    <span class="s">&#39;RSASHA1NSEC3SHA1&#39;</span> <span class="p">:</span> <span class="n">RSASHA1NSEC3SHA1</span><span class="p">,</span>
+    <span class="s">&#39;RSASHA256&#39;</span> <span class="p">:</span> <span class="n">RSASHA256</span><span class="p">,</span>
+    <span class="s">&#39;RSASHA512&#39;</span> <span class="p">:</span> <span class="n">RSASHA512</span><span class="p">,</span>
+    <span class="s">&#39;INDIRECT&#39;</span> <span class="p">:</span> <span class="n">INDIRECT</span><span class="p">,</span>
+    <span class="s">&#39;PRIVATEDNS&#39;</span> <span class="p">:</span> <span class="n">PRIVATEDNS</span><span class="p">,</span>
+    <span class="s">&#39;PRIVATEOID&#39;</span> <span class="p">:</span> <span class="n">PRIVATEOID</span><span class="p">,</span>
+    <span class="p">}</span>
+
+<span class="c"># We construct the inverse mapping programmatically to ensure that we</span>
+<span class="c"># cannot make any mistakes (e.g. omissions, cut-and-paste errors) that</span>
+<span class="c"># would cause the mapping not to be true inverse.</span>
+
+<span class="n">_algorithm_by_value</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">_algorithm_by_text</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+
+<div class="viewcode-block" id="algorithm_from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.dnssec.algorithm_from_text">[docs]</a><span class="k">def</span> <span class="nf">algorithm_from_text</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert text into a DNSSEC algorithm value</span>
+<span class="sd">    @rtype: int&quot;&quot;&quot;</span>
+
+    <span class="n">value</span> <span class="o">=</span> <span class="n">_algorithm_by_text</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="algorithm_to_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.dnssec.algorithm_to_text">[docs]</a><span class="k">def</span> <span class="nf">algorithm_to_text</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a DNSSEC algorithm value to text</span>
+<span class="sd">    @rtype: string&quot;&quot;&quot;</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_algorithm_by_value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">text</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+</div>
+<span class="k">def</span> <span class="nf">_to_rdata</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">origin</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">cStringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+    <span class="n">record</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">origin</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+<div class="viewcode-block" id="key_id"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.dnssec.key_id">[docs]</a><span class="k">def</span> <span class="nf">key_id</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">rdata</span> <span class="o">=</span> <span class="n">_to_rdata</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">origin</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">==</span> <span class="n">RSAMD5</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">rdata</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="n">rdata</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rdata</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="n">total</span> <span class="o">+=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">rdata</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">i</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="n">rdata</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rdata</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">total</span> <span class="o">+=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">rdata</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">rdata</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span>
+        <span class="n">total</span> <span class="o">+=</span> <span class="p">((</span><span class="n">total</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xffff</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">total</span> <span class="o">&amp;</span> <span class="mh">0xffff</span>
+</div>
+<div class="viewcode-block" id="make_ds"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.dnssec.make_ds">[docs]</a><span class="k">def</span> <span class="nf">make_ds</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">algorithm</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;SHA1&#39;</span><span class="p">:</span>
+        <span class="n">dsalg</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="nb">hash</span> <span class="o">=</span> <span class="n">dns_hash</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;SHA1&#39;</span><span class="p">)()</span>
+    <span class="k">elif</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;SHA256&#39;</span><span class="p">:</span>
+        <span class="n">dsalg</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="nb">hash</span> <span class="o">=</span> <span class="n">dns_hash</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;SHA256&#39;</span><span class="p">)()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">UnsupportedAlgorithm</span><span class="p">,</span> <span class="s">&#39;unsupported algorithm &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">algorithm</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">origin</span><span class="p">)</span>
+    <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">canonicalize</span><span class="p">()</span><span class="o">.</span><span class="n">to_wire</span><span class="p">())</span>
+    <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_to_rdata</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">origin</span><span class="p">))</span>
+    <span class="n">digest</span> <span class="o">=</span> <span class="nb">hash</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+
+    <span class="n">dsrdata</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!HBB&quot;</span><span class="p">,</span> <span class="n">key_id</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">key</span><span class="o">.</span><span class="n">algorithm</span><span class="p">,</span> <span class="n">dsalg</span><span class="p">)</span> <span class="o">+</span> <span class="n">digest</span>
+    <span class="k">return</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">DS</span><span class="p">,</span> <span class="n">dsrdata</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                               <span class="nb">len</span><span class="p">(</span><span class="n">dsrdata</span><span class="p">))</span>
+</div>
+<span class="k">def</span> <span class="nf">_find_key</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">rrsig</span><span class="p">):</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">signer</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dns_node</span><span class="o">.</span><span class="n">Node</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">rdataset</span> <span class="o">=</span> <span class="n">dns_node</span><span class="o">.</span><span class="n">find_rdataset</span><span class="p">(</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span>
+                                          <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">DNSKEY</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rdataset</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">for</span> <span class="n">rdata</span> <span class="ow">in</span> <span class="n">rdataset</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">rdata</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">==</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span> <span class="ow">and</span> \
+               <span class="n">key_id</span><span class="p">(</span><span class="n">rdata</span><span class="p">)</span> <span class="o">==</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">key_tag</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rdata</span>
+    <span class="k">return</span> <span class="bp">None</span>
+
+<span class="k">def</span> <span class="nf">_is_rsa</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">algorithm</span> <span class="ow">in</span> <span class="p">(</span><span class="n">RSAMD5</span><span class="p">,</span> <span class="n">RSASHA1</span><span class="p">,</span>
+                         <span class="n">RSASHA1NSEC3SHA1</span><span class="p">,</span> <span class="n">RSASHA256</span><span class="p">,</span>
+                         <span class="n">RSASHA512</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_is_dsa</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">algorithm</span> <span class="ow">in</span> <span class="p">(</span><span class="n">DSA</span><span class="p">,</span> <span class="n">DSANSEC3SHA1</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_is_md5</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="n">RSAMD5</span>
+
+<span class="k">def</span> <span class="nf">_is_sha1</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">algorithm</span> <span class="ow">in</span> <span class="p">(</span><span class="n">DSA</span><span class="p">,</span> <span class="n">RSASHA1</span><span class="p">,</span>
+                         <span class="n">DSANSEC3SHA1</span><span class="p">,</span> <span class="n">RSASHA1NSEC3SHA1</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_is_sha256</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="n">RSASHA256</span>
+
+<span class="k">def</span> <span class="nf">_is_sha512</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="n">RSASHA512</span>
+
+<span class="k">def</span> <span class="nf">_make_hash</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_is_md5</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dns_hash</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;MD5&#39;</span><span class="p">)()</span>
+    <span class="k">if</span> <span class="n">_is_sha1</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dns_hash</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;SHA1&#39;</span><span class="p">)()</span>
+    <span class="k">if</span> <span class="n">_is_sha256</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dns_hash</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;SHA256&#39;</span><span class="p">)()</span>
+    <span class="k">if</span> <span class="n">_is_sha512</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dns_hash</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;SHA512&#39;</span><span class="p">)()</span>
+    <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;unknown hash for algorithm </span><span class="si">%u</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">algorithm</span>
+
+<span class="k">def</span> <span class="nf">_make_algorithm_id</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_is_md5</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="n">oid</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0x2a</span><span class="p">,</span> <span class="mh">0x86</span><span class="p">,</span> <span class="mh">0x48</span><span class="p">,</span> <span class="mh">0x86</span><span class="p">,</span> <span class="mh">0xf7</span><span class="p">,</span> <span class="mh">0x0d</span><span class="p">,</span> <span class="mh">0x02</span><span class="p">,</span> <span class="mh">0x05</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">_is_sha1</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="n">oid</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0x2b</span><span class="p">,</span> <span class="mh">0x0e</span><span class="p">,</span> <span class="mh">0x03</span><span class="p">,</span> <span class="mh">0x02</span><span class="p">,</span> <span class="mh">0x1a</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">_is_sha256</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="n">oid</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0x60</span><span class="p">,</span> <span class="mh">0x86</span><span class="p">,</span> <span class="mh">0x48</span><span class="p">,</span> <span class="mh">0x01</span><span class="p">,</span> <span class="mh">0x65</span><span class="p">,</span> <span class="mh">0x03</span><span class="p">,</span> <span class="mh">0x04</span><span class="p">,</span> <span class="mh">0x02</span><span class="p">,</span> <span class="mh">0x01</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">_is_sha512</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="n">oid</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0x60</span><span class="p">,</span> <span class="mh">0x86</span><span class="p">,</span> <span class="mh">0x48</span><span class="p">,</span> <span class="mh">0x01</span><span class="p">,</span> <span class="mh">0x65</span><span class="p">,</span> <span class="mh">0x03</span><span class="p">,</span> <span class="mh">0x04</span><span class="p">,</span> <span class="mh">0x02</span><span class="p">,</span> <span class="mh">0x03</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;unknown algorithm </span><span class="si">%u</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">algorithm</span>
+    <span class="n">olen</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">oid</span><span class="p">)</span>
+    <span class="n">dlen</span> <span class="o">=</span> <span class="n">_make_hash</span><span class="p">(</span><span class="n">algorithm</span><span class="p">)</span><span class="o">.</span><span class="n">digest_size</span>
+    <span class="n">idbytes</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0x30</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">8</span> <span class="o">+</span> <span class="n">olen</span> <span class="o">+</span> <span class="n">dlen</span><span class="p">]</span> <span class="o">+</span> \
+              <span class="p">[</span><span class="mh">0x30</span><span class="p">,</span> <span class="n">olen</span> <span class="o">+</span> <span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="mh">0x06</span><span class="p">,</span> <span class="n">olen</span><span class="p">]</span> <span class="o">+</span> <span class="n">oid</span> <span class="o">+</span> \
+              <span class="p">[</span><span class="mh">0x05</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="mh">0x04</span><span class="p">,</span> <span class="n">dlen</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">chr</span><span class="p">,</span> <span class="n">idbytes</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">_validate_rrsig</span><span class="p">(</span><span class="n">rrset</span><span class="p">,</span> <span class="n">rrsig</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">now</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validate an RRset against a single signature rdata</span>
+
+<span class="sd">    The owner name of the rrsig is assumed to be the same as the owner name</span>
+<span class="sd">    of the rrset.</span>
+
+<span class="sd">    @param rrset: The RRset to validate</span>
+<span class="sd">    @type rrset: dns_rrset.RRset or (dns_name.Name, dns_rdataset.Rdataset)</span>
+<span class="sd">    tuple</span>
+<span class="sd">    @param rrsig: The signature rdata</span>
+<span class="sd">    @type rrsig: dns_rrset.Rdata</span>
+<span class="sd">    @param keys: The key dictionary.</span>
+<span class="sd">    @type keys: a dictionary keyed by dns_name.Name with node or rdataset values</span>
+<span class="sd">    @param origin: The origin to use for relative names</span>
+<span class="sd">    @type origin: dns_name.Name or None</span>
+<span class="sd">    @param now: The time to use when validating the signatures.  The default</span>
+<span class="sd">    is the current time.</span>
+<span class="sd">    @type now: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">origin</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+
+    <span class="n">key</span> <span class="o">=</span> <span class="n">_find_key</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">rrsig</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;unknown key&#39;</span>
+
+    <span class="c"># For convenience, allow the rrset to be specified as a (name, rdataset)</span>
+    <span class="c"># tuple as well as a proper rrset</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rrset</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">rrname</span> <span class="o">=</span> <span class="n">rrset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">rdataset</span> <span class="o">=</span> <span class="n">rrset</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rrname</span> <span class="o">=</span> <span class="n">rrset</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">rdataset</span> <span class="o">=</span> <span class="n">rrset</span>
+
+    <span class="k">if</span> <span class="n">now</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">expiration</span> <span class="o">&lt;</span> <span class="n">now</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;expired&#39;</span>
+    <span class="k">if</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">inception</span> <span class="o">&gt;</span> <span class="n">now</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;not yet valid&#39;</span>
+
+    <span class="nb">hash</span> <span class="o">=</span> <span class="n">_make_hash</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">_is_rsa</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="n">keyptr</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">key</span>
+        <span class="p">(</span><span class="nb">bytes</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!B&#39;</span><span class="p">,</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">keyptr</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="nb">bytes</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="p">(</span><span class="nb">bytes</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">keyptr</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+        <span class="n">rsa_e</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="nb">bytes</span><span class="p">]</span>
+        <span class="n">rsa_n</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="nb">bytes</span><span class="p">:]</span>
+        <span class="n">keylen</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rsa_n</span><span class="p">)</span> <span class="o">*</span> <span class="mi">8</span>
+        <span class="n">pubkey</span> <span class="o">=</span> <span class="n">Crypto</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">RSA</span><span class="o">.</span><span class="n">construct</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">rsa_n</span><span class="p">),</span>
+             <span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">rsa_e</span><span class="p">)))</span>
+        <span class="n">sig</span> <span class="o">=</span> <span class="p">(</span><span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">signature</span><span class="p">),)</span>
+    <span class="k">elif</span> <span class="n">_is_dsa</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="n">keyptr</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">key</span>
+        <span class="p">(</span><span class="n">t</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!B&#39;</span><span class="p">,</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">keyptr</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">octets</span> <span class="o">=</span> <span class="mi">64</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="mi">8</span>
+        <span class="n">dsa_q</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">20</span><span class="p">]</span>
+        <span class="n">keyptr</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">20</span><span class="p">:]</span>
+        <span class="n">dsa_p</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">octets</span><span class="p">]</span>
+        <span class="n">keyptr</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="n">octets</span><span class="p">:]</span>
+        <span class="n">dsa_g</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">octets</span><span class="p">]</span>
+        <span class="n">keyptr</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="n">octets</span><span class="p">:]</span>
+        <span class="n">dsa_y</span> <span class="o">=</span> <span class="n">keyptr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">octets</span><span class="p">]</span>
+        <span class="n">pubkey</span> <span class="o">=</span> <span class="n">Crypto</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">DSA</span><span class="o">.</span><span class="n">construct</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">dsa_y</span><span class="p">),</span>
+             <span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">dsa_g</span><span class="p">),</span>
+             <span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">dsa_p</span><span class="p">),</span>
+             <span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">dsa_q</span><span class="p">)))</span>
+        <span class="p">(</span><span class="n">dsa_r</span><span class="p">,</span> <span class="n">dsa_s</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!20s20s&#39;</span><span class="p">,</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">signature</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">sig</span> <span class="o">=</span> <span class="p">(</span><span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">dsa_r</span><span class="p">),</span>
+               <span class="n">Crypto</span><span class="o">.</span><span class="n">Util</span><span class="o">.</span><span class="n">number</span><span class="o">.</span><span class="n">bytes_to_long</span><span class="p">(</span><span class="n">dsa_s</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;unknown algorithm </span><span class="si">%u</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span>
+
+    <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_to_rdata</span><span class="p">(</span><span class="n">rrsig</span><span class="p">,</span> <span class="n">origin</span><span class="p">)[:</span><span class="mi">18</span><span class="p">])</span>
+    <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">signer</span><span class="o">.</span><span class="n">to_digestable</span><span class="p">(</span><span class="n">origin</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">labels</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rrname</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">rrname</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">labels</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">rrname</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s">&#39;*&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span>
+    <span class="n">rrnamebuf</span> <span class="o">=</span> <span class="n">rrname</span><span class="o">.</span><span class="n">to_digestable</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+    <span class="n">rrfixed</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HHI&#39;</span><span class="p">,</span> <span class="n">rdataset</span><span class="o">.</span><span class="n">rdtype</span><span class="p">,</span> <span class="n">rdataset</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span>
+                          <span class="n">rrsig</span><span class="o">.</span><span class="n">original_ttl</span><span class="p">)</span>
+    <span class="n">rrlist</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">rdataset</span><span class="p">);</span>
+    <span class="k">for</span> <span class="n">rr</span> <span class="ow">in</span> <span class="n">rrlist</span><span class="p">:</span>
+        <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rrnamebuf</span><span class="p">)</span>
+        <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rrfixed</span><span class="p">)</span>
+        <span class="n">rrdata</span> <span class="o">=</span> <span class="n">rr</span><span class="o">.</span><span class="n">to_digestable</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+        <span class="n">rrlen</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">rrdata</span><span class="p">))</span>
+        <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rrlen</span><span class="p">)</span>
+        <span class="nb">hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rrdata</span><span class="p">)</span>
+
+    <span class="n">digest</span> <span class="o">=</span> <span class="nb">hash</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">_is_rsa</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="c"># PKCS1 algorithm identifier goop</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="n">_make_algorithm_id</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span><span class="p">)</span> <span class="o">+</span> <span class="n">digest</span>
+        <span class="n">padlen</span> <span class="o">=</span> <span class="n">keylen</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">digest</span><span class="p">)</span> <span class="o">-</span> <span class="mi">3</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="nb">chr</span><span class="p">(</span><span class="mh">0xFF</span><span class="p">)</span> <span class="o">*</span> <span class="n">padlen</span> <span class="o">+</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">digest</span>
+    <span class="k">elif</span> <span class="n">_is_dsa</span><span class="p">(</span><span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># Raise here for code clarity; this won&#39;t actually ever happen</span>
+        <span class="c"># since if the algorithm is really unknown we&#39;d already have</span>
+        <span class="c"># raised an exception above</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;unknown algorithm </span><span class="si">%u</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">rrsig</span><span class="o">.</span><span class="n">algorithm</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pubkey</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">digest</span><span class="p">,</span> <span class="n">sig</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&#39;verify failure&#39;</span>
+
+<span class="k">def</span> <span class="nf">_validate</span><span class="p">(</span><span class="n">rrset</span><span class="p">,</span> <span class="n">rrsigset</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">now</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validate an RRset</span>
+
+<span class="sd">    @param rrset: The RRset to validate</span>
+<span class="sd">    @type rrset: dns_rrset.RRset or (dns_name.Name, dns_rdataset.Rdataset)</span>
+<span class="sd">    tuple</span>
+<span class="sd">    @param rrsigset: The signature RRset</span>
+<span class="sd">    @type rrsigset: dns_rrset.RRset or (dns_name.Name, dns_rdataset.Rdataset)</span>
+<span class="sd">    tuple</span>
+<span class="sd">    @param keys: The key dictionary.</span>
+<span class="sd">    @type keys: a dictionary keyed by dns_name.Name with node or rdataset values</span>
+<span class="sd">    @param origin: The origin to use for relative names</span>
+<span class="sd">    @type origin: dns_name.Name or None</span>
+<span class="sd">    @param now: The time to use when validating the signatures.  The default</span>
+<span class="sd">    is the current time.</span>
+<span class="sd">    @type now: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">origin</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rrset</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">rrname</span> <span class="o">=</span> <span class="n">rrset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rrname</span> <span class="o">=</span> <span class="n">rrset</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rrsigset</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">rrsigname</span> <span class="o">=</span> <span class="n">rrsigset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">rrsigrdataset</span> <span class="o">=</span> <span class="n">rrsigset</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rrsigname</span> <span class="o">=</span> <span class="n">rrsigset</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">rrsigrdataset</span> <span class="o">=</span> <span class="n">rrsigset</span>
+
+    <span class="n">rrname</span> <span class="o">=</span> <span class="n">rrname</span><span class="o">.</span><span class="n">choose_relativity</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+    <span class="n">rrsigname</span> <span class="o">=</span> <span class="n">rrname</span><span class="o">.</span><span class="n">choose_relativity</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rrname</span> <span class="o">!=</span> <span class="n">rrsigname</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&quot;owner names do not match&quot;</span>
+
+    <span class="k">for</span> <span class="n">rrsig</span> <span class="ow">in</span> <span class="n">rrsigrdataset</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_validate_rrsig</span><span class="p">(</span><span class="n">rrset</span><span class="p">,</span> <span class="n">rrsig</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">now</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">except</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">raise</span> <span class="n">ValidationFailure</span><span class="p">,</span> <span class="s">&quot;no RRSIGs validated&quot;</span>
+
+<span class="k">def</span> <span class="nf">_need_pycrypto</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">,</span> <span class="s">&quot;DNSSEC validation requires pycrypto&quot;</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">Crypto.PublicKey.RSA</span>
+    <span class="kn">import</span> <span class="nn">Crypto.PublicKey.DSA</span>
+    <span class="kn">import</span> <span class="nn">Crypto.Util.number</span>
+    <span class="n">validate</span> <span class="o">=</span> <span class="n">_validate</span>
+    <span class="n">validate_rrsig</span> <span class="o">=</span> <span class="n">_validate_rrsig</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">validate</span> <span class="o">=</span> <span class="n">_need_pycrypto</span>
+    <span class="n">validate_rrsig</span> <span class="o">=</span> <span class="n">_need_pycrypto</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

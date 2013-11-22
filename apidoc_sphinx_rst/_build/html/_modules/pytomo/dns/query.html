@@ -1,0 +1,588 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.query &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.query</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;Talk to a DNS server.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">generators</span><span class="p">,</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">import</span> <span class="nn">select</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">inet</span> <span class="k">as</span> <span class="n">dns_inet</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">message</span> <span class="k">as</span> <span class="n">dns_message</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rrset</span> <span class="k">as</span> <span class="n">dns_rrset</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">tsig</span> <span class="k">as</span> <span class="n">dns_tsig</span>
+
+<div class="viewcode-block" id="UnexpectedSource"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.query.UnexpectedSource">[docs]</a><span class="k">class</span> <span class="nc">UnexpectedSource</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if a query response comes from an unexpected address or port.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="BadResponse"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.query.BadResponse">[docs]</a><span class="k">class</span> <span class="nc">BadResponse</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if a query response does not respond to the question asked.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<span class="k">def</span> <span class="nf">_compute_expiration</span><span class="p">(</span><span class="n">timeout</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="n">timeout</span>
+
+<span class="k">def</span> <span class="nf">_poll_for</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">writable</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    @param fd: File descriptor (int).</span>
+<span class="sd">    @param readable: Whether to wait for readability (bool).</span>
+<span class="sd">    @param writable: Whether to wait for writability (bool).</span>
+<span class="sd">    @param expiration: Deadline timeout (expiration time, in seconds (float)).</span>
+
+<span class="sd">    @return True on success, False on timeout</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">event_mask</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">readable</span><span class="p">:</span>
+        <span class="n">event_mask</span> <span class="o">|=</span> <span class="n">select</span><span class="o">.</span><span class="n">POLLIN</span>
+    <span class="k">if</span> <span class="n">writable</span><span class="p">:</span>
+        <span class="n">event_mask</span> <span class="o">|=</span> <span class="n">select</span><span class="o">.</span><span class="n">POLLOUT</span>
+    <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">event_mask</span> <span class="o">|=</span> <span class="n">select</span><span class="o">.</span><span class="n">POLLERR</span>
+
+    <span class="n">pollable</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+    <span class="n">pollable</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">event_mask</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">timeout</span><span class="p">:</span>
+        <span class="n">event_list</span> <span class="o">=</span> <span class="n">pollable</span><span class="o">.</span><span class="n">poll</span><span class="p">(</span><span class="nb">long</span><span class="p">(</span><span class="n">timeout</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">event_list</span> <span class="o">=</span> <span class="n">pollable</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">event_list</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_select_for</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">writable</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    @param fd: File descriptor (int).</span>
+<span class="sd">    @param readable: Whether to wait for readability (bool).</span>
+<span class="sd">    @param writable: Whether to wait for writability (bool).</span>
+<span class="sd">    @param expiration: Deadline timeout (expiration time, in seconds (float)).</span>
+
+<span class="sd">    @return True on success, False on timeout</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rset</span><span class="p">,</span> <span class="n">wset</span><span class="p">,</span> <span class="n">xset</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">readable</span><span class="p">:</span>
+        <span class="n">rset</span> <span class="o">=</span> <span class="p">[</span><span class="n">fd</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">writable</span><span class="p">:</span>
+        <span class="n">wset</span> <span class="o">=</span> <span class="p">[</span><span class="n">fd</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">xset</span> <span class="o">=</span> <span class="p">[</span><span class="n">fd</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">rcount</span><span class="p">,</span> <span class="n">wcount</span><span class="p">,</span> <span class="n">xcount</span><span class="p">)</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">rset</span><span class="p">,</span> <span class="n">wset</span><span class="p">,</span> <span class="n">xset</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">rcount</span><span class="p">,</span> <span class="n">wcount</span><span class="p">,</span> <span class="n">xcount</span><span class="p">)</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">rset</span><span class="p">,</span> <span class="n">wset</span><span class="p">,</span> <span class="n">xset</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">((</span><span class="n">rcount</span> <span class="ow">or</span> <span class="n">wcount</span> <span class="ow">or</span> <span class="n">xcount</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">_wait_for</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">writable</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">expiration</span><span class="p">):</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">expiration</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="n">expiration</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">timeout</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">Timeout</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_polling_backend</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">writable</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">Timeout</span>
+        <span class="k">except</span> <span class="n">select</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EINTR</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">e</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="k">def</span> <span class="nf">_set_polling_backend</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Internal API. Do not use.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_polling_backend</span>
+
+    <span class="n">_polling_backend</span> <span class="o">=</span> <span class="n">fn</span>
+
+<span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">select</span><span class="p">,</span> <span class="s">&#39;poll&#39;</span><span class="p">):</span>
+    <span class="c"># Prefer poll() on platforms that support it because it has no</span>
+    <span class="c"># limits on the maximum value of a file descriptor (plus it will</span>
+    <span class="c"># be more efficient for high values).</span>
+    <span class="n">_polling_backend</span> <span class="o">=</span> <span class="n">_poll_for</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">_polling_backend</span> <span class="o">=</span> <span class="n">_select_for</span>
+
+<span class="k">def</span> <span class="nf">_wait_for_readable</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">expiration</span><span class="p">):</span>
+    <span class="n">_wait_for</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_wait_for_writable</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">expiration</span><span class="p">):</span>
+    <span class="n">_wait_for</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_addresses_equal</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="p">):</span>
+    <span class="c"># Convert the first value of the tuple, which is a textual format</span>
+    <span class="c"># address into binary form, so that we are not confused by different</span>
+    <span class="c"># textual representations of the same address</span>
+    <span class="n">n1</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">inet_pton</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">a1</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">n2</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">inet_pton</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">a2</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">n1</span> <span class="o">==</span> <span class="n">n2</span> <span class="ow">and</span> <span class="n">a1</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="n">a2</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+<div class="viewcode-block" id="udp"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.query.udp">[docs]</a><span class="k">def</span> <span class="nf">udp</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">53</span><span class="p">,</span> <span class="n">af</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">source_port</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">ignore_unexpected</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">one_rr_per_rrset</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the response obtained after sending a query via UDP.</span>
+
+<span class="sd">    @param q: the query</span>
+<span class="sd">    @type q: dns_message.Message</span>
+<span class="sd">    @param where: where to send the message</span>
+<span class="sd">    @type where: string containing an IPv4 or IPv6 address</span>
+<span class="sd">    @param timeout: The number of seconds to wait before the query times out.</span>
+<span class="sd">    If None, the default, wait forever.</span>
+<span class="sd">    @type timeout: float</span>
+<span class="sd">    @param port: The port to which to send the message.  The default is 53.</span>
+<span class="sd">    @type port: int</span>
+<span class="sd">    @param af: the address family to use.  The default is None, which</span>
+<span class="sd">    causes the address family to use to be inferred from the form of of where.</span>
+<span class="sd">    If the inference attempt fails, AF_INET is used.</span>
+<span class="sd">    @type af: int</span>
+<span class="sd">    @rtype: dns_message.Message object</span>
+<span class="sd">    @param source: source address.  The default is the IPv4 wildcard address.</span>
+<span class="sd">    @type source: string</span>
+<span class="sd">    @param source_port: The port from which to send the message.</span>
+<span class="sd">    The default is 0.</span>
+<span class="sd">    @type source_port: int</span>
+<span class="sd">    @param ignore_unexpected: If True, ignore responses from unexpected</span>
+<span class="sd">    sources.  The default is False.</span>
+<span class="sd">    @type ignore_unexpected: bool</span>
+<span class="sd">    @param one_rr_per_rrset: Put each RR into its own RRset</span>
+<span class="sd">    @type one_rr_per_rrset: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">wire</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">to_wire</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">af</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">af</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">af_for_address</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">af</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET</span>
+    <span class="k">if</span> <span class="n">af</span> <span class="o">==</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">:</span>
+        <span class="n">destination</span> <span class="o">=</span> <span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">source_port</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">af</span> <span class="o">==</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET6</span><span class="p">:</span>
+        <span class="n">destination</span> <span class="o">=</span> <span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">source_port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">expiration</span> <span class="o">=</span> <span class="n">_compute_expiration</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">_wait_for_writable</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">destination</span><span class="p">)</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">_wait_for_readable</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">from_address</span><span class="p">)</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">65535</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">_addresses_equal</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">from_address</span><span class="p">,</span> <span class="n">destination</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="n">dns_inet</span><span class="o">.</span><span class="n">is_multicast</span><span class="p">(</span><span class="n">where</span><span class="p">)</span> <span class="ow">and</span> \
+                         <span class="n">from_address</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="n">destination</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ignore_unexpected</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">UnexpectedSource</span><span class="p">(</span><span class="s">&#39;got a response from &#39;</span>
+                                       <span class="s">&#39;</span><span class="si">%s</span><span class="s"> instead of </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">from_address</span><span class="p">,</span>
+                                                             <span class="n">destination</span><span class="p">))</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">dns_message</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">keyring</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">keyring</span><span class="p">,</span> <span class="n">request_mac</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">mac</span><span class="p">,</span>
+                              <span class="n">one_rr_per_rrset</span><span class="o">=</span><span class="n">one_rr_per_rrset</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">q</span><span class="o">.</span><span class="n">is_response</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">BadResponse</span>
+    <span class="k">return</span> <span class="n">r</span>
+</div>
+<span class="k">def</span> <span class="nf">_net_read</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">expiration</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read the specified number of bytes from sock.  Keep trying until we</span>
+<span class="sd">    either get the desired amount, or we hit EOF.</span>
+<span class="sd">    A Timeout exception will be raised if the operation is not completed</span>
+<span class="sd">    by the expiration time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">while</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">_wait_for_readable</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">EOFError</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span> <span class="o">+</span> <span class="n">n</span>
+    <span class="k">return</span> <span class="n">s</span>
+
+<span class="k">def</span> <span class="nf">_net_write</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">expiration</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Write the specified data to the socket.</span>
+<span class="sd">    A Timeout exception will be raised if the operation is not completed</span>
+<span class="sd">    by the expiration time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">current</span> <span class="o">&lt;</span> <span class="n">l</span><span class="p">:</span>
+        <span class="n">_wait_for_writable</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+        <span class="n">current</span> <span class="o">+=</span> <span class="n">sock</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">current</span><span class="p">:])</span>
+
+<span class="k">def</span> <span class="nf">_connect</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">ty</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EINPROGRESS</span> <span class="ow">and</span> \
+               <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EWOULDBLOCK</span> <span class="ow">and</span> \
+               <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EALREADY</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">v</span>
+
+<div class="viewcode-block" id="tcp"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.query.tcp">[docs]</a><span class="k">def</span> <span class="nf">tcp</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">53</span><span class="p">,</span> <span class="n">af</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">source_port</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">one_rr_per_rrset</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the response obtained after sending a query via TCP.</span>
+
+<span class="sd">    @param q: the query</span>
+<span class="sd">    @type q: dns_message.Message object</span>
+<span class="sd">    @param where: where to send the message</span>
+<span class="sd">    @type where: string containing an IPv4 or IPv6 address</span>
+<span class="sd">    @param timeout: The number of seconds to wait before the query times out.</span>
+<span class="sd">    If None, the default, wait forever.</span>
+<span class="sd">    @type timeout: float</span>
+<span class="sd">    @param port: The port to which to send the message.  The default is 53.</span>
+<span class="sd">    @type port: int</span>
+<span class="sd">    @param af: the address family to use.  The default is None, which</span>
+<span class="sd">    causes the address family to use to be inferred from the form of of where.</span>
+<span class="sd">    If the inference attempt fails, AF_INET is used.</span>
+<span class="sd">    @type af: int</span>
+<span class="sd">    @rtype: dns_message.Message object</span>
+<span class="sd">    @param source: source address.  The default is the IPv4 wildcard address.</span>
+<span class="sd">    @type source: string</span>
+<span class="sd">    @param source_port: The port from which to send the message.</span>
+<span class="sd">    The default is 0.</span>
+<span class="sd">    @type source_port: int</span>
+<span class="sd">    @param one_rr_per_rrset: Put each RR into its own RRset</span>
+<span class="sd">    @type one_rr_per_rrset: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">wire</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">to_wire</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">af</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">af</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">af_for_address</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">af</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET</span>
+    <span class="k">if</span> <span class="n">af</span> <span class="o">==</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">:</span>
+        <span class="n">destination</span> <span class="o">=</span> <span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">source_port</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">af</span> <span class="o">==</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET6</span><span class="p">:</span>
+        <span class="n">destination</span> <span class="o">=</span> <span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">source_port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">expiration</span> <span class="o">=</span> <span class="n">_compute_expiration</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">_connect</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">destination</span><span class="p">)</span>
+
+        <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">wire</span><span class="p">)</span>
+
+        <span class="c"># copying the wire into tcpmsg is inefficient, but lets us</span>
+        <span class="c"># avoid writev() or doing a short write that would get pushed</span>
+        <span class="c"># onto the net</span>
+        <span class="n">tcpmsg</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="o">+</span> <span class="n">wire</span>
+        <span class="n">_net_write</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">tcpmsg</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+        <span class="n">ldata</span> <span class="o">=</span> <span class="n">_net_read</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">l</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">ldata</span><span class="p">)</span>
+        <span class="n">wire</span> <span class="o">=</span> <span class="n">_net_read</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">dns_message</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">keyring</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">keyring</span><span class="p">,</span> <span class="n">request_mac</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">mac</span><span class="p">,</span>
+                              <span class="n">one_rr_per_rrset</span><span class="o">=</span><span class="n">one_rr_per_rrset</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">q</span><span class="o">.</span><span class="n">is_response</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">BadResponse</span>
+    <span class="k">return</span> <span class="n">r</span>
+</div>
+<div class="viewcode-block" id="xfr"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.query.xfr">[docs]</a><span class="k">def</span> <span class="nf">xfr</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">zone</span><span class="p">,</span> <span class="n">rdtype</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">AXFR</span><span class="p">,</span> <span class="n">rdclass</span><span class="o">=</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">53</span><span class="p">,</span> <span class="n">keyring</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">keyname</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">af</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">lifetime</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">source_port</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">serial</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">use_udp</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">keyalgorithm</span><span class="o">=</span><span class="n">dns_tsig</span><span class="o">.</span><span class="n">default_algorithm</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return a generator for the responses to a zone transfer.</span>
+
+<span class="sd">    @param where: where to send the message</span>
+<span class="sd">    @type where: string containing an IPv4 or IPv6 address</span>
+<span class="sd">    @param zone: The name of the zone to transfer</span>
+<span class="sd">    @type zone: dns_name.Name object or string</span>
+<span class="sd">    @param rdtype: The type of zone transfer.  The default is</span>
+<span class="sd">    dns_rdatatype.AXFR.</span>
+<span class="sd">    @type rdtype: int or string</span>
+<span class="sd">    @param rdclass: The class of the zone transfer.  The default is</span>
+<span class="sd">    dns_rdatatype.IN.</span>
+<span class="sd">    @type rdclass: int or string</span>
+<span class="sd">    @param timeout: The number of seconds to wait for each response message.</span>
+<span class="sd">    If None, the default, wait forever.</span>
+<span class="sd">    @type timeout: float</span>
+<span class="sd">    @param port: The port to which to send the message.  The default is 53.</span>
+<span class="sd">    @type port: int</span>
+<span class="sd">    @param keyring: The TSIG keyring to use</span>
+<span class="sd">    @type keyring: dict</span>
+<span class="sd">    @param keyname: The name of the TSIG key to use</span>
+<span class="sd">    @type keyname: dns_name.Name object or string</span>
+<span class="sd">    @param relativize: If True, all names in the zone will be relativized to</span>
+<span class="sd">    the zone origin.  It is essential that the relativize setting matches</span>
+<span class="sd">    the one specified to dns_zone.from_xfr().</span>
+<span class="sd">    @type relativize: bool</span>
+<span class="sd">    @param af: the address family to use.  The default is None, which</span>
+<span class="sd">    causes the address family to use to be inferred from the form of of where.</span>
+<span class="sd">    If the inference attempt fails, AF_INET is used.</span>
+<span class="sd">    @type af: int</span>
+<span class="sd">    @param lifetime: The total number of seconds to spend doing the transfer.</span>
+<span class="sd">    If None, the default, then there is no limit on the time the transfer may</span>
+<span class="sd">    take.</span>
+<span class="sd">    @type lifetime: float</span>
+<span class="sd">    @rtype: generator of dns_message.Message objects.</span>
+<span class="sd">    @param source: source address.  The default is the IPv4 wildcard address.</span>
+<span class="sd">    @type source: string</span>
+<span class="sd">    @param source_port: The port from which to send the message.</span>
+<span class="sd">    The default is 0.</span>
+<span class="sd">    @type source_port: int</span>
+<span class="sd">    @param serial: The SOA serial number to use as the base for an IXFR diff</span>
+<span class="sd">    sequence (only meaningful if rdtype == dns_rdatatype.IXFR).</span>
+<span class="sd">    @type serial: int</span>
+<span class="sd">    @param use_udp: Use UDP (only meaningful for IXFR)</span>
+<span class="sd">    @type use_udp: bool</span>
+<span class="sd">    @param keyalgorithm: The TSIG algorithm to use; defaults to</span>
+<span class="sd">    dns_tsig.default_algorithm</span>
+<span class="sd">    @type keyalgorithm: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">zone</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">zone</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">zone</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+        <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">dns_message</span><span class="o">.</span><span class="n">make_query</span><span class="p">(</span><span class="n">zone</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rdtype</span> <span class="o">==</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">IXFR</span><span class="p">:</span>
+        <span class="n">rrset</span> <span class="o">=</span> <span class="n">dns_rrset</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">zone</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;IN&#39;</span><span class="p">,</span> <span class="s">&#39;SOA&#39;</span><span class="p">,</span>
+                                    <span class="s">&#39;. . </span><span class="si">%u</span><span class="s"> 0 0 0 0&#39;</span> <span class="o">%</span> <span class="n">serial</span><span class="p">)</span>
+        <span class="n">q</span><span class="o">.</span><span class="n">authority</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rrset</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">keyring</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">q</span><span class="o">.</span><span class="n">use_tsig</span><span class="p">(</span><span class="n">keyring</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="n">keyalgorithm</span><span class="p">)</span>
+    <span class="n">wire</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">to_wire</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">af</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">af</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">af_for_address</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">af</span> <span class="o">=</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET</span>
+    <span class="k">if</span> <span class="n">af</span> <span class="o">==</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">:</span>
+        <span class="n">destination</span> <span class="o">=</span> <span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">source_port</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">af</span> <span class="o">==</span> <span class="n">dns_inet</span><span class="o">.</span><span class="n">AF_INET6</span><span class="p">:</span>
+        <span class="n">destination</span> <span class="o">=</span> <span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">source_port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">use_udp</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">rdtype</span> <span class="o">!=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">IXFR</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;cannot do a UDP AXFR&#39;</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="n">expiration</span> <span class="o">=</span> <span class="n">_compute_expiration</span><span class="p">(</span><span class="n">lifetime</span><span class="p">)</span>
+    <span class="n">_connect</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">destination</span><span class="p">)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">wire</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">use_udp</span><span class="p">:</span>
+        <span class="n">_wait_for_writable</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">wire</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tcpmsg</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="o">+</span> <span class="n">wire</span>
+        <span class="n">_net_write</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">tcpmsg</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">soa_rrset</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">soa_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">relativize</span><span class="p">:</span>
+        <span class="n">origin</span> <span class="o">=</span> <span class="n">zone</span>
+        <span class="n">oname</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">empty</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">oname</span> <span class="o">=</span> <span class="n">zone</span>
+    <span class="n">tsig_ctx</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+        <span class="n">mexpiration</span> <span class="o">=</span> <span class="n">_compute_expiration</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mexpiration</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">mexpiration</span> <span class="o">&gt;</span> <span class="n">expiration</span><span class="p">:</span>
+            <span class="n">mexpiration</span> <span class="o">=</span> <span class="n">expiration</span>
+        <span class="k">if</span> <span class="n">use_udp</span><span class="p">:</span>
+            <span class="n">_wait_for_readable</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">expiration</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">from_address</span><span class="p">)</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">65535</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ldata</span> <span class="o">=</span> <span class="n">_net_read</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mexpiration</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">l</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">ldata</span><span class="p">)</span>
+            <span class="n">wire</span> <span class="o">=</span> <span class="n">_net_read</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">mexpiration</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">dns_message</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">wire</span><span class="p">,</span> <span class="n">keyring</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">keyring</span><span class="p">,</span> <span class="n">request_mac</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">mac</span><span class="p">,</span>
+                                  <span class="n">xfr</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">origin</span><span class="p">,</span> <span class="n">tsig_ctx</span><span class="o">=</span><span class="n">tsig_ctx</span><span class="p">,</span>
+                                  <span class="n">multi</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="n">first</span><span class="p">,</span>
+                                  <span class="n">one_rr_per_rrset</span><span class="o">=</span><span class="p">(</span><span class="n">rdtype</span><span class="o">==</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">IXFR</span><span class="p">))</span>
+        <span class="n">tsig_ctx</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">tsig_ctx</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">answer_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">delete_mode</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">expecting_SOA</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">soa_rrset</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">answer</span> <span class="ow">or</span> <span class="n">r</span><span class="o">.</span><span class="n">answer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">oname</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">answer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">rrset</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">!=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">SOA</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">(</span><span class="s">&quot;first RRset is not an SOA&quot;</span><span class="p">)</span>
+            <span class="n">answer_index</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">soa_rrset</span> <span class="o">=</span> <span class="n">rrset</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">rdtype</span> <span class="o">==</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">IXFR</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">soa_rrset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">serial</span> <span class="o">==</span> <span class="n">serial</span><span class="p">:</span>
+                    <span class="c">#</span>
+                    <span class="c"># We&#39;re already up-to-date.</span>
+                    <span class="c">#</span>
+                    <span class="n">done</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">expecting_SOA</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="c">#</span>
+        <span class="c"># Process SOAs in the answer section (other than the initial</span>
+        <span class="c"># SOA in the first message).</span>
+        <span class="c">#</span>
+        <span class="k">for</span> <span class="n">rrset</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">answer</span><span class="p">[</span><span class="n">answer_index</span><span class="p">:]:</span>
+            <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">(</span><span class="s">&quot;answers after final SOA&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rrset</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">==</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">SOA</span> <span class="ow">and</span> <span class="n">rrset</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">oname</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">expecting_SOA</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">rrset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">serial</span> <span class="o">!=</span> <span class="n">serial</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">(</span><span class="s">&quot;IXFR base serial mismatch&quot;</span><span class="p">)</span>
+                    <span class="n">expecting_SOA</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">elif</span> <span class="n">rdtype</span> <span class="o">==</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">IXFR</span><span class="p">:</span>
+                    <span class="n">delete_mode</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">delete_mode</span>
+                <span class="k">if</span> <span class="n">rrset</span> <span class="o">==</span> <span class="n">soa_rrset</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">delete_mode</span><span class="p">:</span>
+                    <span class="n">done</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">elif</span> <span class="n">expecting_SOA</span><span class="p">:</span>
+                <span class="c">#</span>
+                <span class="c"># We made an IXFR request and are expecting another</span>
+                <span class="c"># SOA RR, but saw something else, so this must be an</span>
+                <span class="c"># AXFR response.</span>
+                <span class="c">#</span>
+                <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">AXFR</span>
+                <span class="n">expecting_SOA</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">done</span> <span class="ow">and</span> <span class="n">q</span><span class="o">.</span><span class="n">keyring</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">had_tsig</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">(</span><span class="s">&quot;missing TSIG&quot;</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">r</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

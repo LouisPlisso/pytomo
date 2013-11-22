@@ -1,0 +1,290 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.image.IPTC &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.image.IPTC</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># IPTC.py</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: IPTC.py 3613 2008-10-10 21:31:08Z dmeyer $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+
+<span class="c"># http://www.ap.org/apserver/userguide/codes.htm</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="c"># python imports</span>
+<span class="kn">from</span> <span class="nn">struct</span> <span class="kn">import</span> <span class="n">unpack</span>
+
+<span class="c"># kaa imports</span>
+<span class="c">#import kaa</span>
+<span class="c"># use strutils instead of kaa</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">strutils</span> <span class="k">as</span> <span class="n">kaa</span>
+
+<span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;by-line title&#39;</span><span class="p">:</span> <span class="s">&#39;title&#39;</span><span class="p">,</span>
+    <span class="s">&#39;headline&#39;</span><span class="p">:</span> <span class="s">&#39;title&#39;</span><span class="p">,</span>
+    <span class="s">&#39;keywords&#39;</span><span class="p">:</span> <span class="s">&#39;keywords&#39;</span><span class="p">,</span>
+    <span class="s">&#39;writer-editor&#39;</span><span class="p">:</span> <span class="s">&#39;author&#39;</span><span class="p">,</span>
+    <span class="s">&#39;credit&#39;</span><span class="p">:</span> <span class="s">&#39;author&#39;</span><span class="p">,</span>
+    <span class="s">&#39;by-line&#39;</span><span class="p">:</span> <span class="s">&#39;author&#39;</span><span class="p">,</span>
+    <span class="s">&#39;country/primary location name&#39;</span><span class="p">:</span> <span class="s">&#39;country&#39;</span><span class="p">,</span>
+    <span class="s">&#39;caption-abstract&#39;</span><span class="p">:</span> <span class="s">&#39;description&#39;</span><span class="p">,</span>
+    <span class="s">&#39;city&#39;</span><span class="p">:</span> <span class="s">&#39;city&#39;</span><span class="p">,</span>
+    <span class="s">&#39;sub-location&#39;</span><span class="p">:</span> <span class="s">&#39;location&#39;</span>
+<span class="p">}</span>
+
+<span class="c"># These names match the codes defined in ITPC&#39;s IIM record 2.</span>
+<span class="c"># copied from iptcinfo by Josh Carter, josh@multipart-mixed.com</span>
+<span class="n">c_datasets</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="c"># 0: &#39;record version&#39;,    # skip -- binary data</span>
+  <span class="mi">5</span><span class="p">:</span> <span class="s">&#39;object name&#39;</span><span class="p">,</span>
+  <span class="mi">7</span><span class="p">:</span> <span class="s">&#39;edit status&#39;</span><span class="p">,</span>
+  <span class="mi">8</span><span class="p">:</span> <span class="s">&#39;editorial update&#39;</span><span class="p">,</span>
+  <span class="mi">10</span><span class="p">:</span> <span class="s">&#39;urgency&#39;</span><span class="p">,</span>
+  <span class="mi">12</span><span class="p">:</span> <span class="s">&#39;subject reference&#39;</span><span class="p">,</span>
+  <span class="mi">15</span><span class="p">:</span> <span class="s">&#39;category&#39;</span><span class="p">,</span>
+  <span class="mi">20</span><span class="p">:</span> <span class="s">&#39;supplemental category&#39;</span><span class="p">,</span>
+  <span class="mi">22</span><span class="p">:</span> <span class="s">&#39;fixture identifier&#39;</span><span class="p">,</span>
+  <span class="mi">25</span><span class="p">:</span> <span class="s">&#39;keywords&#39;</span><span class="p">,</span>
+  <span class="mi">26</span><span class="p">:</span> <span class="s">&#39;content location code&#39;</span><span class="p">,</span>
+  <span class="mi">27</span><span class="p">:</span> <span class="s">&#39;content location name&#39;</span><span class="p">,</span>
+  <span class="mi">30</span><span class="p">:</span> <span class="s">&#39;release date&#39;</span><span class="p">,</span>
+  <span class="mi">35</span><span class="p">:</span> <span class="s">&#39;release time&#39;</span><span class="p">,</span>
+  <span class="mi">37</span><span class="p">:</span> <span class="s">&#39;expiration date&#39;</span><span class="p">,</span>
+  <span class="mi">38</span><span class="p">:</span> <span class="s">&#39;expiration time&#39;</span><span class="p">,</span>
+  <span class="mi">40</span><span class="p">:</span> <span class="s">&#39;special instructions&#39;</span><span class="p">,</span>
+  <span class="mi">42</span><span class="p">:</span> <span class="s">&#39;action advised&#39;</span><span class="p">,</span>
+  <span class="mi">45</span><span class="p">:</span> <span class="s">&#39;reference service&#39;</span><span class="p">,</span>
+  <span class="mi">47</span><span class="p">:</span> <span class="s">&#39;reference date&#39;</span><span class="p">,</span>
+  <span class="mi">50</span><span class="p">:</span> <span class="s">&#39;reference number&#39;</span><span class="p">,</span>
+  <span class="mi">55</span><span class="p">:</span> <span class="s">&#39;date created&#39;</span><span class="p">,</span>
+  <span class="mi">60</span><span class="p">:</span> <span class="s">&#39;time created&#39;</span><span class="p">,</span>
+  <span class="mi">62</span><span class="p">:</span> <span class="s">&#39;digital creation date&#39;</span><span class="p">,</span>
+  <span class="mi">63</span><span class="p">:</span> <span class="s">&#39;digital creation time&#39;</span><span class="p">,</span>
+  <span class="mi">65</span><span class="p">:</span> <span class="s">&#39;originating program&#39;</span><span class="p">,</span>
+  <span class="mi">70</span><span class="p">:</span> <span class="s">&#39;program version&#39;</span><span class="p">,</span>
+  <span class="mi">75</span><span class="p">:</span> <span class="s">&#39;object cycle&#39;</span><span class="p">,</span>
+  <span class="mi">80</span><span class="p">:</span> <span class="s">&#39;by-line&#39;</span><span class="p">,</span>
+  <span class="mi">85</span><span class="p">:</span> <span class="s">&#39;by-line title&#39;</span><span class="p">,</span>
+  <span class="mi">90</span><span class="p">:</span> <span class="s">&#39;city&#39;</span><span class="p">,</span>
+  <span class="mi">92</span><span class="p">:</span> <span class="s">&#39;sub-location&#39;</span><span class="p">,</span>
+  <span class="mi">95</span><span class="p">:</span> <span class="s">&#39;province/state&#39;</span><span class="p">,</span>
+  <span class="mi">100</span><span class="p">:</span> <span class="s">&#39;country/primary location code&#39;</span><span class="p">,</span>
+  <span class="mi">101</span><span class="p">:</span> <span class="s">&#39;country/primary location name&#39;</span><span class="p">,</span>
+  <span class="mi">103</span><span class="p">:</span> <span class="s">&#39;original transmission reference&#39;</span><span class="p">,</span>
+  <span class="mi">105</span><span class="p">:</span> <span class="s">&#39;headline&#39;</span><span class="p">,</span>
+  <span class="mi">110</span><span class="p">:</span> <span class="s">&#39;credit&#39;</span><span class="p">,</span>
+  <span class="mi">115</span><span class="p">:</span> <span class="s">&#39;source&#39;</span><span class="p">,</span>
+  <span class="mi">116</span><span class="p">:</span> <span class="s">&#39;copyright notice&#39;</span><span class="p">,</span>
+  <span class="mi">118</span><span class="p">:</span> <span class="s">&#39;contact&#39;</span><span class="p">,</span>
+  <span class="mi">120</span><span class="p">:</span> <span class="s">&#39;caption-abstract&#39;</span><span class="p">,</span>
+  <span class="mi">122</span><span class="p">:</span> <span class="s">&#39;writer-editor&#39;</span><span class="p">,</span>
+<span class="c">#  125: &#39;rasterized caption&#39;, # unsupported (binary data)</span>
+  <span class="mi">130</span><span class="p">:</span> <span class="s">&#39;image type&#39;</span><span class="p">,</span>
+  <span class="mi">131</span><span class="p">:</span> <span class="s">&#39;image orientation&#39;</span><span class="p">,</span>
+  <span class="mi">135</span><span class="p">:</span> <span class="s">&#39;language identifier&#39;</span><span class="p">,</span>
+  <span class="mi">200</span><span class="p">:</span> <span class="s">&#39;custom1&#39;</span><span class="p">,</span> <span class="c"># These are NOT STANDARD, but are used by</span>
+  <span class="mi">201</span><span class="p">:</span> <span class="s">&#39;custom2&#39;</span><span class="p">,</span> <span class="c"># Fotostation. Use at your own risk. They&#39;re</span>
+  <span class="mi">202</span><span class="p">:</span> <span class="s">&#39;custom3&#39;</span><span class="p">,</span> <span class="c"># here in case you need to store some special</span>
+  <span class="mi">203</span><span class="p">:</span> <span class="s">&#39;custom4&#39;</span><span class="p">,</span> <span class="c"># stuff, but note that other programs won&#39;t</span>
+  <span class="mi">204</span><span class="p">:</span> <span class="s">&#39;custom5&#39;</span><span class="p">,</span> <span class="c"># recognize them and may blow them away if</span>
+  <span class="mi">205</span><span class="p">:</span> <span class="s">&#39;custom6&#39;</span><span class="p">,</span> <span class="c"># you open and re-save the file. (Except with</span>
+  <span class="mi">206</span><span class="p">:</span> <span class="s">&#39;custom7&#39;</span><span class="p">,</span> <span class="c"># Fotostation, of course.)</span>
+  <span class="mi">207</span><span class="p">:</span> <span class="s">&#39;custom8&#39;</span><span class="p">,</span>
+  <span class="mi">208</span><span class="p">:</span> <span class="s">&#39;custom9&#39;</span><span class="p">,</span>
+  <span class="mi">209</span><span class="p">:</span> <span class="s">&#39;custom10&#39;</span><span class="p">,</span>
+  <span class="mi">210</span><span class="p">:</span> <span class="s">&#39;custom11&#39;</span><span class="p">,</span>
+  <span class="mi">211</span><span class="p">:</span> <span class="s">&#39;custom12&#39;</span><span class="p">,</span>
+  <span class="mi">212</span><span class="p">:</span> <span class="s">&#39;custom13&#39;</span><span class="p">,</span>
+  <span class="mi">213</span><span class="p">:</span> <span class="s">&#39;custom14&#39;</span><span class="p">,</span>
+  <span class="mi">214</span><span class="p">:</span> <span class="s">&#39;custom15&#39;</span><span class="p">,</span>
+  <span class="mi">215</span><span class="p">:</span> <span class="s">&#39;custom16&#39;</span><span class="p">,</span>
+  <span class="mi">216</span><span class="p">:</span> <span class="s">&#39;custom17&#39;</span><span class="p">,</span>
+  <span class="mi">217</span><span class="p">:</span> <span class="s">&#39;custom18&#39;</span><span class="p">,</span>
+  <span class="mi">218</span><span class="p">:</span> <span class="s">&#39;custom19&#39;</span><span class="p">,</span>
+  <span class="mi">219</span><span class="p">:</span> <span class="s">&#39;custom20&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="flatten"><a class="viewcode-back" href="../../../../pytomo.kaa_metadata.image.html#pytomo.kaa_metadata.image.IPTC.flatten">[docs]</a><span class="k">def</span> <span class="nf">flatten</span><span class="p">(</span><span class="nb">list</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="o">.</span><span class="n">items</span><span class="p">()[:]:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">del</span> <span class="nb">list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="s">&#39;keywords&#39;</span><span class="p">:</span>
+                <span class="nb">list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span> <span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39; </span><span class="se">\t\0\n\r</span><span class="s">&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">val</span> <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="s">u&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">list</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+</div>
+<div class="viewcode-block" id="parseiptc"><a class="viewcode-back" href="../../../../pytomo.kaa_metadata.image.html#pytomo.kaa_metadata.image.IPTC.parseiptc">[docs]</a><span class="k">def</span> <span class="nf">parseiptc</span><span class="p">(</span><span class="n">app</span><span class="p">):</span>
+    <span class="n">iptc</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">app</span><span class="p">[:</span><span class="mi">14</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;Photoshop 3.0</span><span class="se">\x00</span><span class="s">&quot;</span><span class="p">:</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">app</span><span class="p">[</span><span class="mi">14</span><span class="p">:]</span>
+
+    <span class="c"># parse the image resource block</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">while</span> <span class="n">app</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;8BIM&quot;</span><span class="p">:</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">4</span>
+        <span class="c"># resource code</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s">&quot;&lt;H&quot;</span><span class="p">,</span> <span class="n">app</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">2</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">2</span>
+        <span class="c"># resource name (usually empty)</span>
+        <span class="n">name_len</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">app</span><span class="p">[</span><span class="n">offset</span><span class="p">])</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">app</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">1</span><span class="o">+</span><span class="n">name_len</span><span class="p">]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">name_len</span>
+        <span class="k">if</span> <span class="n">offset</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="c"># resource data block</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s">&quot;&lt;L&quot;</span><span class="p">,</span> <span class="n">app</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">4</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">4</span>
+        <span class="k">if</span> <span class="n">code</span> <span class="o">==</span> <span class="mh">0x0404</span><span class="p">:</span>
+            <span class="c"># 0x0404 contains IPTC/NAA data</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">app</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="n">size</span><span class="p">]</span>
+            <span class="k">break</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">size</span>
+        <span class="k">if</span> <span class="n">offset</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">iptc</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">intro</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">offset</span><span class="p">])</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">flatten</span><span class="p">(</span><span class="n">iptc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">intro</span> <span class="o">!=</span> <span class="mh">0x1c</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">flatten</span><span class="p">(</span><span class="n">iptc</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">length</span><span class="p">)</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s">&quot;!BBBH&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="mi">5</span><span class="p">])</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">kaa</span><span class="o">.</span><span class="n">str_to_unicode</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">offset</span><span class="o">+</span><span class="mi">5</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="n">length</span><span class="o">+</span><span class="mi">5</span><span class="p">])</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">length</span> <span class="o">+</span> <span class="mi">5</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">c_datasets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">iptc</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">iptc</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">iptc</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">flatten</span><span class="p">(</span><span class="n">iptc</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,657 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>flvlib Package &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="index.html" />
+    <link rel="up" title="pytomo Package" href="pytomo.html" />
+    <link rel="next" title="scripts Package" href="pytomo.flvlib.scripts.html" />
+    <link rel="prev" title="IN Package" href="pytomo.dns.rdtypes.IN.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.flvlib.scripts.html" title="scripts Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.dns.rdtypes.IN.html" title="IN Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" accesskey="U">pytomo Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="flvlib-package">
+<h1>flvlib Package<a class="headerlink" href="#flvlib-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">flvlib</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pytomo.flvlib"></span></div>
+<div class="section" id="module-pytomo.flvlib.astypes">
+<span id="astypes-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">astypes</span></tt> Module<a class="headerlink" href="#module-pytomo.flvlib.astypes" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.flvlib.astypes.ECMAArray">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">ECMAArray</tt><big>(</big><em>dict=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#ECMAArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.ECMAArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytomo.flvlib.helpers.OrderedAttrDict" title="pytomo.flvlib.helpers.OrderedAttrDict"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.flvlib.helpers.OrderedAttrDict</span></tt></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.astypes.FLVObject">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">FLVObject</tt><big>(</big><em>dict=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#FLVObject"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.FLVObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytomo.flvlib.helpers.OrderedAttrDict" title="pytomo.flvlib.helpers.OrderedAttrDict"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.flvlib.helpers.OrderedAttrDict</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="pytomo.flvlib.astypes.MalformedFLV">
+<em class="property">exception </em><tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">MalformedFLV</tt><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#MalformedFLV"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.MalformedFLV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.astypes.MovieClip">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">MovieClip</tt><big>(</big><em>path</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#MovieClip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.MovieClip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.astypes.Reference">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">Reference</tt><big>(</big><em>ref</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#Reference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.Reference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.astypes.Undefined">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">Undefined</tt><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#Undefined"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.Undefined" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_boolean">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_boolean</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_boolean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_boolean" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_date">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_date</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_date"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_date" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_ecma_array">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_ecma_array</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_ecma_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_ecma_array" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_longstring">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_longstring</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_longstring"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_longstring" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_movieclip">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_movieclip</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_movieclip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_movieclip" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_null">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_null</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_null"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_null" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_number">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_number</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_number"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_number" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_object">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_object</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_object"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_object" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_reference">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_reference</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_reference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_reference" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_script_data_value">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_script_data_value</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_script_data_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_script_data_value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_script_data_variable">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_script_data_variable</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_script_data_variable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_script_data_variable" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_strict_array">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_strict_array</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_strict_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_strict_array" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_string">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_string</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.get_undefined">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">get_undefined</tt><big>(</big><em>f</em>, <em>max_offset=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#get_undefined"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.get_undefined" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_boolean">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_boolean</tt><big>(</big><em>value</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_boolean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_boolean" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_date">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_date</tt><big>(</big><em>date</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_date"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_date" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_ecma_array">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_ecma_array</tt><big>(</big><em>d</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_ecma_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_ecma_array" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_longstring">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_longstring</tt><big>(</big><em>string</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_longstring"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_longstring" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_movieclip">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_movieclip</tt><big>(</big><em>clip</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_movieclip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_movieclip" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_null">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_null</tt><big>(</big><em>none</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_null"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_null" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_number">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_number</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_number"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_number" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_object">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_object</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_object"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_object" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_reference">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_reference</tt><big>(</big><em>reference</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_reference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_reference" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_script_data_value">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_script_data_value</tt><big>(</big><em>value</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_script_data_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_script_data_value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_script_data_variable">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_script_data_variable</tt><big>(</big><em>name</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_script_data_variable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_script_data_variable" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_strict_array">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_strict_array</tt><big>(</big><em>l</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_strict_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_strict_array" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_string">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_string</tt><big>(</big><em>string</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.astypes.make_undefined">
+<tt class="descclassname">pytomo.flvlib.astypes.</tt><tt class="descname">make_undefined</tt><big>(</big><em>undefined</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/astypes.html#make_undefined"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.astypes.make_undefined" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.flvlib.constants">
+<span id="constants-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">constants</span></tt> Module<a class="headerlink" href="#module-pytomo.flvlib.constants" title="Permalink to this headline">¶</a></h2>
+<p>The constants used in FLV files and their meanings.</p>
+</div>
+<div class="section" id="module-pytomo.flvlib.helpers">
+<span id="helpers-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">helpers</span></tt> Module<a class="headerlink" href="#module-pytomo.flvlib.helpers" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.helpers.</tt><tt class="descname">ASPrettyPrinter</tt><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Pretty printing of AS objects</p>
+<dl class="classmethod">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter.pformat">
+<em class="property">classmethod </em><tt class="descname">pformat</tt><big>(</big><em>val</em>, <em>indent=0</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter.pformat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter.pformat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter.pprint">
+<em class="property">classmethod </em><tt class="descname">pprint</tt><big>(</big><em>val</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter.pprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter.pprint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter.pprint_dict">
+<em class="property">classmethod </em><tt class="descname">pprint_dict</tt><big>(</big><em>val</em>, <em>indent</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter.pprint_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter.pprint_dict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter.pprint_list">
+<em class="property">classmethod </em><tt class="descname">pprint_list</tt><big>(</big><em>val</em>, <em>indent</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter.pprint_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter.pprint_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter.pprint_lookup">
+<em class="property">classmethod </em><tt class="descname">pprint_lookup</tt><big>(</big><em>val</em>, <em>ident</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter.pprint_lookup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter.pprint_lookup" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter.pprint_number">
+<em class="property">classmethod </em><tt class="descname">pprint_number</tt><big>(</big><em>val</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter.pprint_number"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter.pprint_number" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.flvlib.helpers.ASPrettyPrinter.pprint_string">
+<em class="property">classmethod </em><tt class="descname">pprint_string</tt><big>(</big><em>val</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#ASPrettyPrinter.pprint_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.ASPrettyPrinter.pprint_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.helpers.FixedOffset">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.helpers.</tt><tt class="descname">FixedOffset</tt><big>(</big><em>offset</em>, <em>name</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#FixedOffset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.FixedOffset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/library/datetime.html#datetime.tzinfo" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">datetime.tzinfo</span></tt></a></p>
+<p>Fixed offset in minutes east from UTC.</p>
+<dl class="method">
+<dt id="pytomo.flvlib.helpers.FixedOffset.dst">
+<tt class="descname">dst</tt><big>(</big><em>dt</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#FixedOffset.dst"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.FixedOffset.dst" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.helpers.FixedOffset.tzname">
+<tt class="descname">tzname</tt><big>(</big><em>dt</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#FixedOffset.tzname"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.FixedOffset.tzname" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.helpers.FixedOffset.utcoffset">
+<tt class="descname">utcoffset</tt><big>(</big><em>dt</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#FixedOffset.utcoffset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.FixedOffset.utcoffset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.helpers.LocalTimezone">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.helpers.</tt><tt class="descname">LocalTimezone</tt><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#LocalTimezone"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/library/datetime.html#datetime.tzinfo" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">datetime.tzinfo</span></tt></a></p>
+<p>A tzinfo class representing the system&#8217;s idea of the local timezone</p>
+<dl class="attribute">
+<dt id="pytomo.flvlib.helpers.LocalTimezone.DSTDIFF">
+<tt class="descname">DSTDIFF</tt><em class="property"> = datetime.timedelta(0, 3600)</em><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone.DSTDIFF" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.flvlib.helpers.LocalTimezone.DSTOFFSET">
+<tt class="descname">DSTOFFSET</tt><em class="property"> = datetime.timedelta(0, 7200)</em><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone.DSTOFFSET" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.flvlib.helpers.LocalTimezone.STDOFFSET">
+<tt class="descname">STDOFFSET</tt><em class="property"> = datetime.timedelta(0, 3600)</em><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone.STDOFFSET" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.flvlib.helpers.LocalTimezone.ZERO">
+<tt class="descname">ZERO</tt><em class="property"> = datetime.timedelta(0)</em><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone.ZERO" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.helpers.LocalTimezone.dst">
+<tt class="descname">dst</tt><big>(</big><em>dt</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#LocalTimezone.dst"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone.dst" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.helpers.LocalTimezone.tzname">
+<tt class="descname">tzname</tt><big>(</big><em>dt</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#LocalTimezone.tzname"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone.tzname" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.helpers.LocalTimezone.utcoffset">
+<tt class="descname">utcoffset</tt><big>(</big><em>dt</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#LocalTimezone.utcoffset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.LocalTimezone.utcoffset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.helpers.OrderedAttrDict">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.helpers.</tt><tt class="descname">OrderedAttrDict</tt><big>(</big><em>dict=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#OrderedAttrDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.OrderedAttrDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/library/userdict.html#UserDict.DictMixin" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">UserDict.DictMixin</span></tt></a></p>
+<p>A dictionary that preserves insert order and also has an attribute
+interface.</p>
+<p>Values can be transparently accessed and set as keys or as attributes.</p>
+<dl class="method">
+<dt id="pytomo.flvlib.helpers.OrderedAttrDict.keys">
+<tt class="descname">keys</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#OrderedAttrDict.keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.OrderedAttrDict.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.helpers.force_remove">
+<tt class="descclassname">pytomo.flvlib.helpers.</tt><tt class="descname">force_remove</tt><big>(</big><em>path</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/helpers.html#force_remove"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.helpers.force_remove" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.flvlib.primitives">
+<span id="primitives-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">primitives</span></tt> Module<a class="headerlink" href="#module-pytomo.flvlib.primitives" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.get_ui32">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">get_ui32</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#get_ui32"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.get_ui32" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.make_ui32">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">make_ui32</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#make_ui32"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.make_ui32" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.get_si32_extended">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">get_si32_extended</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#get_si32_extended"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.get_si32_extended" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.make_si32_extended">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">make_si32_extended</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#make_si32_extended"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.make_si32_extended" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.get_ui24">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">get_ui24</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#get_ui24"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.get_ui24" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.make_ui24">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">make_ui24</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#make_ui24"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.make_ui24" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.get_ui16">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">get_ui16</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#get_ui16"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.get_ui16" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.make_ui16">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">make_ui16</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#make_ui16"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.make_ui16" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.get_si16">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">get_si16</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#get_si16"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.get_si16" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.make_si16">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">make_si16</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#make_si16"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.make_si16" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.get_ui8">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">get_ui8</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#get_ui8"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.get_ui8" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.make_ui8">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">make_ui8</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#make_ui8"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.make_ui8" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.get_double">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">get_double</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#get_double"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.get_double" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.primitives.make_double">
+<tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">make_double</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#make_double"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.make_double" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="exception">
+<dt id="pytomo.flvlib.primitives.EndOfFile">
+<em class="property">exception </em><tt class="descclassname">pytomo.flvlib.primitives.</tt><tt class="descname">EndOfFile</tt><a class="reference internal" href="_modules/pytomo/flvlib/primitives.html#EndOfFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.primitives.EndOfFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.flvlib.tags">
+<span id="tags-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">tags</span></tt> Module<a class="headerlink" href="#module-pytomo.flvlib.tags" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.flvlib.tags.AudioTag">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">AudioTag</tt><big>(</big><em>parent_flv</em>, <em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#AudioTag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.AudioTag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytomo.flvlib.tags.Tag" title="pytomo.flvlib.tags.Tag"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.flvlib.tags.Tag</span></tt></a></p>
+<dl class="method">
+<dt id="pytomo.flvlib.tags.AudioTag.parse_tag_content">
+<tt class="descname">parse_tag_content</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#AudioTag.parse_tag_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.AudioTag.parse_tag_content" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="pytomo.flvlib.tags.EndOfTags">
+<em class="property">exception </em><tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">EndOfTags</tt><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#EndOfTags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.EndOfTags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.tags.FLV">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">FLV</tt><big>(</big><em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#FLV"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.FLV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="pytomo.flvlib.tags.FLV.get_next_tag">
+<tt class="descname">get_next_tag</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#FLV.get_next_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.FLV.get_next_tag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.tags.FLV.iter_tags">
+<tt class="descname">iter_tags</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#FLV.iter_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.FLV.iter_tags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.tags.FLV.parse_header">
+<tt class="descname">parse_header</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#FLV.parse_header"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.FLV.parse_header" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.tags.FLV.read_tags">
+<tt class="descname">read_tags</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#FLV.read_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.FLV.read_tags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.tags.FLV.tag_type_to_class">
+<tt class="descname">tag_type_to_class</tt><big>(</big><em>tag_type</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#FLV.tag_type_to_class"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.FLV.tag_type_to_class" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.tags.ScriptTag">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">ScriptTag</tt><big>(</big><em>parent_flv</em>, <em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#ScriptTag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.ScriptTag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytomo.flvlib.tags.Tag" title="pytomo.flvlib.tags.Tag"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.flvlib.tags.Tag</span></tt></a></p>
+<dl class="method">
+<dt id="pytomo.flvlib.tags.ScriptTag.parse_tag_content">
+<tt class="descname">parse_tag_content</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#ScriptTag.parse_tag_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.ScriptTag.parse_tag_content" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.tags.Tag">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">Tag</tt><big>(</big><em>parent_flv</em>, <em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#Tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.Tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="pytomo.flvlib.tags.Tag.parse">
+<tt class="descname">parse</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#Tag.parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.Tag.parse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.flvlib.tags.Tag.parse_tag_content">
+<tt class="descname">parse_tag_content</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#Tag.parse_tag_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.Tag.parse_tag_content" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.flvlib.tags.VideoTag">
+<em class="property">class </em><tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">VideoTag</tt><big>(</big><em>parent_flv</em>, <em>f</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#VideoTag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.VideoTag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytomo.flvlib.tags.Tag" title="pytomo.flvlib.tags.Tag"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.flvlib.tags.Tag</span></tt></a></p>
+<dl class="method">
+<dt id="pytomo.flvlib.tags.VideoTag.parse_tag_content">
+<tt class="descname">parse_tag_content</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#VideoTag.parse_tag_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.VideoTag.parse_tag_content" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.tags.create_flv_header">
+<tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">create_flv_header</tt><big>(</big><em>has_audio=True</em>, <em>has_video=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#create_flv_header"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.create_flv_header" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.tags.create_flv_tag">
+<tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">create_flv_tag</tt><big>(</big><em>type</em>, <em>data</em>, <em>timestamp=0</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#create_flv_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.create_flv_tag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.tags.create_script_tag">
+<tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">create_script_tag</tt><big>(</big><em>name</em>, <em>data</em>, <em>timestamp=0</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#create_script_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.create_script_tag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.tags.ensure">
+<tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">ensure</tt><big>(</big><em>value</em>, <em>expected</em>, <em>error_msg</em><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#ensure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.ensure" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pytomo.flvlib.tags.strict_parser">
+<tt class="descclassname">pytomo.flvlib.tags.</tt><tt class="descname">strict_parser</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/flvlib/tags.html#strict_parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.flvlib.tags.strict_parser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pytomo.flvlib.scripts.html">scripts Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.flvlib.scripts.html#module-pytomo.flvlib.scripts.debug_flv"><tt class="docutils literal"><span class="pre">debug_flv</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">flvlib Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">flvlib</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-pytomo.flvlib.astypes"><tt class="docutils literal"><span class="pre">astypes</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.flvlib.constants"><tt class="docutils literal"><span class="pre">constants</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.flvlib.helpers"><tt class="docutils literal"><span class="pre">helpers</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.flvlib.primitives"><tt class="docutils literal"><span class="pre">primitives</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.flvlib.tags"><tt class="docutils literal"><span class="pre">tags</span></tt> Module</a></li>
+<li><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pytomo.dns.rdtypes.IN.html"
+                        title="previous chapter">IN Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pytomo.flvlib.scripts.html"
+                        title="next chapter">scripts Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/pytomo.flvlib.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.flvlib.scripts.html" title="scripts Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.dns.rdtypes.IN.html" title="IN Package"
+             >previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

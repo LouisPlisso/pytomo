@@ -1,0 +1,289 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.image.jpg &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.image.jpg</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># jpg.py - jpg file parsing</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: jpg.py 3654 2008-10-26 20:05:40Z dmeyer $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">cStringIO</span>
+
+<span class="c"># import kaa_metadata.image core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">EXIF</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">IPTC</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="c"># interesting file format info:</span>
+<span class="c"># http://www.dcs.ed.ac.uk/home/mxr/gfx/2d-hi.html</span>
+<span class="c"># http://www.funducode.com/freec/Fileformats/format3/format3b.htm</span>
+
+<span class="n">SOF</span> <span class="o">=</span> <span class="p">{</span> <span class="mh">0xC0</span> <span class="p">:</span> <span class="s">&quot;Baseline&quot;</span><span class="p">,</span>
+        <span class="mh">0xC1</span> <span class="p">:</span> <span class="s">&quot;Extended sequential&quot;</span><span class="p">,</span>
+        <span class="mh">0xC2</span> <span class="p">:</span> <span class="s">&quot;Progressive&quot;</span><span class="p">,</span>
+        <span class="mh">0xC3</span> <span class="p">:</span> <span class="s">&quot;Lossless&quot;</span><span class="p">,</span>
+        <span class="mh">0xC5</span> <span class="p">:</span> <span class="s">&quot;Differential sequential&quot;</span><span class="p">,</span>
+        <span class="mh">0xC6</span> <span class="p">:</span> <span class="s">&quot;Differential progressive&quot;</span><span class="p">,</span>
+        <span class="mh">0xC7</span> <span class="p">:</span> <span class="s">&quot;Differential lossless&quot;</span><span class="p">,</span>
+        <span class="mh">0xC9</span> <span class="p">:</span> <span class="s">&quot;Extended sequential, arithmetic coding&quot;</span><span class="p">,</span>
+        <span class="mh">0xCA</span> <span class="p">:</span> <span class="s">&quot;Progressive, arithmetic coding&quot;</span><span class="p">,</span>
+        <span class="mh">0xCB</span> <span class="p">:</span> <span class="s">&quot;Lossless, arithmetic coding&quot;</span><span class="p">,</span>
+        <span class="mh">0xCD</span> <span class="p">:</span> <span class="s">&quot;Differential sequential, arithmetic coding&quot;</span><span class="p">,</span>
+        <span class="mh">0xCE</span> <span class="p">:</span> <span class="s">&quot;Differential progressive, arithmetic coding&quot;</span><span class="p">,</span>
+        <span class="mh">0xCF</span> <span class="p">:</span> <span class="s">&quot;Differential lossless, arithmetic coding&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">EXIFMap</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;Image Artist&#39;</span><span class="p">:</span> <span class="s">&#39;artist&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Image Model&#39;</span><span class="p">:</span> <span class="s">&#39;hardware&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Image Software&#39;</span><span class="p">:</span> <span class="s">&#39;software&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">JPG</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">Image</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    JPEG parser supporting EXIf and IPTC tables. The important</span>
+<span class="sd">    information is mapped to match the kaa_metadata key naming, the</span>
+<span class="sd">    complete table can be accessed with self.tables.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">table_mapping</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&#39;EXIF&#39;</span><span class="p">:</span> <span class="n">EXIFMap</span><span class="p">,</span> <span class="s">&#39;IPTC&#39;</span><span class="p">:</span> <span class="n">IPTC</span><span class="o">.</span><span class="n">mapping</span> <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">Image</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;image/jpeg&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;jpeg image&#39;</span>
+
+        <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">!=</span> <span class="s">&#39;</span><span class="se">\xff\xd8</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">!=</span> <span class="s">&#39;</span><span class="se">\xff\xd9</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="c"># Normally an JPEG should end in ffd9. This does not however</span>
+            <span class="c"># we assume it&#39;s an jpeg for now</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Wrong encode found for jpeg&quot;</span><span class="p">)</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">):</span>
+            <span class="p">(</span><span class="n">ff</span><span class="p">,</span><span class="n">segtype</span><span class="p">,</span><span class="n">seglen</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;&gt;BBH&quot;</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ff</span> <span class="o">!=</span> <span class="mh">0xff</span><span class="p">:</span> <span class="k">break</span>
+            <span class="k">if</span> <span class="n">segtype</span> <span class="o">==</span> <span class="mh">0xd9</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="k">elif</span> <span class="n">SOF</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">segtype</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">seglen</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+                <span class="p">(</span><span class="n">precision</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span>\
+                 <span class="n">num_comp</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;BHHB&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[:</span><span class="mi">6</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">segtype</span> <span class="o">==</span> <span class="mh">0xe1</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">seglen</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+                <span class="nb">type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:</span><span class="n">data</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s">&#39;Exif&#39;</span><span class="p">:</span>
+                    <span class="c"># create a fake file from the data we have to</span>
+                    <span class="c"># pass it to the EXIF parser</span>
+                    <span class="n">fakefile</span> <span class="o">=</span> <span class="n">cStringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+                    <span class="n">fakefile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\xFF\xD8</span><span class="s">&#39;</span><span class="p">)</span>
+                    <span class="n">fakefile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+                    <span class="n">fakefile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                    <span class="n">fakefile</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="n">exif</span> <span class="o">=</span> <span class="n">EXIF</span><span class="o">.</span><span class="n">process_file</span><span class="p">(</span><span class="n">fakefile</span><span class="p">)</span>
+                    <span class="n">fakefile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">exif</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span> <span class="o">=</span> <span class="n">exif</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;JPEGThumbnail&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;EXIF&#39;</span><span class="p">,</span> <span class="n">exif</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="s">&#39;Image Orientation&#39;</span> <span class="ow">in</span> <span class="n">exif</span><span class="p">:</span>
+                            <span class="n">orientation</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exif</span><span class="p">[</span><span class="s">&#39;Image Orientation&#39;</span><span class="p">])</span>
+                            <span class="k">if</span> <span class="n">orientation</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;90 CW&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">rotation</span> <span class="o">=</span> <span class="mi">90</span>
+                            <span class="k">elif</span> <span class="n">orientation</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;90&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">rotation</span> <span class="o">=</span> <span class="mi">270</span>
+                            <span class="k">elif</span> <span class="n">orientation</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;180&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">rotation</span> <span class="o">=</span> <span class="mi">180</span>
+                        <span class="n">t</span> <span class="o">=</span> <span class="n">exif</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;Image DateTimeOriginal&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="p">:</span>
+                            <span class="c"># sometimes it is called this way</span>
+                            <span class="n">t</span> <span class="o">=</span> <span class="n">exif</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;EXIF DateTimeOriginal&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="p">:</span>
+                            <span class="n">t</span> <span class="o">=</span> <span class="n">exif</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;Image DateTime&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="p">:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="s">&#39;%Y:%m:</span><span class="si">%d</span><span class="s"> %H:%M:%S&#39;</span><span class="p">)</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+                            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                                <span class="c"># Malformed time string.</span>
+                                <span class="k">pass</span>
+                <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s">&#39;http://ns.adobe.com/xap/1.0/&#39;</span><span class="p">:</span>
+                    <span class="c"># FIXME: parse XMP data (xml)</span>
+                    <span class="n">doc</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+            <span class="k">elif</span> <span class="n">segtype</span> <span class="o">==</span> <span class="mh">0xed</span><span class="p">:</span>
+                <span class="n">iptc</span> <span class="o">=</span> <span class="n">IPTC</span><span class="o">.</span><span class="n">parseiptc</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">seglen</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">iptc</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;IPTC&#39;</span><span class="p">,</span> <span class="n">iptc</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">segtype</span> <span class="o">==</span> <span class="mh">0xe7</span><span class="p">:</span>
+                <span class="c"># information created by libs like epeg</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">seglen</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+            <span class="k">elif</span> <span class="n">segtype</span> <span class="o">==</span> <span class="mh">0xfe</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">comment</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">seglen</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comment</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;&lt;?xml&#39;</span><span class="p">):</span>
+                    <span class="c"># This could be a comment based on</span>
+                    <span class="c"># http://www.w3.org/TR/photo-rdf/</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;xml comment parser not integrated&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">comment</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># Huffman table marker (FFC4)</span>
+                <span class="c"># Start of Scan marker (FFDA)</span>
+                <span class="c"># Quantization table marker (FFDB)</span>
+                <span class="c"># Restart Interval (FFDD) ???</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">segtype</span> <span class="ow">in</span> <span class="p">(</span><span class="mh">0xc4</span><span class="p">,</span> <span class="mh">0xda</span><span class="p">,</span> <span class="mh">0xdb</span><span class="p">,</span> <span class="mh">0xdd</span><span class="p">):</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;SEGMENT: 0x</span><span class="si">%x%x</span><span class="s">, len=</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ff</span><span class="p">,</span><span class="n">segtype</span><span class="p">,</span><span class="n">seglen</span><span class="p">))</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">seglen</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">app</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span> <span class="s">&#39;JPGMETA&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;Thumb:&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;Software&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">JPG</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

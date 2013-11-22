@@ -1,0 +1,262 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.audio.ac3 &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.audio.ac3</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># ac3.py - AC3 file parser</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: ac3.py 3217 2008-03-23 17:22:49Z tack $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="c"># import kaa_metadata.audio core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+
+<span class="c"># http://www.atsc.org/standards/a_52a.pdf</span>
+<span class="c"># fscod: Sample rate code, 2 bits</span>
+<span class="c">#  00  48</span>
+<span class="c">#  01  44.1</span>
+<span class="c">#  10  32</span>
+<span class="c">#  11  reserved</span>
+
+<span class="n">FSCOD</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">48000</span><span class="p">,</span> <span class="mi">44100</span><span class="p">,</span> <span class="mi">32000</span><span class="p">,</span> <span class="mi">0</span> <span class="p">]</span>
+
+<span class="c"># bsmod: Bit stream mode, 3 bits</span>
+<span class="c"># bsmod acmod Type of Service</span>
+<span class="c">#  000  any main audio service: complete main (CM)</span>
+<span class="c">#  001  any main audio service: music and effects (ME)</span>
+<span class="c">#  010  any associated service: visually impaired (VI)</span>
+<span class="c">#  011  any associated service: hearing impaired (HI)</span>
+<span class="c">#  100  any associated service: dialogue (D)</span>
+<span class="c">#  101  any associated service: commentary (C)</span>
+<span class="c">#  110  any associated service: emergency (E)</span>
+<span class="c">#  111  001 associated service: voice over (VO)</span>
+<span class="c">#  111  010 - 111  main audio service: karaoke</span>
+<span class="c">#</span>
+<span class="c"># acmod: Audio coding mode, 3 bits</span>
+<span class="c">#  000  1+1 2 Ch1, Ch2</span>
+<span class="c">#  001  1/0 1 C</span>
+<span class="c">#  010  2/0 2 L, R</span>
+<span class="c">#  011  3/0 3 L, C, R</span>
+<span class="c">#  100  2/1 3 L, R, S</span>
+<span class="c">#  101  3/1 4 L, C, R, S</span>
+<span class="c">#  110  2/2 4 L, R, SL, SR</span>
+<span class="c">#  111  3/2 5 L, C, R, SL, SR</span>
+
+<span class="n">ACMOD</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span> <span class="s">&#39;1+1&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&#39;Ch1, Ch2&#39;</span> <span class="p">),</span>
+          <span class="p">(</span> <span class="s">&#39;1/0&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;C&#39;</span> <span class="p">),</span>
+          <span class="p">(</span> <span class="s">&#39;2/0&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&#39;L, R&#39;</span> <span class="p">),</span>
+          <span class="p">(</span> <span class="s">&#39;3/0&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s">&#39;L, C, R&#39;</span> <span class="p">),</span>
+          <span class="p">(</span> <span class="s">&#39;2/1&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s">&#39;L, R, S&#39;</span> <span class="p">),</span>
+          <span class="p">(</span> <span class="s">&#39;3/1&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="s">&#39;L, C, R, S&#39;</span> <span class="p">),</span>
+          <span class="p">(</span> <span class="s">&#39;2/2&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="s">&#39;L, R, SL, SR&#39;</span> <span class="p">),</span>
+          <span class="p">(</span> <span class="s">&#39;3/2&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s">&#39;L, C, R, SL, SR&#39;</span> <span class="p">)</span> <span class="p">]</span>
+
+
+<span class="c"># dsurmod: Dolby surround mode, 2 bits</span>
+<span class="c">#  00  not indicated</span>
+<span class="c">#  01  Not Dolby Surround encoded</span>
+<span class="c">#  10  Dolby Surround encoded</span>
+<span class="c">#  11  reserved</span>
+<span class="c">#</span>
+<span class="c"># lfeon: Low frequency effects channel on, 1 bit</span>
+<span class="c"># This bit has a value of 1 if the lfe (sub woofer) channel is on, and a</span>
+<span class="c"># value of 0 if the lfe channel is off.</span>
+<span class="c">#</span>
+<span class="c"># frmsizcod:</span>
+<span class="c">#  byte&amp;0x3e = 0x00        \b, 32 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x02        \b, 40 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x04        \b, 48 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x06        \b, 56 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x08        \b, 64 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x0a        \b, 80 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x0c        \b, 96 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x0e        \b, 112 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x10        \b, 128 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x12        \b, 160 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x14        \b, 192 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x16        \b, 224 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x18        \b, 256 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x1a        \b, 320 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x1c        \b, 384 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x1e        \b, 448 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x20        \b, 512 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x22        \b, 576 kbit/s</span>
+<span class="c">#  byte&amp;0x3e = 0x24        \b, 640 kbit/s</span>
+
+<span class="n">FRMSIZCOD</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">48</span><span class="p">,</span> <span class="mi">56</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">112</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span>
+              <span class="mi">224</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">320</span><span class="p">,</span> <span class="mi">384</span><span class="p">,</span> <span class="mi">448</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">576</span><span class="p">,</span> <span class="mi">640</span> <span class="p">]</span>
+
+<span class="k">class</span> <span class="nc">AC3</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">Music</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.ac3&#39;</span><span class="p">):</span>
+            <span class="c"># when the ending is ac3, force the detection. It may not be</span>
+            <span class="c"># necessary the the header is at the beginning but in the first</span>
+            <span class="c"># 2000 bytes</span>
+            <span class="n">check_length</span> <span class="o">=</span> <span class="mi">1000</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">check_length</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">check_length</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x0b\x77</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="n">info</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;HBBBB&#39;</span><span class="p">,</span><span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">6</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">FSCOD</span><span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">6</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bitrate</span> <span class="o">=</span> <span class="n">FRMSIZCOD</span><span class="p">[(</span><span class="n">info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x3F</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span>
+        <span class="n">bsmod</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x7</span>
+        <span class="n">channels</span> <span class="o">=</span> <span class="n">ACMOD</span><span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">5</span><span class="p">]</span>
+        <span class="n">acmod</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">ACMOD</span><span class="p">[</span><span class="n">acmod</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">bits</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">acmod</span> <span class="o">&amp;</span> <span class="mh">0x01</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">acmod</span> <span class="o">==</span> <span class="mh">0x01</span><span class="p">:</span>
+            <span class="n">bits</span> <span class="o">+=</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">acmod</span> <span class="o">&amp;</span> <span class="mh">0x04</span><span class="p">:</span>
+            <span class="n">bits</span> <span class="o">+=</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">acmod</span> <span class="o">==</span> <span class="mh">0x02</span><span class="p">:</span>
+            <span class="n">bits</span> <span class="o">+=</span> <span class="mi">2</span>
+
+        <span class="c"># info is now 5 bits of info[3] and all bits of info[4] ( == 13 bits)</span>
+        <span class="c"># &#39;bits&#39; bits (0-6) bits are information we don&#39;t need, after that,</span>
+        <span class="c"># the bit we need is lfeon.</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="p">(((</span><span class="n">info</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x1F</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="n">info</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+
+        <span class="c"># now we create the mask we need (based on &#39;bits&#39;)</span>
+        <span class="c"># the bit number 13 - &#39;bits&#39; is what we want to read</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">13</span> <span class="o">-</span> <span class="n">bits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">info</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c"># LFE channel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">size</span> <span class="o">*</span> <span class="mf">8.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitrate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="mh">0x2000</span> <span class="c"># fourcc code of ac3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;audio/ac3&#39;</span>
+
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">AC3</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

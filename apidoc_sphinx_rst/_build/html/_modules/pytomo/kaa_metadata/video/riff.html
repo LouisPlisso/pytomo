@@ -1,0 +1,678 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.video.riff &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.video.riff</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># riff.py - riff (avi) file parser</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: riff.py 3652 2008-10-26 18:23:25Z dmeyer $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="c"># import kaa_metadata.video core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="c"># List of tags</span>
+<span class="c"># http://kibus1.narod.ru/frames_eng.htm?sof/abcavi/infotags.htm</span>
+<span class="c"># http://www.divx-digest.com/software/avitags_dll.html</span>
+<span class="c"># File Format: google for odmlff2.pdf</span>
+
+<span class="n">AVIINFO</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;INAM&#39;</span><span class="p">:</span> <span class="s">&#39;title&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IART&#39;</span><span class="p">:</span> <span class="s">&#39;artist&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IPRD&#39;</span><span class="p">:</span> <span class="s">&#39;product&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ISFT&#39;</span><span class="p">:</span> <span class="s">&#39;software&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ICMT&#39;</span><span class="p">:</span> <span class="s">&#39;comment&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ILNG&#39;</span><span class="p">:</span> <span class="s">&#39;language&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IKEY&#39;</span><span class="p">:</span> <span class="s">&#39;keywords&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IPRT&#39;</span><span class="p">:</span> <span class="s">&#39;trackno&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IFRM&#39;</span><span class="p">:</span> <span class="s">&#39;trackof&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IPRO&#39;</span><span class="p">:</span> <span class="s">&#39;producer&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IWRI&#39;</span><span class="p">:</span> <span class="s">&#39;writer&#39;</span><span class="p">,</span>
+    <span class="s">&#39;IGNR&#39;</span><span class="p">:</span> <span class="s">&#39;genre&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ICOP&#39;</span><span class="p">:</span> <span class="s">&#39;copyright&#39;</span>
+<span class="p">}</span>
+
+<span class="c"># Taken from libavcodec/mpeg4data.h (pixel_aspect struct)</span>
+<span class="n">PIXEL_ASPECT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mi">1</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="mi">2</span><span class="p">:</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span>
+    <span class="mi">3</span><span class="p">:</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span>
+    <span class="mi">4</span><span class="p">:</span> <span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span>
+    <span class="mi">5</span><span class="p">:</span> <span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="mi">33</span><span class="p">)</span>
+<span class="p">}</span>
+
+
+<span class="k">class</span> <span class="nc">Riff</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    AVI parser also parsing metadata like title, languages, etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">table_mapping</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&#39;AVIINFO&#39;</span> <span class="p">:</span> <span class="n">AVIINFO</span> <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c"># read the header</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">h</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;RIFF&quot;</span> <span class="ow">and</span> <span class="n">h</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;SDSS&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_idx</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">junkStart</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infoStart</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s">&#39;AVI &#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;video/avi&#39;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s">&#39;WAVE&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;audio/wav&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseRIFFChunk</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+                <span class="k">pass</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;error in file, stop parsing&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_find_subtitles</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_idx</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">media</span> <span class="o">==</span> <span class="n">core</span><span class="o">.</span><span class="n">MEDIA_AV</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;WARNING: avi has no index&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;corrupt&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_find_subtitles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Search for subtitle files. Right now only VobSub is supported</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">base</span><span class="o">+</span><span class="s">&#39;.idx&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+               <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">base</span><span class="o">+</span><span class="s">&#39;.sub&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">base</span><span class="o">+</span><span class="s">&#39;.rar&#39;</span><span class="p">)):</span>
+            <span class="nb">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">base</span><span class="o">+</span><span class="s">&#39;.idx&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;VobSub index file&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">sub</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">Subtitle</span><span class="p">()</span>
+                        <span class="n">sub</span><span class="o">.</span><span class="n">language</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">6</span><span class="p">]</span>
+                        <span class="n">sub</span><span class="o">.</span><span class="n">trackno</span> <span class="o">=</span> <span class="n">base</span> <span class="o">+</span> <span class="s">&#39;.idx&#39;</span>  <span class="c"># Maybe not?</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">subtitles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseAVIH</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;IIIIIIIIIIIIII&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">56</span><span class="p">])</span>
+        <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwMicroSecPerFrame&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwMaxBytesPerSec&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwPaddingGranularity&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwFlags&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwTotalFrames&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwInitialFrames&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwStreams&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwSuggestedBufferSize&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwWidth&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwHeight&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwScale&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwRate&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwStart&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwLength&#39;</span><span class="p">]</span> <span class="p">)</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">if</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwMicroSecPerFrame&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&quot;ERROR: Corrupt AVI&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">retval</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseSTRH</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">retval</span><span class="p">[</span><span class="s">&#39;fccType&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;_parseSTRH(</span><span class="si">%s</span><span class="s">) : </span><span class="si">%d</span><span class="s"> bytes&quot;</span> <span class="o">%</span> <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;fccType&#39;</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;fccType&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;auds&#39;</span><span class="p">:</span>
+            <span class="n">retval</span><span class="p">[</span><span class="s">&#39;fccHandler&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;IHHIIIIIIIII&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">52</span><span class="p">])</span>
+            <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwFlags&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;wPriority&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;wLanguage&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwInitialFrames&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwScale&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwRate&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwStart&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwLength&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwSuggestedBufferSize&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwQuality&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwSampleSize&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;rcFrame&#39;</span><span class="p">],</span> <span class="p">)</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;IHHIIIIIIIII&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">52</span><span class="p">])</span>
+                <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwFlags&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;wPriority&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;wLanguage&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwInitialFrames&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwScale&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwRate&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwStart&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwLength&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwSuggestedBufferSize&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwQuality&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwSampleSize&#39;</span><span class="p">],</span>
+                  <span class="n">retval</span><span class="p">[</span><span class="s">&#39;rcFrame&#39;</span><span class="p">],</span> <span class="p">)</span> <span class="o">=</span> <span class="n">v</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwStart&#39;</span><span class="p">])</span> <span class="o">/</span> \
+                             <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwRate&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;dwScale&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">ZeroDivisionError</span><span class="p">):</span>
+                <span class="k">pass</span>
+
+        <span class="k">return</span> <span class="n">retval</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseSTRF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">strh</span><span class="p">):</span>
+        <span class="n">fccType</span> <span class="o">=</span> <span class="n">strh</span><span class="p">[</span><span class="s">&#39;fccType&#39;</span><span class="p">]</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">fccType</span> <span class="o">==</span> <span class="s">&#39;auds&#39;</span><span class="p">:</span>
+            <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;wFormatTag&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;nChannels&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;nSamplesPerSec&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;nAvgBytesPerSec&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;nBlockAlign&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;nBitsPerSample&#39;</span><span class="p">],</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;HHHHHH&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">12</span><span class="p">])</span>
+            <span class="n">ai</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">()</span>
+            <span class="n">ai</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;nSamplesPerSec&#39;</span><span class="p">]</span>
+            <span class="n">ai</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;nChannels&#39;</span><span class="p">]</span>
+            <span class="c"># FIXME: Bitrate calculation is completely wrong.</span>
+            <span class="c">#ai.samplebits = retval[&#39;nBitsPerSample&#39;]</span>
+            <span class="c">#ai.bitrate = retval[&#39;nAvgBytesPerSec&#39;] * 8</span>
+
+            <span class="c"># TODO: set code if possible</span>
+            <span class="c"># http://www.stats.uwa.edu.au/Internal/Specs/DXALL/FileSpec/\</span>
+            <span class="c">#    Languages</span>
+            <span class="c"># ai.language = strh[&#39;wLanguage&#39;]</span>
+            <span class="n">ai</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;wFormatTag&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ai</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">fccType</span> <span class="o">==</span> <span class="s">&#39;vids&#39;</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;IIIHH&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">16</span><span class="p">])</span>
+            <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biSize&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biWidth&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biHeight&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biPlanes&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biBitCount&#39;</span><span class="p">],</span> <span class="p">)</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;IIIII&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="mi">20</span><span class="p">:</span><span class="mi">40</span><span class="p">])</span>
+            <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biSizeImage&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biXPelsPerMeter&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biYPelsPerMeter&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biClrUsed&#39;</span><span class="p">],</span>
+              <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biClrImportant&#39;</span><span class="p">],</span> <span class="p">)</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="n">vi</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">()</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">16</span><span class="p">:</span><span class="mi">20</span><span class="p">]</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biWidth&#39;</span><span class="p">]</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;biHeight&#39;</span><span class="p">]</span>
+            <span class="c"># FIXME: Bitrate calculation is completely wrong.</span>
+            <span class="c">#vi.bitrate = strh[&#39;dwRate&#39;]</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">fps</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">strh</span><span class="p">[</span><span class="s">&#39;dwRate&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">strh</span><span class="p">[</span><span class="s">&#39;dwScale&#39;</span><span class="p">]</span>
+            <span class="n">vi</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">strh</span><span class="p">[</span><span class="s">&#39;dwLength&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">vi</span><span class="o">.</span><span class="n">fps</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vi</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">retval</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseSTRL</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">i</span><span class="o">+=</span><span class="mi">8</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;strh&#39;</span><span class="p">:</span>
+            <span class="n">retval</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseSTRH</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;_parseSTRL: Error&quot;</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">i</span><span class="o">+=</span><span class="mi">8</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;strf&#39;</span><span class="p">:</span>
+            <span class="n">retval</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseSTRF</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;strh&#39;</span><span class="p">])</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span>
+        <span class="k">return</span> <span class="p">(</span> <span class="n">retval</span><span class="p">,</span> <span class="n">i</span> <span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseODML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">8</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s">&#39;dmlh&#39;</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;_parseODML: Error&quot;</span><span class="p">)</span>
+
+        <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span> <span class="o">-</span> <span class="mi">8</span>
+        <span class="k">return</span> <span class="p">(</span> <span class="n">retval</span><span class="p">,</span> <span class="n">i</span> <span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseVPRP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;IIIIIIIIII&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[:</span><span class="mi">4</span><span class="o">*</span><span class="mi">10</span><span class="p">])</span>
+
+        <span class="p">(</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;VideoFormat&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;VideoStandard&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;RefreshRate&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;HTotalIn&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;VTotalIn&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;FrameAspectRatio&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;wPixel&#39;</span><span class="p">],</span>
+          <span class="n">retval</span><span class="p">[</span><span class="s">&#39;hPixel&#39;</span><span class="p">]</span> <span class="p">)</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c"># I need an avi with more informations</span>
+        <span class="c"># enum {FORMAT_UNKNOWN, FORMAT_PAL_SQUARE, FORMAT_PAL_CCIR_601,</span>
+        <span class="c">#    FORMAT_NTSC_SQUARE, FORMAT_NTSC_CCIR_601,...} VIDEO_FORMAT;</span>
+        <span class="c"># enum {STANDARD_UNKNOWN, STANDARD_PAL, STANDARD_NTSC, STANDARD_SECAM}</span>
+        <span class="c">#    VIDEO_STANDARD;</span>
+        <span class="c">#</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">retval</span><span class="p">[</span><span class="s">&#39;FrameAspectRatio&#39;</span><span class="p">]</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">r</span> <span class="o">&amp;</span> <span class="mh">0xFFFF</span><span class="p">)</span>
+        <span class="n">retval</span><span class="p">[</span><span class="s">&#39;FrameAspectRatio&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">:</span>
+            <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">setattr</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="s">&#39;aspect&#39;</span><span class="p">,</span> <span class="n">r</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span> <span class="n">retval</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseLISTmovi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Digs into movi list, looking for a Video Object Layer header in an</span>
+<span class="sd">        mpeg4 stream in order to determine aspect ratio.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">n_dc</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c"># If the VOL header doesn&#39;t appear within 5MB or 5 video chunks,</span>
+        <span class="c"># give up.  The 5MB limit is not likely to apply except in</span>
+        <span class="c"># pathological cases.</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">min</span><span class="p">(</span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="n">size</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span> <span class="ow">and</span> <span class="n">n_dc</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># Eat leading nulls.</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">key</span><span class="p">,</span> <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;4sI&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="o">!=</span> <span class="s">&#39;dc&#39;</span> <span class="ow">or</span> <span class="n">sz</span> <span class="o">&gt;</span> <span class="mi">1024</span><span class="o">*</span><span class="mi">500</span><span class="p">:</span>
+                <span class="c"># This chunk is not video or is unusually big (&gt; 500KB);</span>
+                <span class="c"># skip it.</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">8</span> <span class="o">+</span> <span class="n">sz</span>
+                <span class="k">continue</span>
+
+            <span class="n">n_dc</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c"># Read video chunk into memory</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span>
+
+            <span class="c">#for p in range(0,min(80, sz)):</span>
+            <span class="c">#    print &quot;%02x &quot; % ord(data[p]),</span>
+            <span class="c">#print &quot;\n\n&quot;</span>
+
+            <span class="c"># Look through the picture header for VOL startcode.  The basic</span>
+            <span class="c"># logic for this is taken from libavcodec, h263.c</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">startcode</span> <span class="o">=</span> <span class="mh">0xff</span>
+            <span class="k">def</span> <span class="nf">bits</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+                <span class="c"># Returns n bits in v, offset o bits.</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">v</span> <span class="o">&amp;</span> <span class="mi">2</span><span class="o">**</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="mi">64</span><span class="o">-</span><span class="n">n</span><span class="o">-</span><span class="n">o</span><span class="p">))</span> <span class="o">&gt;&gt;</span> <span class="mi">64</span><span class="o">-</span><span class="n">n</span><span class="o">-</span><span class="n">o</span>
+
+            <span class="k">while</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">sz</span><span class="p">:</span>
+                <span class="n">startcode</span> <span class="o">=</span> <span class="p">((</span><span class="n">startcode</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="nb">ord</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">pos</span><span class="p">]))</span> <span class="o">&amp;</span> <span class="mh">0xffffffff</span>
+                <span class="n">pos</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">startcode</span> <span class="o">&amp;</span> <span class="mh">0xFFFFFF00</span> <span class="o">!=</span> <span class="mh">0x100</span><span class="p">:</span>
+                    <span class="c"># No startcode found yet</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">startcode</span> <span class="o">&gt;=</span> <span class="mh">0x120</span> <span class="ow">and</span> <span class="n">startcode</span> <span class="o">&lt;=</span> <span class="mh">0x12F</span><span class="p">:</span>
+                    <span class="c"># We have the VOL startcode.  Pull 64 bits of it and treat</span>
+                    <span class="c"># as a bitstream</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;&gt;Q&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">pos</span> <span class="p">:</span> <span class="n">pos</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">offset</span> <span class="o">=</span> <span class="mi">10</span>
+                    <span class="k">if</span> <span class="n">bits</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="c"># is_ol_id, skip over vo_ver_id and vo_priority</span>
+                        <span class="n">offset</span> <span class="o">+=</span> <span class="mi">7</span>
+                    <span class="n">ar_info</span> <span class="o">=</span> <span class="n">bits</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">ar_info</span> <span class="o">==</span> <span class="mi">15</span><span class="p">:</span>
+                        <span class="c"># Extended aspect</span>
+                        <span class="n">num</span> <span class="o">=</span> <span class="n">bits</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+                        <span class="n">den</span> <span class="o">=</span> <span class="n">bits</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c"># A standard pixel aspect</span>
+                        <span class="n">num</span><span class="p">,</span> <span class="n">den</span> <span class="o">=</span> <span class="n">PIXEL_ASPECT</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ar_info</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+                    <span class="c"># num/den indicates pixel aspect; convert to video aspect,</span>
+                    <span class="c"># so we need frame width and height.</span>
+                    <span class="k">if</span> <span class="mi">0</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">den</span><span class="p">):</span>
+                        <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">height</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">aspect</span> <span class="o">=</span> <span class="n">num</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">den</span><span class="p">)</span> <span class="o">*</span> <span class="n">width</span> <span class="o">/</span> <span class="n">height</span>
+
+                    <span class="n">done</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="k">break</span>
+
+                <span class="n">startcode</span> <span class="o">=</span> <span class="mh">0xff</span>
+
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">8</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+                <span class="c"># We have the aspect, no need to continue parsing the movi</span>
+                <span class="c"># list, so break out of the loop.</span>
+                <span class="k">break</span>
+
+
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">:</span>
+            <span class="c"># Seek past whatever might be remaining of the movi list.</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+
+
+
+    <span class="k">def</span> <span class="nf">_parseLIST</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="o">-</span><span class="mi">8</span><span class="p">:</span>
+            <span class="c"># skip zero</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+            <span class="n">sz</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;LIST&#39;</span><span class="p">:</span>
+                <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">i</span><span class="o">+=</span><span class="mi">8</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="s">&quot;LIST:&quot;</span><span class="o">+</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseLIST</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">sz</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;strl&#39;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">retval</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">retval</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="n">i</span><span class="o">+=</span><span class="n">sz</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;avih&#39;</span><span class="p">:</span>
+                <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">8</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseAVIH</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">sz</span><span class="p">])</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span>
+                <span class="n">retval</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;strl&#39;</span><span class="p">:</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">4</span>
+                <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">sz</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseSTRL</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:])</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s">&#39;strh&#39;</span><span class="p">][</span><span class="s">&#39;fccType&#39;</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span>
+                <span class="n">retval</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;odml&#39;</span><span class="p">:</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">4</span>
+                <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">sz</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseODML</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:])</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;vprp&#39;</span><span class="p">:</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">4</span>
+                <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">sz</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseVPRP</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:])</span>
+                <span class="n">retval</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;JUNK&#39;</span><span class="p">:</span>
+                <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="n">sz</span> <span class="o">+</span> <span class="mi">8</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">i</span><span class="o">+=</span><span class="mi">8</span>
+                <span class="c"># in most cases this is some info stuff</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">AVIINFO</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">!=</span> <span class="s">&#39;IDIT&#39;</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Unknown Key: </span><span class="si">%s</span><span class="s">, len: </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="n">sz</span><span class="p">))</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">sz</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;ISFT&#39;</span><span class="p">:</span>
+                    <span class="c"># product information</span>
+                    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="c"># works for Casio S500 camera videos</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="p">[:</span><span class="n">value</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">)]</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="n">retval</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;IDIT&#39;</span><span class="p">,</span> <span class="s">&#39;ICRD&#39;</span><span class="p">):</span>
+                        <span class="c"># Timestamp the video was created</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="c"># The doc says it should be a format like</span>
+                            <span class="c"># &quot;Wed Jan 02 02:03:55 1990&quot;</span>
+                            <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s">&quot;%a %b </span><span class="si">%d</span><span class="s"> %H:%M:%S %Y&quot;</span><span class="p">)</span>
+                        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="c"># The Casio S500 uses &quot;2005/12/24/ 14:11&quot;</span>
+                                <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s">&quot;%Y/%m/</span><span class="si">%d</span><span class="s">/ %H:%M&quot;</span><span class="p">)</span>
+                            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                                <span class="c"># FIXME: something different</span>
+                                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;no support for time format </span><span class="si">%s</span><span class="s">&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                                <span class="n">t</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="p">:</span>
+                            <span class="c"># save timestamp as int</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+                <span class="n">i</span><span class="o">+=</span><span class="n">sz</span>
+        <span class="k">return</span> <span class="n">retval</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseRIFFChunk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">file</span><span class="p">):</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">h</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">h</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;LIST&#39;</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="mi">8</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;movi&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">aspect</span> <span class="ow">and</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">width</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">height</span> <span class="ow">and</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">format</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;DIVX&#39;</span><span class="p">,</span> <span class="s">&#39;XVID&#39;</span><span class="p">,</span> <span class="s">&#39;FMP4&#39;</span><span class="p">):</span> <span class="c"># any others?</span>
+                <span class="c"># If we don&#39;t have the aspect (i.e. it isn&#39;t in odml vprp</span>
+                <span class="c"># header), but we do know the video&#39;s dimensions, and</span>
+                <span class="c"># we&#39;re dealing with an mpeg4 stream, try to get the aspect</span>
+                <span class="c"># from the VOL header in the mpeg4 stream.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_parseLISTmovi</span><span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">elif</span> <span class="n">size</span> <span class="o">&gt;</span> <span class="mi">80000</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;RIFF LIST &quot;</span><span class="si">%s</span><span class="s">&quot; too long to parse: </span><span class="si">%s</span><span class="s"> bytes&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">size</span><span class="p">))</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">elif</span> <span class="n">size</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;RIFF LIST &quot;</span><span class="si">%s</span><span class="s">&quot; too short: </span><span class="si">%s</span><span class="s"> bytes&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">size</span><span class="p">))</span>
+                <span class="k">return</span> <span class="bp">True</span>
+
+            <span class="n">t</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="mi">4</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;parse RIFF LIST &quot;</span><span class="si">%s</span><span class="s">&quot;: </span><span class="si">%d</span><span class="s"> bytes&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">size</span><span class="p">))</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseLIST</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;INFO&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">infoStart</span> <span class="o">=</span> <span class="n">pos</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span> <span class="s">&#39;AVIINFO&#39;</span><span class="p">,</span> <span class="n">value</span> <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;MID &#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span> <span class="s">&#39;AVIMID&#39;</span><span class="p">,</span> <span class="n">value</span> <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;hdrl&#39;</span><span class="p">,</span> <span class="p">):</span>
+                <span class="c"># no need to add this info to a table</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Skipping table info </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;JUNK&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">junkStart</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="mi">8</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">junkSize</span>  <span class="o">=</span> <span class="n">size</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;idx1&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">has_idx</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;idx1: </span><span class="si">%s</span><span class="s"> bytes&#39;</span> <span class="o">%</span> <span class="n">size</span><span class="p">)</span>
+            <span class="c"># no need to parse this</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;RIFF&#39;</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;New RIFF chunk, extended avi [</span><span class="si">%i</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="n">size</span><span class="p">)</span>
+            <span class="nb">type</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span> <span class="o">!=</span> <span class="s">&#39;AVIX&#39;</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Second RIFF chunk is </span><span class="si">%s</span><span class="s">, not AVIX, skipping&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="c"># that&#39;s it, no new informations should be in AVIX</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;fmt &#39;</span> <span class="ow">and</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">50</span><span class="p">:</span>
+            <span class="c"># This is a wav file.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">media</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">MEDIA_AUDIO</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;&lt;HHLLHH&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">[:</span><span class="mi">16</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;codec&#39;</span><span class="p">,</span> <span class="nb">hex</span><span class="p">(</span><span class="n">fmt</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;samplerate&#39;</span><span class="p">,</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="c"># fmt[3] is average bytes per second, so we must divide it</span>
+            <span class="c"># by 125 to get kbits per second</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;bitrate&#39;</span><span class="p">,</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="mi">125</span><span class="p">)</span>
+            <span class="c"># ugly hack: remember original rate in bytes per second</span>
+            <span class="c"># so that the length can be calculated in next elif block</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;byterate&#39;</span><span class="p">,</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="c"># Set a dummy fourcc so codec will be resolved in finalize.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;fourcc&#39;</span><span class="p">,</span> <span class="s">&#39;dummy&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;data&#39;</span><span class="p">:</span>
+            <span class="c"># XXX: this is naive and may not be right.  For example if the</span>
+            <span class="c"># stream is something that supports VBR like mp3, the value</span>
+            <span class="c"># will be off.  The only way to properly deal with this issue</span>
+            <span class="c"># is to decode part of the stream based on its codec, but</span>
+            <span class="c"># kaa_metadata doesn&#39;t have this capability (yet?)</span>
+            <span class="c"># ugly hack: use original rate in bytes per second</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;length&#39;</span><span class="p">,</span> <span class="n">size</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">byterate</span><span class="p">))</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">printable</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">whitespace</span><span class="p">):</span>
+            <span class="c"># check if name is something usefull at all, maybe it is no</span>
+            <span class="c"># avi or broken</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Skipping </span><span class="si">%s</span><span class="s"> [</span><span class="si">%i</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">size</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># bad avi</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Bad or broken avi&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">Riff</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

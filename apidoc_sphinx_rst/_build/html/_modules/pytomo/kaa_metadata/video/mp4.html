@@ -1,0 +1,605 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.video.mp4 &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.video.mp4</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># mp4.py - mp4/mov file parser</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: mp4.py 4114 2009-05-28 12:27:58Z tack $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2007 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">zlib</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">StringIO</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="c"># import kaa_metadata.video core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+
+<span class="c"># http://developer.apple.com/documentation/QuickTime/QTFF/index.html</span>
+<span class="c"># http://developer.apple.com/documentation/QuickTime/QTFF/QTFFChap4/\</span>
+<span class="c">#     chapter_5_section_2.html#//apple_ref/doc/uid/TP40000939-CH206-BBCBIICE</span>
+<span class="c"># Note: May need to define custom log level to work like ATOM_DEBUG did here</span>
+
+<span class="n">QTUDTA</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;nam&#39;</span><span class="p">:</span> <span class="s">&#39;title&#39;</span><span class="p">,</span>
+    <span class="s">&#39;aut&#39;</span><span class="p">:</span> <span class="s">&#39;artist&#39;</span><span class="p">,</span>
+    <span class="s">&#39;cpy&#39;</span><span class="p">:</span> <span class="s">&#39;copyright&#39;</span>
+<span class="p">}</span>
+
+<span class="n">QTLANGUAGES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mi">0</span> <span class="p">:</span> <span class="s">&quot;en&quot;</span><span class="p">,</span>
+    <span class="mi">1</span> <span class="p">:</span> <span class="s">&quot;fr&quot;</span><span class="p">,</span>
+    <span class="mi">2</span> <span class="p">:</span> <span class="s">&quot;de&quot;</span><span class="p">,</span>
+    <span class="mi">3</span> <span class="p">:</span> <span class="s">&quot;it&quot;</span><span class="p">,</span>
+    <span class="mi">4</span> <span class="p">:</span> <span class="s">&quot;nl&quot;</span><span class="p">,</span>
+    <span class="mi">5</span> <span class="p">:</span> <span class="s">&quot;sv&quot;</span><span class="p">,</span>
+    <span class="mi">6</span> <span class="p">:</span> <span class="s">&quot;es&quot;</span><span class="p">,</span>
+    <span class="mi">7</span> <span class="p">:</span> <span class="s">&quot;da&quot;</span><span class="p">,</span>
+    <span class="mi">8</span> <span class="p">:</span> <span class="s">&quot;pt&quot;</span><span class="p">,</span>
+    <span class="mi">9</span> <span class="p">:</span> <span class="s">&quot;no&quot;</span><span class="p">,</span>
+    <span class="mi">10</span> <span class="p">:</span> <span class="s">&quot;he&quot;</span><span class="p">,</span>
+    <span class="mi">11</span> <span class="p">:</span> <span class="s">&quot;ja&quot;</span><span class="p">,</span>
+    <span class="mi">12</span> <span class="p">:</span> <span class="s">&quot;ar&quot;</span><span class="p">,</span>
+    <span class="mi">13</span> <span class="p">:</span> <span class="s">&quot;fi&quot;</span><span class="p">,</span>
+    <span class="mi">14</span> <span class="p">:</span> <span class="s">&quot;el&quot;</span><span class="p">,</span>
+    <span class="mi">15</span> <span class="p">:</span> <span class="s">&quot;is&quot;</span><span class="p">,</span>
+    <span class="mi">16</span> <span class="p">:</span> <span class="s">&quot;mt&quot;</span><span class="p">,</span>
+    <span class="mi">17</span> <span class="p">:</span> <span class="s">&quot;tr&quot;</span><span class="p">,</span>
+    <span class="mi">18</span> <span class="p">:</span> <span class="s">&quot;hr&quot;</span><span class="p">,</span>
+    <span class="mi">19</span> <span class="p">:</span> <span class="s">&quot;Traditional Chinese&quot;</span><span class="p">,</span>
+    <span class="mi">20</span> <span class="p">:</span> <span class="s">&quot;ur&quot;</span><span class="p">,</span>
+    <span class="mi">21</span> <span class="p">:</span> <span class="s">&quot;hi&quot;</span><span class="p">,</span>
+    <span class="mi">22</span> <span class="p">:</span> <span class="s">&quot;th&quot;</span><span class="p">,</span>
+    <span class="mi">23</span> <span class="p">:</span> <span class="s">&quot;ko&quot;</span><span class="p">,</span>
+    <span class="mi">24</span> <span class="p">:</span> <span class="s">&quot;lt&quot;</span><span class="p">,</span>
+    <span class="mi">25</span> <span class="p">:</span> <span class="s">&quot;pl&quot;</span><span class="p">,</span>
+    <span class="mi">26</span> <span class="p">:</span> <span class="s">&quot;hu&quot;</span><span class="p">,</span>
+    <span class="mi">27</span> <span class="p">:</span> <span class="s">&quot;et&quot;</span><span class="p">,</span>
+    <span class="mi">28</span> <span class="p">:</span> <span class="s">&quot;lv&quot;</span><span class="p">,</span>
+    <span class="mi">29</span> <span class="p">:</span> <span class="s">&quot;Lappish&quot;</span><span class="p">,</span>
+    <span class="mi">30</span> <span class="p">:</span> <span class="s">&quot;fo&quot;</span><span class="p">,</span>
+    <span class="mi">31</span> <span class="p">:</span> <span class="s">&quot;Farsi&quot;</span><span class="p">,</span>
+    <span class="mi">32</span> <span class="p">:</span> <span class="s">&quot;ru&quot;</span><span class="p">,</span>
+    <span class="mi">33</span> <span class="p">:</span> <span class="s">&quot;Simplified Chinese&quot;</span><span class="p">,</span>
+    <span class="mi">34</span> <span class="p">:</span> <span class="s">&quot;Flemish&quot;</span><span class="p">,</span>
+    <span class="mi">35</span> <span class="p">:</span> <span class="s">&quot;ga&quot;</span><span class="p">,</span>
+    <span class="mi">36</span> <span class="p">:</span> <span class="s">&quot;sq&quot;</span><span class="p">,</span>
+    <span class="mi">37</span> <span class="p">:</span> <span class="s">&quot;ro&quot;</span><span class="p">,</span>
+    <span class="mi">38</span> <span class="p">:</span> <span class="s">&quot;cs&quot;</span><span class="p">,</span>
+    <span class="mi">39</span> <span class="p">:</span> <span class="s">&quot;sk&quot;</span><span class="p">,</span>
+    <span class="mi">40</span> <span class="p">:</span> <span class="s">&quot;sl&quot;</span><span class="p">,</span>
+    <span class="mi">41</span> <span class="p">:</span> <span class="s">&quot;yi&quot;</span><span class="p">,</span>
+    <span class="mi">42</span> <span class="p">:</span> <span class="s">&quot;sr&quot;</span><span class="p">,</span>
+    <span class="mi">43</span> <span class="p">:</span> <span class="s">&quot;mk&quot;</span><span class="p">,</span>
+    <span class="mi">44</span> <span class="p">:</span> <span class="s">&quot;bg&quot;</span><span class="p">,</span>
+    <span class="mi">45</span> <span class="p">:</span> <span class="s">&quot;uk&quot;</span><span class="p">,</span>
+    <span class="mi">46</span> <span class="p">:</span> <span class="s">&quot;be&quot;</span><span class="p">,</span>
+    <span class="mi">47</span> <span class="p">:</span> <span class="s">&quot;uz&quot;</span><span class="p">,</span>
+    <span class="mi">48</span> <span class="p">:</span> <span class="s">&quot;kk&quot;</span><span class="p">,</span>
+    <span class="mi">49</span> <span class="p">:</span> <span class="s">&quot;az&quot;</span><span class="p">,</span>
+    <span class="mi">50</span> <span class="p">:</span> <span class="s">&quot;AzerbaijanAr&quot;</span><span class="p">,</span>
+    <span class="mi">51</span> <span class="p">:</span> <span class="s">&quot;hy&quot;</span><span class="p">,</span>
+    <span class="mi">52</span> <span class="p">:</span> <span class="s">&quot;ka&quot;</span><span class="p">,</span>
+    <span class="mi">53</span> <span class="p">:</span> <span class="s">&quot;mo&quot;</span><span class="p">,</span>
+    <span class="mi">54</span> <span class="p">:</span> <span class="s">&quot;ky&quot;</span><span class="p">,</span>
+    <span class="mi">55</span> <span class="p">:</span> <span class="s">&quot;tg&quot;</span><span class="p">,</span>
+    <span class="mi">56</span> <span class="p">:</span> <span class="s">&quot;tk&quot;</span><span class="p">,</span>
+    <span class="mi">57</span> <span class="p">:</span> <span class="s">&quot;mn&quot;</span><span class="p">,</span>
+    <span class="mi">58</span> <span class="p">:</span> <span class="s">&quot;MongolianCyr&quot;</span><span class="p">,</span>
+    <span class="mi">59</span> <span class="p">:</span> <span class="s">&quot;ps&quot;</span><span class="p">,</span>
+    <span class="mi">60</span> <span class="p">:</span> <span class="s">&quot;ku&quot;</span><span class="p">,</span>
+    <span class="mi">61</span> <span class="p">:</span> <span class="s">&quot;ks&quot;</span><span class="p">,</span>
+    <span class="mi">62</span> <span class="p">:</span> <span class="s">&quot;sd&quot;</span><span class="p">,</span>
+    <span class="mi">63</span> <span class="p">:</span> <span class="s">&quot;bo&quot;</span><span class="p">,</span>
+    <span class="mi">64</span> <span class="p">:</span> <span class="s">&quot;ne&quot;</span><span class="p">,</span>
+    <span class="mi">65</span> <span class="p">:</span> <span class="s">&quot;sa&quot;</span><span class="p">,</span>
+    <span class="mi">66</span> <span class="p">:</span> <span class="s">&quot;mr&quot;</span><span class="p">,</span>
+    <span class="mi">67</span> <span class="p">:</span> <span class="s">&quot;bn&quot;</span><span class="p">,</span>
+    <span class="mi">68</span> <span class="p">:</span> <span class="s">&quot;as&quot;</span><span class="p">,</span>
+    <span class="mi">69</span> <span class="p">:</span> <span class="s">&quot;gu&quot;</span><span class="p">,</span>
+    <span class="mi">70</span> <span class="p">:</span> <span class="s">&quot;pa&quot;</span><span class="p">,</span>
+    <span class="mi">71</span> <span class="p">:</span> <span class="s">&quot;or&quot;</span><span class="p">,</span>
+    <span class="mi">72</span> <span class="p">:</span> <span class="s">&quot;ml&quot;</span><span class="p">,</span>
+    <span class="mi">73</span> <span class="p">:</span> <span class="s">&quot;kn&quot;</span><span class="p">,</span>
+    <span class="mi">74</span> <span class="p">:</span> <span class="s">&quot;ta&quot;</span><span class="p">,</span>
+    <span class="mi">75</span> <span class="p">:</span> <span class="s">&quot;te&quot;</span><span class="p">,</span>
+    <span class="mi">76</span> <span class="p">:</span> <span class="s">&quot;si&quot;</span><span class="p">,</span>
+    <span class="mi">77</span> <span class="p">:</span> <span class="s">&quot;my&quot;</span><span class="p">,</span>
+    <span class="mi">78</span> <span class="p">:</span> <span class="s">&quot;Khmer&quot;</span><span class="p">,</span>
+    <span class="mi">79</span> <span class="p">:</span> <span class="s">&quot;lo&quot;</span><span class="p">,</span>
+    <span class="mi">80</span> <span class="p">:</span> <span class="s">&quot;vi&quot;</span><span class="p">,</span>
+    <span class="mi">81</span> <span class="p">:</span> <span class="s">&quot;id&quot;</span><span class="p">,</span>
+    <span class="mi">82</span> <span class="p">:</span> <span class="s">&quot;tl&quot;</span><span class="p">,</span>
+    <span class="mi">83</span> <span class="p">:</span> <span class="s">&quot;MalayRoman&quot;</span><span class="p">,</span>
+    <span class="mi">84</span> <span class="p">:</span> <span class="s">&quot;MalayArabic&quot;</span><span class="p">,</span>
+    <span class="mi">85</span> <span class="p">:</span> <span class="s">&quot;am&quot;</span><span class="p">,</span>
+    <span class="mi">86</span> <span class="p">:</span> <span class="s">&quot;ti&quot;</span><span class="p">,</span>
+    <span class="mi">87</span> <span class="p">:</span> <span class="s">&quot;om&quot;</span><span class="p">,</span>
+    <span class="mi">88</span> <span class="p">:</span> <span class="s">&quot;so&quot;</span><span class="p">,</span>
+    <span class="mi">89</span> <span class="p">:</span> <span class="s">&quot;sw&quot;</span><span class="p">,</span>
+    <span class="mi">90</span> <span class="p">:</span> <span class="s">&quot;Ruanda&quot;</span><span class="p">,</span>
+    <span class="mi">91</span> <span class="p">:</span> <span class="s">&quot;Rundi&quot;</span><span class="p">,</span>
+    <span class="mi">92</span> <span class="p">:</span> <span class="s">&quot;Chewa&quot;</span><span class="p">,</span>
+    <span class="mi">93</span> <span class="p">:</span> <span class="s">&quot;mg&quot;</span><span class="p">,</span>
+    <span class="mi">94</span> <span class="p">:</span> <span class="s">&quot;eo&quot;</span><span class="p">,</span>
+    <span class="mi">128</span> <span class="p">:</span> <span class="s">&quot;cy&quot;</span><span class="p">,</span>
+    <span class="mi">129</span> <span class="p">:</span> <span class="s">&quot;eu&quot;</span><span class="p">,</span>
+    <span class="mi">130</span> <span class="p">:</span> <span class="s">&quot;ca&quot;</span><span class="p">,</span>
+    <span class="mi">131</span> <span class="p">:</span> <span class="s">&quot;la&quot;</span><span class="p">,</span>
+    <span class="mi">132</span> <span class="p">:</span> <span class="s">&quot;qu&quot;</span><span class="p">,</span>
+    <span class="mi">133</span> <span class="p">:</span> <span class="s">&quot;gn&quot;</span><span class="p">,</span>
+    <span class="mi">134</span> <span class="p">:</span> <span class="s">&quot;ay&quot;</span><span class="p">,</span>
+    <span class="mi">135</span> <span class="p">:</span> <span class="s">&quot;tt&quot;</span><span class="p">,</span>
+    <span class="mi">136</span> <span class="p">:</span> <span class="s">&quot;ug&quot;</span><span class="p">,</span>
+    <span class="mi">137</span> <span class="p">:</span> <span class="s">&quot;Dzongkha&quot;</span><span class="p">,</span>
+    <span class="mi">138</span> <span class="p">:</span> <span class="s">&quot;JavaneseRom&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">MPEG4</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parser for the MP4 container format. This format is mostly</span>
+<span class="sd">    identical to Apple Quicktime and 3GP files. It maps to mp4, mov,</span>
+<span class="sd">    qt and some other extensions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">table_mapping</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&#39;QTUDTA&#39;</span><span class="p">:</span> <span class="n">QTUDTA</span> <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_references</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;video/quicktime&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a_type</span> <span class="o">=</span> <span class="s">&#39;Quicktime Video&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">volume</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">a_type</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">struct</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+            <span class="c"># EOF.</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">a_type</span> <span class="o">==</span> <span class="s">&#39;ftyp&#39;</span><span class="p">:</span>
+            <span class="c"># file type information</span>
+            <span class="k">if</span> <span class="n">size</span> <span class="o">&gt;=</span> <span class="mi">12</span><span class="p">:</span>
+                <span class="c"># this should always happen</span>
+                <span class="k">if</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="o">!=</span> <span class="s">&#39;qt  &#39;</span><span class="p">:</span>
+                    <span class="c"># not a quicktime movie, it is a mpeg4 container</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;video/mp4&#39;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">a_type</span> <span class="o">=</span> <span class="s">&#39;MPEG-4 Video&#39;</span>
+                <span class="n">size</span> <span class="o">-=</span> <span class="mi">4</span>
+            <span class="n">in_file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">a_type</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="n">a_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;mdat&#39;</span><span class="p">,</span> <span class="s">&#39;skip&#39;</span><span class="p">):</span>
+            <span class="c"># movie data at the beginning, skip</span>
+            <span class="n">in_file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">a_type</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">a_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;moov&#39;</span><span class="p">,</span> <span class="s">&#39;wide&#39;</span><span class="p">,</span> <span class="s">&#39;free&#39;</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;invalid header: </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">a_type</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="c"># Extended size</span>
+        <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;Q&#39;</span><span class="p">,</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span>
+
+        <span class="c"># Back over the atom header we just read, since _readatom expects the</span>
+        <span class="c"># file position to be at the start of an atom.</span>
+        <span class="n">in_file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="o">-</span><span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readatom</span><span class="p">(</span><span class="n">in_file</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_references</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;references&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_references</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">analyse_user_data_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">):</span>
+        <span class="s">&quot;Extract info of user data atom&quot;</span>
+        <span class="c"># Userdata (Metadata)</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">tabl</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">i18ntabl</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">atomdata</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+        <span class="k">while</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">atomsize</span> <span class="o">-</span> <span class="mi">12</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">datasize</span><span class="p">,</span> <span class="n">datatype</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="mi">8</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">datatype</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">169</span><span class="p">:</span>
+                <span class="c"># i18n Metadata...</span>
+                <span class="n">mypos</span> <span class="o">=</span> <span class="mi">8</span> <span class="o">+</span> <span class="n">pos</span>
+                <span class="k">while</span> <span class="n">mypos</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">&lt;</span> <span class="n">datasize</span> <span class="o">+</span> <span class="n">pos</span><span class="p">:</span>
+                    <span class="c"># first 4 Bytes are i18n header</span>
+                    <span class="p">(</span><span class="n">tlen</span><span class="p">,</span> <span class="n">lang</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;HH&#39;</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">[</span><span class="n">mypos</span><span class="p">:</span><span class="n">mypos</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span>
+                    <span class="n">i18ntabl</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span> <span class="o">=</span> <span class="n">i18ntabl</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="p">{})</span>
+                    <span class="n">l</span> <span class="o">=</span> <span class="n">atomdata</span><span class="p">[(</span><span class="n">mypos</span> <span class="o">+</span> <span class="mi">4</span><span class="p">):(</span><span class="n">mypos</span> <span class="o">+</span> <span class="n">tlen</span> <span class="o">+</span> <span class="mi">4</span><span class="p">)]</span>
+                    <span class="n">i18ntabl</span><span class="p">[</span><span class="n">lang</span><span class="p">][</span><span class="n">datatype</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span> <span class="o">=</span> <span class="n">l</span>
+                    <span class="n">mypos</span> <span class="o">+=</span> <span class="n">tlen</span> <span class="o">+</span> <span class="mi">4</span>
+            <span class="k">elif</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;WLOC&#39;</span><span class="p">:</span>
+                <span class="c"># Drop Window Location</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="n">datasize</span><span class="p">)][</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">tabl</span><span class="p">[</span><span class="n">datatype</span><span class="p">]</span> <span class="o">=</span> <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="n">datasize</span><span class="p">)]</span>
+            <span class="n">pos</span> <span class="o">+=</span> <span class="n">datasize</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i18ntabl</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">i18ntabl</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">QTLANGUAGES</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">and</span> <span class="n">QTLANGUAGES</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;en&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;QTUDTA&#39;</span><span class="p">,</span> <span class="n">i18ntabl</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;QTUDTA&#39;</span><span class="p">,</span> <span class="n">tabl</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;NO i18&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;QTUDTA&#39;</span><span class="p">,</span> <span class="n">tabl</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">analyse_track_header_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trackinfo</span><span class="p">,</span> <span class="n">datasize</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
+        <span class="s">&quot;Extract inof of track header atom&quot;</span>
+        <span class="n">tkhd</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;6I8x4H36xII&#39;</span><span class="p">,</span>
+                             <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="n">datasize</span><span class="p">)])</span>
+        <span class="c"># trackinfo is passed by reference</span>
+        <span class="n">trackinfo</span><span class="p">[</span><span class="s">&#39;width&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tkhd</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span>
+        <span class="n">trackinfo</span><span class="p">[</span><span class="s">&#39;height&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tkhd</span><span class="p">[</span><span class="mi">11</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span>
+        <span class="n">trackinfo</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tkhd</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># Timestamp of Seconds is since January 1st 1904!</span>
+            <span class="c"># 2082844800 is the difference between Unix and</span>
+            <span class="c"># Apple time. FIXME to work on Apple, too</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tkhd</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">2082844800</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;There was trouble extracting timestamp&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">analyse_media_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trackinfo</span><span class="p">,</span> <span class="n">datasize</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
+        <span class="s">&quot;Extract info of media atom&quot;</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="mi">8</span>
+        <span class="n">datasize</span> <span class="o">-=</span> <span class="mi">8</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;--&gt; mdia information&#39;</span><span class="p">)</span>
+        <span class="n">tracktype</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">while</span> <span class="n">datasize</span><span class="p">:</span>
+            <span class="n">mdia</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">[</span><span class="n">pos</span><span class="p">:(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">)])</span>
+            <span class="k">if</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;mdhd&#39;</span><span class="p">:</span>
+                <span class="c"># Parse based on version of mdhd header.  See</span>
+                <span class="c"># http://wiki.multimedia.cx/index.php?title=QuickTime_container#mdhd</span>
+                <span class="n">ver</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">atomdata</span><span class="p">[</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">ver</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">mdhd</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;IIIIIhh&#39;</span><span class="p">,</span>
+                                         <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">24</span><span class="p">)])</span>
+                <span class="k">elif</span> <span class="n">ver</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">mdhd</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;IQQIQhh&#39;</span><span class="p">,</span>
+                                         <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">36</span><span class="p">)])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">mdhd</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">if</span> <span class="n">mdhd</span><span class="p">:</span>
+                    <span class="c"># duration / time scale</span>
+                    <span class="n">trackinfo</span><span class="p">[</span><span class="s">&#39;length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mdhd</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">/</span> <span class="n">mdhd</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">mdhd</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="ow">in</span> <span class="n">QTLANGUAGES</span><span class="p">:</span>
+                        <span class="n">trackinfo</span><span class="p">[</span><span class="s">&#39;language&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">QTLANGUAGES</span><span class="p">[</span><span class="n">mdhd</span><span class="p">[</span><span class="mi">5</span><span class="p">]]</span>
+                    <span class="c"># mdhd[6] == quality</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">mdhd</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">/</span> <span class="n">mdhd</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;minf&#39;</span><span class="p">:</span>
+                <span class="c"># minf has only atoms inside</span>
+                <span class="n">pos</span> <span class="o">-=</span> <span class="p">(</span><span class="n">mdia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+                <span class="n">datasize</span> <span class="o">+=</span> <span class="p">(</span><span class="n">mdia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;stbl&#39;</span><span class="p">:</span>
+                <span class="c"># stbl has only atoms inside</span>
+                <span class="n">pos</span> <span class="o">-=</span> <span class="p">(</span><span class="n">mdia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+                <span class="n">datasize</span> <span class="o">+=</span> <span class="p">(</span><span class="n">mdia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;hdlr&#39;</span><span class="p">:</span>
+                <span class="n">hdlr</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s4s&#39;</span><span class="p">,</span>
+                                     <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">12</span><span class="p">)])</span>
+                <span class="k">if</span> <span class="n">hdlr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;mhlr&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">hdlr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;vide&#39;</span><span class="p">:</span>
+                        <span class="n">tracktype</span> <span class="o">=</span> <span class="s">&#39;video&#39;</span>
+                    <span class="k">if</span> <span class="n">hdlr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;soun&#39;</span><span class="p">:</span>
+                        <span class="n">tracktype</span> <span class="o">=</span> <span class="s">&#39;audio&#39;</span>
+            <span class="k">elif</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;stsd&#39;</span><span class="p">:</span>
+                <span class="n">stsd</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;2I&#39;</span><span class="p">,</span>
+                                     <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">8</span><span class="p">)])</span>
+                <span class="k">if</span> <span class="n">stsd</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">codec</span> <span class="o">=</span> <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">16</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">16</span> <span class="o">+</span> <span class="mi">8</span><span class="p">)]</span>
+                    <span class="n">codec</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">codec</span><span class="p">)</span>
+                    <span class="n">trackinfo</span><span class="p">[</span><span class="s">&#39;codec&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">codec</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">codec</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;jpeg&#39;</span><span class="p">:</span>
+                        <span class="n">tracktype</span> <span class="o">=</span> <span class="s">&#39;image&#39;</span>
+            <span class="k">elif</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;dinf&#39;</span><span class="p">:</span>
+                <span class="n">dref</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span>
+                                     <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">8</span><span class="p">)])</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;  --&gt; </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s"> (useless)&#39;</span> <span class="o">%</span> <span class="n">mdia</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">dref</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;dref&#39;</span><span class="p">:</span>
+                    <span class="n">num</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I&#39;</span><span class="p">,</span>
+                                    <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">20</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">20</span> <span class="o">+</span> <span class="mi">4</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">rpos</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">20</span> <span class="o">+</span> <span class="mi">4</span>
+                    <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+                        <span class="n">ref</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I3s&#39;</span><span class="p">,</span>
+                                            <span class="n">atomdata</span><span class="p">[</span><span class="n">rpos</span><span class="p">:(</span><span class="n">rpos</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)])</span>
+                        <span class="c"># FIXME: do somthing if this references (data)</span>
+                        <span class="n">data</span> <span class="o">=</span> <span class="n">atomdata</span><span class="p">[(</span><span class="n">rpos</span> <span class="o">+</span> <span class="mi">7</span><span class="p">):(</span><span class="n">rpos</span> <span class="o">+</span> <span class="n">ref</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+                        <span class="n">rpos</span> <span class="o">+=</span> <span class="n">ref</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;st&#39;</span><span class="p">):</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;  --&gt; </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s"> (sample)&#39;</span> <span class="o">%</span> <span class="n">mdia</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;vmhd&#39;</span><span class="p">,)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tracktype</span><span class="p">:</span>
+                    <span class="c"># indicates that this track is video</span>
+                    <span class="n">tracktype</span> <span class="o">=</span> <span class="s">&#39;video&#39;</span>
+                <span class="k">elif</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;vmhd&#39;</span><span class="p">,</span> <span class="s">&#39;smhd&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tracktype</span><span class="p">:</span>
+                    <span class="c"># indicates that this track is audio</span>
+                    <span class="n">tracktype</span> <span class="o">=</span> <span class="s">&#39;audio&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;  --&gt; </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s"> (unknown)&#39;</span> <span class="o">%</span> <span class="n">mdia</span><span class="p">)</span>
+            <span class="n">pos</span> <span class="o">+=</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">datasize</span> <span class="o">-=</span> <span class="n">mdia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># not logical but only thing that works without completely reading</span>
+            <span class="c"># the mp4 spec</span>
+            <span class="k">return</span> <span class="n">pos</span><span class="p">,</span> <span class="n">datasize</span><span class="p">,</span> <span class="n">tracktype</span>
+
+    <span class="k">def</span> <span class="nf">analyse_track_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">):</span>
+        <span class="s">&quot;Extract info of track atom&quot;</span>
+        <span class="n">atomdata</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">trackinfo</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">while</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">datasize</span><span class="p">,</span> <span class="n">datatype</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span>
+                                                 <span class="n">atomdata</span><span class="p">[</span><span class="n">pos</span><span class="p">:(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">)])</span>
+            <span class="k">if</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;tkhd&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">analyse_track_header_atom</span><span class="p">(</span><span class="n">trackinfo</span><span class="p">,</span> <span class="n">datasize</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">,</span>
+                                               <span class="n">pos</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;mdia&#39;</span><span class="p">:</span>
+                <span class="n">pos</span><span class="p">,</span> <span class="n">datasize</span><span class="p">,</span> <span class="n">tracktype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">analyse_media_atom</span><span class="p">(</span><span class="n">trackinfo</span><span class="p">,</span>
+                                                       <span class="n">datasize</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;udta&#39;</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">[:</span><span class="mi">8</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;edts&#39;</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;--&gt; </span><span class="si">%s</span><span class="s"> [</span><span class="si">%d</span><span class="s">] (edit list)&#39;</span> <span class="o">%</span> \
+                              <span class="p">(</span><span class="n">datatype</span><span class="p">,</span> <span class="n">datasize</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;--&gt; </span><span class="si">%s</span><span class="s"> [</span><span class="si">%d</span><span class="s">] (unknown)&#39;</span> <span class="o">%</span> \
+                              <span class="p">(</span><span class="n">datatype</span><span class="p">,</span> <span class="n">datasize</span><span class="p">))</span>
+            <span class="n">pos</span> <span class="o">+=</span> <span class="n">datasize</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">tracktype</span> <span class="o">==</span> <span class="s">&#39;video&#39;</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tracktype</span> <span class="o">==</span> <span class="s">&#39;audio&#39;</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">info</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">trackinfo</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">analyse_movie_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">):</span>
+        <span class="s">&quot;Extract info from movie header&quot;</span>
+        <span class="n">mvhd</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;6I2h&#39;</span><span class="p">,</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">28</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">mvhd</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">/</span> <span class="n">mvhd</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">volume</span> <span class="o">=</span> <span class="n">mvhd</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+        <span class="n">in_file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">analyse_compressed_movie</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">):</span>
+        <span class="s">&quot;Extract info from compressed movie&quot;</span>
+        <span class="n">datasize</span><span class="p">,</span> <span class="n">atomtype</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;dcom&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">atomsize</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;4s&#39;</span><span class="p">,</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">datasize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">datasize</span><span class="p">,</span> <span class="n">atomtype</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;cmvd&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">atomsize</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s">&#39;zlib&#39;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">datasize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">decompressed</span> <span class="o">=</span> <span class="n">zlib</span><span class="o">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">decompressed</span> <span class="o">=</span> <span class="n">zlib</span><span class="o">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">4</span><span class="p">:])</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;There was a proble decompressiong atom&#39;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">atomsize</span>
+            <span class="n">decompressedIO</span> <span class="o">=</span> <span class="n">StringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">decompressed</span><span class="p">)</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readatom</span><span class="p">(</span><span class="n">decompressedIO</span><span class="p">):</span>
+                <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;unknown compression </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">method</span><span class="p">)</span>
+            <span class="c"># unknown compression method</span>
+            <span class="n">in_file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">datasize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">analyse_media_data_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">):</span>
+        <span class="s">&quot;Extract info from media data atom&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">+</span> <span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span>
+        <span class="c"># maybe there is data inside the mdat</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;parsing mdat&#39;</span><span class="p">)</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readatom</span><span class="p">(</span><span class="n">in_file</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;end of mdat&#39;</span><span class="p">)</span>
+        <span class="c"># in_file passed by reference</span>
+        <span class="n">in_file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">analyse_reference_movie_descriptor_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">):</span>
+        <span class="s">&quot;Extract info from reference movie descriptor atom&quot;</span>
+        <span class="n">atomdata</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">)</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">quality</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">datarate</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">datasize</span><span class="p">,</span> <span class="n">datatype</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span>
+                                                 <span class="n">atomdata</span><span class="p">[</span><span class="n">pos</span><span class="p">:(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">)])</span>
+            <span class="k">if</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;rdrf&#39;</span><span class="p">:</span>
+                <span class="n">rflags</span><span class="p">,</span> <span class="n">rtype</span><span class="p">,</span> <span class="n">rlen</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4sI&#39;</span><span class="p">,</span>
+                                                <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">20</span><span class="p">)])</span>
+                <span class="k">if</span> <span class="n">rtype</span> <span class="o">==</span> <span class="s">&#39;url &#39;</span><span class="p">:</span>
+                    <span class="n">url</span> <span class="o">=</span> <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">20</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">20</span> <span class="o">+</span> <span class="n">rlen</span><span class="p">)]</span>
+                    <span class="k">if</span> <span class="n">url</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">url</span> <span class="o">=</span> <span class="n">url</span><span class="p">[:</span><span class="n">url</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">)]</span>
+            <span class="k">elif</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;rmqu&#39;</span><span class="p">:</span>
+                <span class="n">quality</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I&#39;</span><span class="p">,</span> <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">12</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">datatype</span> <span class="o">==</span> <span class="s">&#39;rmdr&#39;</span><span class="p">:</span>
+                <span class="n">datarate</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I&#39;</span><span class="p">,</span>
+                                         <span class="n">atomdata</span><span class="p">[(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">12</span><span class="p">):(</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">16</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">pos</span> <span class="o">+=</span> <span class="n">datasize</span>
+        <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_references</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">url</span><span class="p">,</span> <span class="n">quality</span><span class="p">,</span> <span class="n">datarate</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_readatom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_file</span><span class="p">):</span>
+        <span class="s">&quot;Main reader for atoms in the file&quot;</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">in_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="n">atomsize</span><span class="p">,</span> <span class="n">atomtype</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;I4s&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">atomtype</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;latin1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">isalnum</span><span class="p">():</span>
+            <span class="c"># stop at nonsense data</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> [</span><span class="si">%X</span><span class="s">]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">atomtype</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;udta&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">analyse_user_data_atom</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;trak&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">analyse_track_atom</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;mvhd&#39;</span><span class="p">:</span>
+            <span class="n">atomsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">analyse_movie_header</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;cmov&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">analyse_compressed_movie</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">atomsize</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">atomsize</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;moov&#39;</span><span class="p">:</span>
+            <span class="c"># decompressed movie info</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readatom</span><span class="p">(</span><span class="n">in_file</span><span class="p">):</span>
+                <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;mdat&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">analyse_media_data_atom</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;rmra&#39;</span><span class="p">:</span>
+            <span class="c"># reference list</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readatom</span><span class="p">(</span><span class="n">in_file</span><span class="p">):</span>
+                <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">atomtype</span> <span class="o">==</span> <span class="s">&#39;rmda&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">analyse_reference_movie_descriptor_atom</span><span class="p">(</span><span class="n">in_file</span><span class="p">,</span> <span class="n">atomsize</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">atomtype</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;wide&#39;</span><span class="p">,</span> <span class="s">&#39;free&#39;</span><span class="p">):</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;unhandled base atom </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">atomtype</span><span class="p">)</span>
+            <span class="c"># Skip unknown atoms</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">in_file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">atomsize</span> <span class="o">-</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">atomsize</span>
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">MPEG4</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

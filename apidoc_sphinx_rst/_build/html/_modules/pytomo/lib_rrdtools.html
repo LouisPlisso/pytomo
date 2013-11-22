@@ -1,0 +1,773 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.lib_rrdtools &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.lib_rrdtools</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="sd">&#39;&#39;&#39;Module for RRDtool interface to the pytomo data.</span>
+
+<span class="sd">Necessary module: rrdtool (python-rrdtool,</span>
+<span class="sd">                  http://oss.oetiker.ch/rrdtool/download.en.html)</span>
+<span class="sd">Version: 0.1</span>
+<span class="sd">Author: Ana Oprea</span>
+<span class="sd">Date: 11.07.2012</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        # first create a database - follow steps in lib_database</span>
+<span class="sd">        import pytomo.start_pytomo as start_pytomo</span>
+<span class="sd">        start_pytomo.configure_log_file(&#39;doc_test&#39;)</span>
+<span class="sd">        import pytomo.lib_database as lib_database</span>
+<span class="sd">        from pytomo.lib_plot import UNITS</span>
+<span class="sd">        import pytomo.lib_rrdtools as lib_rrdtools</span>
+
+<span class="sd">        pytomo_rrd = lib_rrdtools.PytomoRRD(db_name)</span>
+<span class="sd">        pytomo_rrd.update_pytomo_rrd()</span>
+<span class="sd">        pytomo_rrd.plot_pytomo_rrd()</span>
+
+<span class="sd">        &gt;&gt;&gt; import time</span>
+<span class="sd">        &gt;&gt;&gt; timestamp = time.strftime(&quot;%Y-%m-%d.%H_%M_%S&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; # to make sure a new file is created for every run we use</span>
+<span class="sd">        &gt;&gt;&gt; # timestamp.</span>
+<span class="sd">        &gt;&gt;&gt; db_name = &#39;doc_test_lib_db&#39; + str(timestamp) + &#39;.db&#39;</span>
+<span class="sd">        &gt;&gt;&gt; # import pytomo.lib_database as lib_database</span>
+<span class="sd">        &gt;&gt;&gt; doc_db = lib_database.PytomoDatabase(db_name)</span>
+<span class="sd">        &gt;&gt;&gt; doc_db.create_pytomo_table(&#39;doc_test_table&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; import datetime</span>
+<span class="sd">        &gt;&gt;&gt; record = (datetime.datetime(2011, 5, 6, 15, 30, 50, 103775),</span>
+<span class="sd">        ... &#39;Youtube&#39;, &#39;http://www.youtube.com/watch?v=RcmKbTR--iA&#39;,</span>
+<span class="sd">        ... &#39;http://v15.lscache3.c.youtube.com&#39;,</span>
+<span class="sd">        ... &#39;173.194.20.56&#39;,&#39;default_10.193.225.12&#39;, None, None, None,</span>
+<span class="sd">        ... 8.9944229125976562, &#39;mp4&#39;, 225, 115012833.0, 511168.14666666667,</span>
+<span class="sd">        ... 9575411, 0, 1024 ,100,  0.99954795837402344, 7.9875903129577637,</span>
+<span class="sd">        ... 35, 11.722306421319782, 1192528.8804511931, None)</span>
+<span class="sd">        &gt;&gt;&gt; doc_db.insert_record(record)</span>
+<span class="sd">        &gt;&gt;&gt; record = (datetime.datetime(2011, 5, 6, 15, 31, 10, 103775),</span>
+<span class="sd">        ... &#39;Youtube&#39;, &#39;http://www.youtube.com/watch?v=RcmKbTR--iA&#39;,</span>
+<span class="sd">        ... &#39;http://v15.lscache3.c.youtube.com&#39;,</span>
+<span class="sd">        ... &#39;173.194.20.56&#39;,&#39;default_10.193.225.12&#39;, None, None, None,</span>
+<span class="sd">        ... 8.9944229125976562, &#39;mp4&#39;, 225, 115012833.0, 511168.14666666667,</span>
+<span class="sd">        ... 9575411, 0, 1024, 100, 0.99954795837402344, 7.9875903129577637,</span>
+<span class="sd">        ... 40, 11.722306421319782, 1192528.8804511931,</span>
+<span class="sd">        ... &#39;http://www.youtube.com/fake_redirect&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; doc_db.insert_record(record)</span>
+<span class="sd">        &gt;&gt;&gt; pytomo_rrd = PytomoRRD(db_name)</span>
+<span class="sd">        &gt;&gt;&gt; pytomo_rrd.update_pytomo_rrd()</span>
+<span class="sd">        &gt;&gt;&gt; pytomo_rrd.plot_pytomo_rrd()</span>
+<span class="sd">        &gt;&gt;&gt; from os import unlink</span>
+<span class="sd">        &gt;&gt;&gt; unlink(db_name)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">with_statement</span><span class="p">,</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="c"># TODO Louis check if correct</span>
+<span class="k">if</span> <span class="s">&#39;win&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">rrdtoolmodule</span> <span class="kn">as</span> <span class="nn">rrdtool</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">.rrdtool_win_x86_DLLs</span> <span class="kn">import</span> <span class="n">rrdtoolmodule</span> <span class="k">as</span> <span class="n">rrdtool</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">rrdtool</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&#39;Please install the RRDtool module on your system.</span><span class="se">\n</span><span class="s">We suggest to&#39;</span>
+              <span class="s">&#39; download from your distribution repository: python-rrdtool</span><span class="se">\n</span><span class="s">&#39;</span>
+              <span class="s">&#39;For Debian based systems: sudo apt-get install python-rrdtool</span><span class="se">\n</span><span class="s">&#39;</span>
+              <span class="s">&#39;For RHEL based systems: sudo yum install python-rrdtool</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">optparse</span> <span class="kn">import</span> <span class="n">OptionParser</span>
+<span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">itemgetter</span>
+<span class="c"># only for logging</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="c"># config file</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">config_pytomo</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">config_pytomo</span>
+<span class="c"># database data</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">lib_database</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">lib_database</span>
+<span class="kn">from</span> <span class="nn">sqlite3</span> <span class="kn">import</span> <span class="n">Error</span>
+<span class="c"># parameters to extract from db and plot</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.lib_plot</span> <span class="kn">import</span> <span class="n">UNITS</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">lib_plot</span> <span class="kn">import</span> <span class="n">UNITS</span>
+<span class="c"># file operations</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.lib_io</span> <span class="kn">import</span> <span class="n">TIMESTAMP_POSITION</span><span class="p">,</span> <span class="n">NO_DB_RECORDS_UNITS</span><span class="p">,</span> \
+    <span class="n">get_latest_file</span><span class="p">,</span> <span class="n">rrd_filename</span><span class="p">,</span> <span class="n">plot_filename</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">lib_io</span> <span class="kn">import</span> <span class="n">TIMESTAMP_POSITION</span><span class="p">,</span> <span class="n">NO_DB_RECORDS_UNITS</span><span class="p">,</span> \
+    <span class="n">get_latest_file</span><span class="p">,</span> <span class="n">rrd_filename</span><span class="p">,</span> <span class="n">plot_filename</span>
+
+<span class="c"># RRD parameters</span>
+<span class="c"># RRD syncronise interval in seconds (plot cannot start exactly at start)</span>
+<span class="n">RRD_PLOT_SYNC_TIME</span> <span class="o">=</span> <span class="mi">300</span>
+<span class="c"># RRD syncronise interval in seconds (plot cannot start exactly at start)</span>
+<span class="n">RRD_STEP_SYNC_TIME</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="c"># Consolidation function: AVERAGE, MIN, MAX, LAST</span>
+<span class="n">CF_AVG</span> <span class="o">=</span> <span class="s">&#39;AVERAGE&#39;</span>
+<span class="n">CF_MAX</span> <span class="o">=</span> <span class="s">&#39;MAX&#39;</span>
+<span class="n">CF_MIN</span> <span class="o">=</span> <span class="s">&#39;MIN&#39;</span>
+<span class="n">CF_LAST</span> <span class="o">=</span> <span class="s">&#39;LAST&#39;</span>
+<span class="c"># how many of primary DS are used to build a Consolidated Data Point which then</span>
+<span class="c"># goes into the archive (if all points need to be plotted set to 1)</span>
+<span class="c"># RRA_POINTS * RRD_STEP = time interval to apply CF</span>
+<span class="c"># specific for each CF, there can be different aggregations for the same CF</span>
+<span class="n">RRA_POINTS_AVG</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="c">#RRA_POINTS_AVG3 = 3</span>
+<span class="n">RRA_POINTS_MIN</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">RRA_POINTS_MAX</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">RRA_POINTS_LAST</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="c"># Data Source in rrd only allows for maximum 19 characters name</span>
+<span class="n">DS_NAME_MAX_LENGTH</span> <span class="o">=</span> <span class="mi">19</span>
+<span class="c"># percentage of allowed Unknown DS in a consolidation interval</span>
+<span class="n">RRA_U_PERCENTAGE</span> <span class="o">=</span> <span class="mf">0.99</span>
+<span class="c"># graph line thickness (mm)</span>
+<span class="n">RRD_PLOT_LINE</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="c"># for some parameters that are generally zero the line is not very noticeable</span>
+<span class="c"># (problem noticed on WinXP_x86 and Ubuntu1204)</span>
+<span class="n">RRD_PLOT_LINE_GENERALLY_ZERO</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="c"># line name for AVERAGE CF</span>
+<span class="n">RRD_PLOT_AVG_NAME</span> <span class="o">=</span> <span class="s">&#39;line_avg&#39;</span>
+<span class="c"># line colour for AVERAGE CF in 0x</span>
+<span class="n">RRD_PLOT_AVG_COL</span> <span class="o">=</span> <span class="s">&#39;FF0000&#39;</span>
+<span class="c"># line name for MIN CF</span>
+<span class="n">RRD_PLOT_MIN_NAME</span> <span class="o">=</span> <span class="s">&#39;line_min&#39;</span>
+<span class="c"># line colour for AVERAGE CF in 0x</span>
+<span class="n">RRD_PLOT_MIN_COL</span> <span class="o">=</span> <span class="s">&#39;00FF00&#39;</span>
+<span class="c"># line name for MAX CF</span>
+<span class="n">RRD_PLOT_MAX_NAME</span> <span class="o">=</span> <span class="s">&#39;line_max&#39;</span>
+<span class="c"># line colour for MAX CF in 0x</span>
+<span class="n">RRD_PLOT_MAX_COL</span> <span class="o">=</span> <span class="s">&#39;0000FF&#39;</span>
+<span class="c"># line name for LAST CF</span>
+<span class="n">RRD_PLOT_LAST_NAME</span> <span class="o">=</span> <span class="s">&#39;line_last&#39;</span>
+<span class="c"># line colour for MAX CF in 0x</span>
+<span class="n">RRD_PLOT_LAST_COL</span> <span class="o">=</span> <span class="s">&#39;FFFF00&#39;</span>
+<span class="c"># rrd plot characteristics</span>
+<span class="n">RRD_PLOT_CHARACTER</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;--lower-limit&#39;</span><span class="p">,</span> <span class="s">&#39;0&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;--rigid&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;--alt-autoscale-max&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;--font&#39;</span><span class="p">,</span> <span class="s">&#39;WATERMARK:7&#39;</span><span class="p">]</span>
+<span class="c"># nr. of &#39;=&#39; displayed by log</span>
+<span class="n">NR_REPEAT</span> <span class="o">=</span> <span class="mi">28</span>
+<span class="c"># specific parameters</span>
+<span class="n">AVG_TH_PARAM</span> <span class="o">=</span> <span class="s">&#39;AvgThroughput&#39;</span>
+<span class="n">INDICATOR_PARAM</span> <span class="o">=</span> <span class="s">&#39;ReceptionRatio&#39;</span>
+<span class="n">DOWN_B_PARAM</span> <span class="o">=</span> <span class="s">&#39;DownloadBytes&#39;</span>
+<span class="n">DOWN_T_PARAM</span> <span class="o">=</span> <span class="s">&#39;DownloadTime&#39;</span>
+<span class="n">ENC_PARAM</span> <span class="o">=</span> <span class="s">&#39;EncodingRate&#39;</span>
+<span class="n">DOWN_INT_PARAM</span> <span class="o">=</span> <span class="s">&#39;DownloadInterruptions&#39;</span>
+<span class="n">VIDEO_PERCENTAGE_PARAM</span> <span class="o">=</span> <span class="s">&#39;VideosWithInterruptions&#39;</span>
+<span class="c"># parameters to extract from db</span>
+<span class="n">PARAMETERS</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">UNITS</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="c"># parameters that do not exist in db</span>
+<span class="n">PARAM_NO_DB</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">NO_DB_RECORDS_UNITS</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="c"># all parameters to plot</span>
+<span class="n">ALL_PARAM</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">PARAMETERS</span> <span class="o">+</span> <span class="n">PARAM_NO_DB</span><span class="p">)</span>
+<span class="c"># parameters that are measured in bytes</span>
+<span class="n">PARAMETERS_IN_BYTES</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;DownloadBytes&#39;</span><span class="p">,</span> <span class="s">&#39;InitialData&#39;</span><span class="p">,</span> <span class="s">&#39;VideoLength&#39;</span><span class="p">]</span>
+<span class="c"># parameters that include buffering time</span>
+<span class="n">PARAMETERS_FOR_BUFFERING</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;BufferingDuration&#39;</span><span class="p">,</span> <span class="s">&#39;BufferDurationAtEnd&#39;</span><span class="p">]</span>
+<span class="c"># parameters that should be genrally zero</span>
+<span class="n">PARAMETERS_GENERALLY_ZERO</span> <span class="o">=</span> <span class="p">([</span><span class="n">DOWN_INT_PARAM</span><span class="p">,</span> <span class="n">VIDEO_PERCENTAGE_PARAM</span><span class="p">]</span> <span class="o">+</span>
+                             <span class="n">PARAMETERS_FOR_BUFFERING</span><span class="p">)</span>
+<span class="c"># indexes of parameters (for example {&#39;DownloadTime&#39;: 0})</span>
+<span class="n">INDEX_DICT</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ALL_PARAM</span><span class="p">))</span>
+<span class="c"># power of 10 for Mega</span>
+<span class="n">MEGA_ORDER</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="c"># needed to compute average throughput in kpbs</span>
+<span class="c"># 1 byte = 8 bits</span>
+<span class="n">BYTE_BIT_TRANS</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="c"># kilo = 1000</span>
+<span class="n">KILO_TRANS</span> <span class="o">=</span> <span class="mi">1000</span>
+
+<div class="viewcode-block" id="create_DS_types"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.create_DS_types">[docs]</a><span class="k">def</span> <span class="nf">create_DS_types</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">heartbeat</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Function to return a list of elements &#39;DS:ds-name:GAUGE:heartbeat:U:U&#39;</span>
+<span class="sd">    &gt;&gt;&gt; HEARTBEAT = 100</span>
+<span class="sd">    &gt;&gt;&gt; create_DS_types([&#39;BufferDurationAtEnd&#39;, &#39;PingMin&#39;,</span>
+<span class="sd">    ... &#39;InitialData&#39;], HEARTBEAT) #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    [&#39;DS:BufferDurationAtEnd:GAUGE:100:U:U&#39;, &#39;DS:PingMin:GAUGE:100:U:U&#39;,</span>
+<span class="sd">    &#39;DS:InitialData:GAUGE:100:U:U&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; create_DS_types([], HEARTBEAT)</span>
+<span class="sd">    []</span>
+<span class="sd">    &gt;&gt;&gt; create_DS_types(None, HEARTBEAT)</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">        ...</span>
+<span class="sd">    TypeError: &#39;NoneType&#39; object is not iterable</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="p">[(</span><span class="s">&#39;DS:</span><span class="si">%s</span><span class="s">:GAUGE:</span><span class="si">%i</span><span class="s">:U:U&#39;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">parameter</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span> <span class="n">heartbeat</span><span class="p">))</span>
+                                <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="generate_plot_names"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.generate_plot_names">[docs]</a><span class="k">def</span> <span class="nf">generate_plot_names</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to create a list of filenames for plots like:</span>
+<span class="sd">    RRD_PLOT_DIR/parameter_to_plot_timestamp.extension</span>
+<span class="sd">    TODO: redo doctest</span>
+<span class="sd">    &gt;&gt;&gt; from time import time</span>
+<span class="sd">    &gt;&gt;&gt; TIMESTAMP = &#39;2012-07-20.11_44_27&#39;</span>
+<span class="sd">    &gt;&gt;&gt; generate_plot_names([&#39;DownloadTime&#39;,</span>
+<span class="sd">    ... &#39;PingMin&#39;], TIMESTAMP) #doctest: +NORMALIZE_WHITESPACEi, +ELLIPSIS</span>
+<span class="sd">    [&#39;/home/capture/co/pytomo/trunk/Pytomo/images/s-spo-hti.2012-07-20.11_44_27.DownloadTime_pytomo_image.png&#39;,</span>
+<span class="sd">     &#39;/home/capture/co/pytomo/trunk/Pytomo/images/s-spo-hti.2012-07-20.11_44_27.PingMin_pytomo_image.png&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; generate_plot_names([], TIMESTAMP)</span>
+<span class="sd">    []</span>
+<span class="sd">    &gt;&gt;&gt; generate_plot_names(None, TIMESTAMP)</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">        ...</span>
+<span class="sd">    TypeError: &#39;NoneType&#39; object is not iterable</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">plot_filename</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span> <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="update_data_types"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.update_data_types">[docs]</a><span class="k">def</span> <span class="nf">update_data_types</span><span class="p">(</span><span class="n">parameters</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Function to return a string &#39;%i:%s:...:%s&#39; dependent on the number of DS</span>
+<span class="sd">    &gt;&gt;&gt; update_data_types([&#39;BufferDurationAtEnd&#39;, &#39;PingMin&#39;, &#39;InitialData&#39;])</span>
+<span class="sd">    &#39;%i:%s:%s:%s&#39;</span>
+<span class="sd">    &gt;&gt;&gt; update_data_types([])</span>
+<span class="sd">    &#39;%i&#39;</span>
+<span class="sd">    &gt;&gt;&gt; update_data_types(None)</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">        ...</span>
+<span class="sd">    TypeError: object of type &#39;NoneType&#39; has no len()</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;</span><span class="si">%i</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;:</span><span class="si">%s</span><span class="s">&quot;</span><span class="p">)</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">parameters</span><span class="p">))))</span>
+</div>
+<div class="viewcode-block" id="format_null_values"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.format_null_values">[docs]</a><span class="k">def</span> <span class="nf">format_null_values</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to return a list where None arguments are transformed to U</span>
+<span class="sd">    &gt;&gt;&gt; format_null_values((&#39;2012-06-25 14:54:57.422007&#39;, 0.0, None, 130048.0,</span>
+<span class="sd">    ... None, 4643.9046215020562)) #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    [(&#39;2012-06-25 14:54:57.422007&#39;, 0.0, None, 130048.0, None,</span>
+<span class="sd">        4643.9046215020562)]</span>
+<span class="sd">    &gt;&gt;&gt; format_null_values(*(&#39;2012-06-25 14:54:57.422007&#39;, 0.0, None, 130048.0,</span>
+<span class="sd">    ... None, 4643.9046215020562)) #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    [&#39;2012-06-25 14:54:57.422007&#39;, 0.0, &#39;U&#39;, 130048.0, &#39;U&#39;, 4643.9046215020562]</span>
+<span class="sd">    &gt;&gt;&gt; format_null_values(None)</span>
+<span class="sd">    [&#39;U&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; format_null_values(&#39;2012-06-25 14:54:57.422007&#39;,*(0.0, None, 130048.0,</span>
+<span class="sd">    ... None, 4643.9046215020562)) #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    [&#39;2012-06-25 14:54:57.422007&#39;, 0.0, &#39;U&#39;, 130048.0, &#39;U&#39;, 4643.9046215020562]</span>
+<span class="sd">    &gt;&gt;&gt; format_null_values(&#39;2012-06-25 14:54:57.422007&#39;,(0.0, None, 130048.0,</span>
+<span class="sd">    ... None, 4643.9046215020562)) #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    [&#39;2012-06-25 14:54:57.422007&#39;, (0.0, None, 130048.0, None,</span>
+<span class="sd">        4643.9046215020562)]</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s">&#39;U&#39;</span> <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">args</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="rrd_filename_escape_colon"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.rrd_filename_escape_colon">[docs]</a><span class="k">def</span> <span class="nf">rrd_filename_escape_colon</span><span class="p">(</span><span class="n">rrd_file</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Escape the : in the filename of a rrd because this is not accepted in</span>
+<span class="sd">    the rrd_graph when defining a function (problem appears generally on</span>
+<span class="sd">    Windows)</span>
+<span class="sd">    &gt;&gt;&gt; rrd_filename_escape_colon(&#39;/home/capture/co/pytomo/trunk/Pytomo/rrds/s-spo-hti.1350291171.pytomo.rrd&#39;)</span>
+<span class="sd">    &#39;/home/capture/co/pytomo/trunk/Pytomo/rrds/s-spo-hti.1350291171.pytomo.rrd&#39;</span>
+<span class="sd">    &gt;&gt;&gt; rrd_filename_escape_colon(&#39;C:\Pytomo\rrds\s-spo-hti.1350291171.pytomo.rrd&#39;)</span>
+<span class="sd">    &#39;C\\:\\Pytomo\rrds\\s-spo-hti.1350291171.pytomo.rrd&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">rrd_file</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span><span class="s">&#39;\:&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PytomoRRD"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.PytomoRRD">[docs]</a><span class="k">class</span> <span class="nc">PytomoRRD</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;Pytomo class to interact with rrdtools</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">has_values</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_file</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Get the data and create the RRD (Round Robin Database).</span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        --start = minimum timestamp in db - sync time</span>
+<span class="sd">        --step = STEP - by default, data is fed in the rrd every 300s (5min)</span>
+<span class="sd">        DS: ds-name : ds-type : heartbeat : min : max</span>
+<span class="sd">        Data Source type: GAUGE - current, absolute value is saved</span>
+<span class="sd">        Data Source heartbeat: HEARTBEAT - if no data is received after 5min, it</span>
+<span class="sd">                                            is set to Unknown</span>
+<span class="sd">        Data Source min: U - Unknown</span>
+<span class="sd">        Data Source max: U - Unknown</span>
+<span class="sd">        RRA: CF : cf-arguments</span>
+<span class="sd">        Round Robin Archive: consists of a number of data values or statistics</span>
+<span class="sd">        for each of the defined Data Sources (DS) and is defined within a line</span>
+<span class="sd">        RRA Consolidation Function: AVERAGE - the average of the data points</span>
+<span class="sd">        RRA CF-arguments: RRA_U_PERCENTAGE - percentage of values that can be U</span>
+<span class="sd">        RRA CF-arguments: RRD_STEP - the CF of every (RRD_STEP * RRA_POINTS_...)</span>
+<span class="sd">                                        is computed</span>
+<span class="sd">        RRA CF-arguments: rra_rows - how many generations of data values are</span>
+<span class="sd">            kept in an RRA; the CF is computed during</span>
+<span class="sd">            (RRD_STEP * RRA_POINTS_AVG) * self.rra_rows (= total time plotted)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c"># Intialize the logger for standalone testing Logging</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger_rrd</span><span class="p">()</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;=&#39;</span> <span class="o">*</span> <span class="n">NR_REPEAT</span><span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Parameters plotted by rrd: </span><span class="si">%s</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">PARAMETERS</span><span class="p">)</span>
+        <span class="c"># retrieve desired data from the database in a list of tuples</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">lib_database</span><span class="o">.</span><span class="n">PytomoDatabase</span><span class="p">(</span><span class="n">db_file</span><span class="p">)</span><span class="o">.</span>\
+                        <span class="n">fetch_all_parameters</span><span class="p">(</span><span class="n">PARAMETERS</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">Error</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Unable to extract data </span><span class="si">%s</span><span class="s"> with  error:&#39;</span>
+                                    <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">PARAMETERS</span><span class="p">),</span> <span class="n">mes</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;Retrieved data for rrd.&quot;</span><span class="p">,</span>
+                                <span class="s">&quot;From database: &quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">db_file</span><span class="p">))))</span>
+        <span class="c"># if no data is extracted from sqlite, no other operation is performed</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">has_values</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;No data could be extracted from the &#39;</span>
+                                    <span class="s">&#39;</span><span class="si">%s</span><span class="s"> for the parameters: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">db_file</span><span class="p">),</span> <span class="n">PARAMETERS</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="c"># if there is only one point in the data, rrdtool cannot plot</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">has_values</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Only one point could be extracted from the &#39;</span>
+                                    <span class="s">&#39;</span><span class="si">%s</span><span class="s"> for the parameters: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">db_file</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">PARAMETERS</span><span class="p">)))</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_values</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="c">#config_pytomo.LOG.debug(&quot;Data: %s&quot;, str(self.data))</span>
+        <span class="c"># number of unknown (None) values in the dataset for each parameter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unknown_values</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">PARAMETERS</span><span class="p">)</span>
+        <span class="c"># all the timestamps in the database</span>
+        <span class="n">timestamps</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">lib_database</span><span class="o">.</span><span class="n">time_to_epoch</span><span class="p">,</span>
+                                <span class="nb">map</span><span class="p">(</span><span class="n">itemgetter</span><span class="p">(</span><span class="n">TIMESTAMP_POSITION</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+        <span class="c"># the timestamp is the last element of each tuple in the data list</span>
+        <span class="c"># start time is the minimum timestamp (epoch) from the db - sync time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">timestamps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">RRD_PLOT_SYNC_TIME</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Start time rrd: </span><span class="si">%i</span><span class="s">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span>
+        <span class="c"># end time is the maximum timestamp (epoch) from the db + sync time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_time</span> <span class="o">=</span> <span class="n">timestamps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">RRD_PLOT_SYNC_TIME</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;End time rrd: </span><span class="si">%i</span><span class="s">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_time</span><span class="p">)</span>
+        <span class="c"># difference between two adjacent timestamps</span>
+        <span class="n">timestamp_dif</span> <span class="o">=</span> <span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">timestamps</span><span class="p">,</span> <span class="n">timestamps</span><span class="p">[</span><span class="mi">1</span><span class="p">:])]</span>
+        <span class="c"># time interval in seconds at which data will be fed into the RRD</span>
+        <span class="c"># minimum time difference between the data inserted</span>
+        <span class="c"># when time changes in winter the clock goes back 1h, difference is &lt; 1s</span>
+        <span class="n">min_time_diff</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">timestamp_dif</span><span class="p">)</span> <span class="o">-</span> <span class="n">RRD_STEP_SYNC_TIME</span>
+        <span class="k">if</span> <span class="n">min_time_diff</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">RRD_STEP</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">RRD_STEP</span> <span class="o">=</span> <span class="n">min_time_diff</span>
+        <span class="c"># time interval in seconds after which data is considered Unknown</span>
+        <span class="c"># maximum time difference between the data inserted</span>
+        <span class="n">RRD_HEARTBEAT</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">timestamp_dif</span><span class="p">)</span> <span class="o">+</span> <span class="n">RRD_STEP_SYNC_TIME</span>
+        <span class="c"># create the Data Sources for the rrd</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_sources</span> <span class="o">=</span> <span class="n">create_DS_types</span><span class="p">(</span><span class="n">PARAMETERS</span><span class="p">,</span> <span class="n">RRD_HEARTBEAT</span><span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Data sources: </span><span class="si">%s</span><span class="s">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_sources</span><span class="p">)</span>
+        <span class="c"># rrd file has the first db time to epoch timestamp</span>
+        <span class="c"># RRA number of data generations kept</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rrd_file</span> <span class="o">=</span> <span class="n">rrd_filename</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">timestamps</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rrd_file</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Could not get rrd file&quot;</span><span class="p">)</span>
+        <span class="c"># (RRD_STEP * RRA_POINTS_AVG) * self.rra_rows = total time plotted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rra_rows</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span> <span class="o">/</span>
+                                    <span class="n">RRD_STEP</span> <span class="o">*</span> <span class="n">RRA_POINTS_AVG</span><span class="p">)</span>
+        <span class="c"># if there is only one database entry or if the time difference between</span>
+        <span class="c"># start, end is too small, there might be no generation of data kept</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rra_rows</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rra_rows</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Number of data generations kept: </span><span class="si">%i</span><span class="s">&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rra_rows</span><span class="p">)</span>
+        <span class="c"># all the points are plotted if RRA_POINTS_... = 1</span>
+        <span class="c"># to uncomment if other CF need to be applied on aggregated data</span>
+        <span class="c"># (min/max of 3 points for a specific interval, for example)</span>
+        <span class="n">rrdtool</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_file</span><span class="p">,</span>
+                        <span class="s">&#39;--start&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                        <span class="s">&#39;--step&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">RRD_STEP</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data_sources</span><span class="p">,</span>
+                        <span class="s">&#39;RRA:</span><span class="si">%s</span><span class="s">:</span><span class="si">%f</span><span class="s">:</span><span class="si">%i</span><span class="s">:</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span>
+                                    <span class="p">(</span><span class="n">CF_AVG</span><span class="p">,</span> <span class="n">RRA_U_PERCENTAGE</span><span class="p">,</span> <span class="n">RRA_POINTS_AVG</span><span class="p">,</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">rra_rows</span><span class="p">)</span> <span class="c">#,</span>
+        <span class="c">#                &#39;RRA:AVERAGE%f:%i:%i&#39; %</span>
+        <span class="c">#                                (RRA_U_PERCENTAGE, RRA_POINTS_AVG3,</span>
+        <span class="c">#                                self.rra_rows),</span>
+        <span class="c">#                &#39;RRA:%s:%f:%i:%i&#39; %</span>
+        <span class="c">#                            (CF_MIN, RRA_U_PERCENTAGE, RRA_POINTS_MIN,</span>
+        <span class="c">#                                self.rra_rows),</span>
+        <span class="c">#                &#39;RRA:%s:%f:%i:%i&#39; %</span>
+        <span class="c">#                            (CF_MAX, RRA_U_PERCENTAGE, RRA_POINTS_MAX,</span>
+        <span class="c">#                                self.rra_rows),</span>
+        <span class="c">#                &#39;RRA:%s:%f:%i:%i&#39; %</span>
+        <span class="c">#                            (CF_LAST, RRA_U_PERCENTAGE, RRA_POINTS_LAST,</span>
+        <span class="c">#                                self.rra_rows)</span>
+                        <span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;Created rrd: &quot;</span><span class="p">,</span>
+                                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_file</span><span class="p">))))</span>
+        <span class="c"># image files have the first db time to epoch timestamp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span> <span class="o">=</span> <span class="n">generate_plot_names</span><span class="p">(</span><span class="n">ALL_PARAM</span><span class="p">,</span> <span class="n">timestamps</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+<div class="viewcode-block" id="PytomoRRD.update_pytomo_rrd"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.PytomoRRD.update_pytomo_rrd">[docs]</a>    <span class="k">def</span> <span class="nf">update_pytomo_rrd</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Insert data from the list of tuples (timestamp, parameter1, ...)</span>
+<span class="sd">        to the rrd.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_values</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;RRD data update aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="c"># insert into rrd all the values for the extracted parameters to plot</span>
+        <span class="c"># data[][TIMESTAMP_POSITION] is the timestamp</span>
+        <span class="c"># data[][:TIMESTAMP_POSITION] represents the parameters to plot</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="c"># transform timestamp to epoch in local time</span>
+            <span class="c"># TODO: check problems related to timezone</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">TIMESTAMP_POSITION</span><span class="p">]</span>
+            <span class="n">parameter_values</span> <span class="o">=</span> <span class="n">row</span><span class="p">[:</span><span class="n">TIMESTAMP_POSITION</span><span class="p">]</span>
+            <span class="c"># function used in order to take advantage of the * operator and</span>
+            <span class="c"># retrieve all the elements of an argument</span>
+            <span class="n">identity</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">*</span><span class="n">x</span><span class="p">:</span> <span class="n">x</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">rrdtool</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_file</span><span class="p">,</span>
+                                <span class="n">update_data_types</span><span class="p">(</span><span class="n">parameter_values</span><span class="p">)</span> <span class="o">%</span>
+                                <span class="n">identity</span><span class="p">(</span><span class="n">lib_database</span><span class="o">.</span><span class="n">time_to_epoch</span><span class="p">(</span><span class="n">timestamp</span><span class="p">),</span>
+                                    <span class="o">*</span><span class="n">format_null_values</span><span class="p">(</span><span class="o">*</span><span class="n">parameter_values</span><span class="p">)))</span>
+            <span class="k">except</span> <span class="n">rrdtool</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+                <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Could not update the rrd with error&#39;</span>
+                                        <span class="s">&#39; </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">mes</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="c">#config_pytomo.LOG.debug(&#39;Updated rrd data: (%s, %s)&#39; %</span>
+            <span class="c">#       (timestamp, str(format_null_values(*parameter_values))))</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parameter_values</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">parameter</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">unknown_values</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c">#config_pytomo.LOG.debug(&#39;Updated unknown[%i]&#39; %</span>
+                    <span class="c">#                       index)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Unknown values per parameter: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                                                    <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unknown_values</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="PytomoRRD.fetch_pytomo_rrd"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.PytomoRRD.fetch_pytomo_rrd">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_pytomo_rrd</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Fetch data from the rrd.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_values</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;RRD data fetch aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="c"># fetch data</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Fetched rrd </span><span class="si">%s</span><span class="s"> data </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">CF_AVG</span><span class="p">,</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">rrdtool</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_file</span><span class="p">,</span>
+                            <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">CF_AVG</span><span class="p">,</span>
+                            <span class="s">&#39;--start&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                            <span class="s">&#39;--end&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_time</span> <span class="c">#,</span>
+                            <span class="p">))))</span>
+</div>
+<div class="viewcode-block" id="PytomoRRD.plot_pytomo_rrd"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.PytomoRRD.plot_pytomo_rrd">[docs]</a>    <span class="k">def</span> <span class="nf">plot_pytomo_rrd</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Plot the time series parameters (at least 3 points must exist in the</span>
+<span class="sd">        database for the graphs to exist).</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_values</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;RRD data plot aborted&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="c"># rrdtool graph does not accept &quot;:&quot; in the rrd filename path</span>
+        <span class="n">def_rrd_file</span> <span class="o">=</span> <span class="n">rrd_filename_escape_colon</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_file</span><span class="p">)</span>
+        <span class="c"># graphs that exist in db</span>
+        <span class="k">for</span> <span class="n">unknown_values_index</span><span class="p">,</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">PARAMETERS</span><span class="p">):</span>
+            <span class="c"># set the line thickness of the plots (this needs to be thicker if</span>
+            <span class="c"># values are generally zero)</span>
+            <span class="n">line_thickness</span> <span class="o">=</span> <span class="n">RRD_PLOT_LINE</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span>
+            <span class="c"># display in Mega for parameters that are in bytes</span>
+            <span class="k">if</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">PARAMETERS_IN_BYTES</span><span class="p">:</span>
+                <span class="n">units_exp</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;--units-exponent&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">MEGA_ORDER</span><span class="p">)]</span>
+            <span class="k">elif</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">PARAMETERS_FOR_BUFFERING</span><span class="p">:</span>
+                <span class="n">units_exp</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;--alt-y-grid&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">units_exp</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;--units-exponent&#39;</span><span class="p">,</span> <span class="s">&#39;0&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">PARAMETERS_GENERALLY_ZERO</span><span class="p">:</span>
+                <span class="n">line_thickness</span> <span class="o">=</span> <span class="n">RRD_PLOT_LINE_GENERALLY_ZERO</span>
+            <span class="c"># all the points are plotted if RRA_POINTS_... = 1</span>
+            <span class="c"># to uncomment if other CF need to be applied on aggregated data</span>
+            <span class="c"># (min/max of 3 points for a specific interval, for example)</span>
+            <span class="n">rrdtool</span><span class="o">.</span><span class="n">graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">index</span><span class="p">],</span>
+                            <span class="s">&#39;--start&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                            <span class="s">&#39;--end&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span>
+                            <span class="s">&#39;--vertical-label&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">UNITS</span><span class="p">[</span><span class="n">parameter</span><span class="p">],</span>
+                            <span class="s">&#39;--title&#39;</span><span class="p">,</span> <span class="s">&#39;Pytomo </span><span class="si">%s</span><span class="s"> statistics&#39;</span> <span class="o">%</span> <span class="n">parameter</span><span class="p">,</span>
+                            <span class="n">RRD_PLOT_CHARACTER</span><span class="p">,</span>
+                            <span class="n">units_exp</span><span class="p">,</span>
+                            <span class="c"># only display number of unknown data values</span>
+                            <span class="s">&#39;--watermark&#39;</span><span class="p">,</span> <span class="s">&#39;Number of unknown data values: </span><span class="si">%i</span><span class="s">&#39;</span>
+                                    <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">unknown_values</span><span class="p">[</span><span class="n">unknown_values_index</span><span class="p">],</span>
+                            <span class="c">#&#39;--full-size-mode&#39;,</span>
+                            <span class="s">&#39;DEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="n">RRD_PLOT_AVG_NAME</span><span class="p">,</span> <span class="n">def_rrd_file</span><span class="p">,</span>
+                                <span class="n">parameter</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span> <span class="n">CF_AVG</span><span class="p">),</span>
+                            <span class="s">&#39;LINE</span><span class="si">%i</span><span class="s">:</span><span class="si">%s</span><span class="s">#</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">line_thickness</span><span class="p">,</span>
+                                <span class="n">RRD_PLOT_AVG_NAME</span><span class="p">,</span> <span class="n">RRD_PLOT_AVG_COL</span><span class="p">),</span>
+                            <span class="c">#&#39;DEF:%s=%s:%s:%s&#39;</span>
+                            <span class="c">#% (RRD_PLOT_MIN_NAME, self.rrd_file,</span>
+                            <span class="c">#    parameter[:DS_NAME_MAX_LENGTH], CF_MIN),</span>
+                            <span class="c">#&#39;LINE%i:%s#%s:Minimum&#39; % (RRD_PLOT_LINE,</span>
+                            <span class="c">#    RRD_PLOT_MIN_NAME, RRD_PLOT_MIN_COL),</span>
+                            <span class="c">#&#39;DEF:%s=%s:%s:%s&#39;</span>
+                            <span class="c">#% (RRD_PLOT_MAX_NAME, self.rrd_file,</span>
+                            <span class="c">#    parameter[:DS_NAME_MAX_LENGTH], CF_MAX),</span>
+                            <span class="c">#&#39;LINE%i:%s#%s:Maximum&#39; % (RRD_PLOT_LINE,</span>
+                            <span class="c">#    RRD_PLOT_MAX_NAME, RRD_PLOT_MAX_COL),</span>
+                            <span class="c">#&#39;DEF:%s=%s:%s:%s&#39;</span>
+                            <span class="c">#% (RRD_PLOT_LAST_NAME, self.rrd_file,</span>
+                            <span class="c">#    parameter[:DS_NAME_MAX_LENGTH], CF_LAST),</span>
+                            <span class="c">#&#39;LINE%i:%s#%s:Last&#39; % (RRD_PLOT_LINE,</span>
+                            <span class="c">#    RRD_PLOT_LAST_NAME, RRD_PLOT_LAST_COL)</span>
+                            <span class="p">)</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;The rrd plot was updated: &quot;</span><span class="p">,</span>
+                                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">index</span><span class="p">]))))</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;=&#39;</span> <span class="o">*</span> <span class="n">NR_REPEAT</span><span class="p">)</span>
+        <span class="c"># graph for average throughput:</span>
+        <span class="c"># avg_th [Kbps] = DownBytes [bytes] / DownTime [s] * 8 /1000</span>
+        <span class="n">rrdtool</span><span class="o">.</span><span class="n">graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">AVG_TH_PARAM</span><span class="p">]],</span>
+                        <span class="s">&#39;--start&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                        <span class="s">&#39;--end&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span>
+                        <span class="s">&#39;--vertical-label&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                                            <span class="n">NO_DB_RECORDS_UNITS</span><span class="p">[</span><span class="n">AVG_TH_PARAM</span><span class="p">],</span>
+                        <span class="s">&#39;--title&#39;</span><span class="p">,</span> <span class="s">&#39;Pytomo </span><span class="si">%s</span><span class="s"> statistics&#39;</span> <span class="o">%</span> <span class="n">AVG_TH_PARAM</span><span class="p">,</span>
+                        <span class="n">RRD_PLOT_CHARACTER</span><span class="p">,</span>
+                        <span class="s">&#39;--units-exponent&#39;</span><span class="p">,</span> <span class="s">&#39;0&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;--watermark&#39;</span><span class="p">,</span> <span class="s">&#39;Number of unknown data values: </span><span class="si">%i</span><span class="s">&#39;</span>
+                                <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">unknown_values</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">DOWN_B_PARAM</span><span class="p">]],</span>
+                        <span class="s">&#39;DEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">DOWN_B_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">def_rrd_file</span><span class="p">,</span>
+                                             <span class="n">DOWN_B_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">CF_AVG</span><span class="p">),</span>
+                        <span class="s">&#39;DEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">DOWN_T_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">def_rrd_file</span><span class="p">,</span>
+                                             <span class="n">DOWN_T_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">CF_AVG</span><span class="p">),</span>
+                        <span class="s">&#39;CDEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">,</span><span class="si">%s</span><span class="s">,/,</span><span class="si">%s</span><span class="s">,*,</span><span class="si">%s</span><span class="s">,/&#39;</span> <span class="o">%</span>
+                                            <span class="p">(</span><span class="n">AVG_TH_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">DOWN_B_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">DOWN_T_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="nb">str</span><span class="p">(</span><span class="n">BYTE_BIT_TRANS</span><span class="p">),</span>
+                                             <span class="nb">str</span><span class="p">(</span><span class="n">KILO_TRANS</span><span class="p">)</span>
+                                            <span class="p">),</span>
+                        <span class="s">&#39;LINE</span><span class="si">%i</span><span class="s">:</span><span class="si">%s</span><span class="s">#</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">RRD_PLOT_LINE</span><span class="p">,</span>
+                                          <span class="n">AVG_TH_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                          <span class="n">RRD_PLOT_AVG_COL</span><span class="p">)</span>
+                         <span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;The rrd plot was updated: &quot;</span><span class="p">,</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">AVG_TH_PARAM</span><span class="p">]]))))</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;=&#39;</span> <span class="o">*</span> <span class="n">NR_REPEAT</span><span class="p">)</span>
+        <span class="c"># graph for indicator:</span>
+        <span class="c"># indicator = DownBytes[B] / DownTime[s] * 8 / 1000 / EncodingRate[kbps]</span>
+        <span class="n">rrdtool</span><span class="o">.</span><span class="n">graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">INDICATOR_PARAM</span><span class="p">]],</span>
+                        <span class="s">&#39;--start&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                        <span class="s">&#39;--end&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span>
+                        <span class="s">&#39;--vertical-label&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                                        <span class="n">NO_DB_RECORDS_UNITS</span><span class="p">[</span><span class="n">INDICATOR_PARAM</span><span class="p">],</span>
+                        <span class="s">&#39;--title&#39;</span><span class="p">,</span> <span class="s">&#39;Pytomo </span><span class="si">%s</span><span class="s"> statistics&#39;</span> <span class="o">%</span> <span class="n">INDICATOR_PARAM</span><span class="p">,</span>
+                        <span class="n">RRD_PLOT_CHARACTER</span><span class="p">,</span>
+                        <span class="s">&#39;--units-exponent&#39;</span><span class="p">,</span> <span class="s">&#39;0&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;--watermark&#39;</span><span class="p">,</span> <span class="s">&#39;Number of unknown data values: </span><span class="si">%i</span><span class="s">&#39;</span>
+                                <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">unknown_values</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">DOWN_B_PARAM</span><span class="p">]],</span>
+                        <span class="s">&#39;DEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">DOWN_B_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">def_rrd_file</span><span class="p">,</span>
+                                             <span class="n">DOWN_B_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">CF_AVG</span><span class="p">),</span>
+                        <span class="s">&#39;DEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">DOWN_T_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">def_rrd_file</span><span class="p">,</span>
+                                             <span class="n">DOWN_T_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">CF_AVG</span><span class="p">),</span>
+                        <span class="s">&#39;DEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ENC_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">def_rrd_file</span><span class="p">,</span>
+                                             <span class="n">ENC_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">CF_AVG</span><span class="p">),</span>
+                        <span class="c">#&#39;CDEF:%s=%s,%s,/,%s,*,%s,/&#39; %</span>
+                        <span class="s">&#39;CDEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">,</span><span class="si">%s</span><span class="s">,/,</span><span class="si">%s</span><span class="s">,*,</span><span class="si">%s</span><span class="s">,/,</span><span class="si">%s</span><span class="s">,/&#39;</span> <span class="o">%</span>
+                                        <span class="p">(</span><span class="n">INDICATOR_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                         <span class="n">DOWN_B_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                         <span class="n">DOWN_T_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                         <span class="nb">str</span><span class="p">(</span><span class="n">BYTE_BIT_TRANS</span><span class="p">),</span>
+                                         <span class="nb">str</span><span class="p">(</span><span class="n">KILO_TRANS</span><span class="p">),</span>
+                                         <span class="n">ENC_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">]),</span>
+                        <span class="s">&#39;LINE</span><span class="si">%i</span><span class="s">:</span><span class="si">%s</span><span class="s">#</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">RRD_PLOT_LINE</span><span class="p">,</span>
+                                          <span class="n">INDICATOR_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                          <span class="n">RRD_PLOT_AVG_COL</span><span class="p">)</span>
+                         <span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;The rrd plot was updated: &quot;</span><span class="p">,</span>
+           <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">INDICATOR_PARAM</span><span class="p">]]))))</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;=&#39;</span> <span class="o">*</span> <span class="n">NR_REPEAT</span><span class="p">)</span>
+        <span class="c"># graph for magic parameter:</span>
+        <span class="c"># video_percentage = 1 IF DownInterruptions &gt; 0, ELSE 0</span>
+        <span class="n">rrdtool</span><span class="o">.</span><span class="n">graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">VIDEO_PERCENTAGE_PARAM</span><span class="p">]],</span>
+                        <span class="s">&#39;--start&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                        <span class="s">&#39;--end&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span>
+                        <span class="s">&#39;--vertical-label&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                                    <span class="n">NO_DB_RECORDS_UNITS</span><span class="p">[</span><span class="n">VIDEO_PERCENTAGE_PARAM</span><span class="p">],</span>
+                        <span class="s">&#39;--title&#39;</span><span class="p">,</span> <span class="s">&#39;Pytomo </span><span class="si">%s</span><span class="s"> statistics&#39;</span> <span class="o">%</span>
+                                                        <span class="n">VIDEO_PERCENTAGE_PARAM</span><span class="p">,</span>
+                        <span class="n">RRD_PLOT_CHARACTER</span><span class="p">,</span>
+                        <span class="s">&#39;--units-exponent&#39;</span><span class="p">,</span> <span class="s">&#39;0&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;--watermark&#39;</span><span class="p">,</span> <span class="s">&#39;Number of unknown data values: </span><span class="si">%i</span><span class="s">&#39;</span>
+                            <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">unknown_values</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">DOWN_INT_PARAM</span><span class="p">]],</span>
+                        <span class="s">&#39;DEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">DOWN_INT_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">def_rrd_file</span><span class="p">,</span>
+                                             <span class="n">DOWN_INT_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                             <span class="n">CF_AVG</span><span class="p">),</span>
+                        <span class="c"># IF DownloadInterruptions &gt; 0: ((DOWN_INT_PARAM, 0) GT)</span>
+                        <span class="c"># IF so, return 1, else return 0</span>
+                        <span class="s">&#39;CDEF:</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">,0,GT,1,0,IF&#39;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">VIDEO_PERCENTAGE_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                 <span class="n">DOWN_INT_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">]),</span>
+                        <span class="s">&#39;LINE</span><span class="si">%i</span><span class="s">:</span><span class="si">%s</span><span class="s">#</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">RRD_PLOT_LINE_GENERALLY_ZERO</span><span class="p">,</span>
+                                    <span class="n">VIDEO_PERCENTAGE_PARAM</span><span class="p">[:</span><span class="n">DS_NAME_MAX_LENGTH</span><span class="p">],</span>
+                                    <span class="n">RRD_PLOT_AVG_COL</span><span class="p">)</span>
+                         <span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;The rrd plot was updated: &quot;</span><span class="p">,</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rrd_plot_files</span><span class="p">[</span><span class="n">INDEX_DICT</span><span class="p">[</span><span class="n">AVG_TH_PARAM</span><span class="p">]]))))</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;=&#39;</span> <span class="o">*</span> <span class="n">NR_REPEAT</span><span class="p">)</span>
+
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="PytomoRRD.logger_rrd"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.PytomoRRD.logger_rrd">[docs]</a>    <span class="k">def</span> <span class="nf">logger_rrd</span><span class="p">():</span>
+        <span class="sd">&#39;&#39;&#39; Initialze the logger&#39;&#39;&#39;</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;pytomo_rrd&#39;</span><span class="p">)</span>
+        <span class="c"># to not have console output</span>
+        <span class="c">#config_pytomo.LOG.propagate = False</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_LEVEL</span><span class="p">)</span>
+        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s">.%H_%M_%S&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_FILE</span> <span class="o">==</span> <span class="s">&#39;-&#39;</span><span class="p">:</span>
+            <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">config_pytomo</span><span class="o">.</span> <span class="n">LOG_DIR</span><span class="p">,</span>
+                                <span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_FILE</span><span class="p">))))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="s">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s">&#39;Logfile </span><span class="si">%s</span><span class="s"> could not be open for writing&#39;</span> <span class="o">%</span>
+                                            <span class="n">log_file</span><span class="p">)</span>
+            <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">log_file</span><span class="p">)</span>
+        <span class="n">log_formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s"> - &quot;</span>
+                                  <span class="s">&quot;</span><span class="si">%(levelname)s</span><span class="s"> - </span><span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">)</span>
+        <span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">log_formatter</span><span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="create_options"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.create_options">[docs]</a><span class="k">def</span> <span class="nf">create_options</span><span class="p">(</span><span class="n">parser</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Add the different options to the parser&#39;&#39;&#39;</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&#39;-v&#39;</span><span class="p">,</span> <span class="s">&#39;--verbose&#39;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&#39;verbose&#39;</span><span class="p">,</span>
+            <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">help</span> <span class="o">=</span> <span class="s">&#39;run as verbose mode&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&#39;-f&#39;</span><span class="p">,</span> <span class="s">&#39;--file&#39;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&#39;db_name&#39;</span><span class="p">,</span>
+            <span class="n">help</span> <span class="o">=</span> <span class="s">&#39;run on a specific database (by default the latest database&#39;</span>
+                     <span class="s">&#39; in the default database directory is selected)&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&#39;-d&#39;</span><span class="p">,</span> <span class="s">&#39;--dir&#39;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&#39;db_dir_name&#39;</span><span class="p">,</span>
+            <span class="n">help</span> <span class="o">=</span> <span class="s">&#39;run on a specific directory where the &#39;</span>
+            <span class="s">&#39;latest database will be selected&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_rrdtools.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="s">&quot;Program wrapper&quot;</span>
+    <span class="k">if</span> <span class="n">argv</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">argv</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s">&#39;%prog [-v] [-d database_directory] [-f database]&#39;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">OptionParser</span><span class="p">(</span><span class="n">usage</span><span class="o">=</span><span class="n">usage</span><span class="p">)</span>
+    <span class="n">create_options</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">options</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+    <span class="c"># if no specific directory or database is specified, the latest one from</span>
+    <span class="c"># DB_DIR is selected</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">options</span><span class="o">.</span><span class="n">db_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">options</span><span class="o">.</span><span class="n">db_dir_name</span><span class="p">:</span>
+        <span class="n">database</span> <span class="o">=</span> <span class="n">get_latest_file</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">DATABASE_DIR</span><span class="p">)</span>
+    <span class="c"># if database is specified</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">db_name</span><span class="p">:</span>
+        <span class="n">database</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">db_name</span>
+    <span class="c"># if a directory is specified, the latest database there is selected</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">db_dir_name</span><span class="p">:</span>
+        <span class="n">database</span> <span class="o">=</span> <span class="n">get_latest_file</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">db_dir_name</span><span class="p">)</span>
+    <span class="n">pytomo_rrd</span> <span class="o">=</span> <span class="n">PytomoRRD</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+    <span class="n">pytomo_rrd</span><span class="o">.</span><span class="n">update_pytomo_rrd</span><span class="p">()</span>
+    <span class="n">pytomo_rrd</span><span class="o">.</span><span class="n">plot_pytomo_rrd</span><span class="p">()</span>
+    <span class="k">return</span> <span class="mi">0</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">doctest</span>
+    <span class="n">doctest</span><span class="o">.</span><span class="n">testmod</span><span class="p">()</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

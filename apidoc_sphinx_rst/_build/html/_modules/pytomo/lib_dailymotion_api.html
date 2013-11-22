@@ -1,0 +1,392 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.lib_dailymotion_api &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.lib_dailymotion_api</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="sd">&#39;&#39;&#39; Module to interact with the Dailymotion API:</span>
+<span class="sd">    - function to get the most popular dailymotion videos according to the time</span>
+<span class="sd">    frame (adapted from lib_youtube_api);</span>
+<span class="sd">    - function to retrieve the related videos from the Dailymotion api in a</span>
+<span class="sd">    list of links.</span>
+
+<span class="sd">Author: Ana Oprea</span>
+<span class="sd">Date: 04.09.2012 - modified 17.09.2012 for related links</span>
+
+<span class="sd">Usage:</span>
+<span class="sd">To use the functions provided in this module independently, first place yourself</span>
+<span class="sd">just above pytomo folder.Then:</span>
+
+<span class="sd">&gt;&gt;&gt; import pytomo.start_pytomo as start_pytomo</span>
+<span class="sd">&gt;&gt;&gt; TIMESTAMP = &#39;test_timestamp&#39;</span>
+<span class="sd">&gt;&gt;&gt; start_pytomo.configure_log_file(TIMESTAMP)</span>
+
+<span class="sd">&gt;&gt;&gt; import pytomo.lib_dailymotion_api as lib_dailymotion_api</span>
+<span class="sd">&gt;&gt;&gt; url = &#39;http://www.dailymotion.com/video/xkqa0p&#39;</span>
+<span class="sd">&gt;&gt;&gt; time_f = &#39;today&#39; # choose from &#39;today&#39; or &#39;month&#39; or &#39;week&#39; or all_time&#39;</span>
+<span class="sd">&gt;&gt;&gt; max_results = 20</span>
+<span class="sd">&gt;&gt;&gt; lib_dailymotion_api.get_popular_links(time_f, max_results)</span>
+<span class="sd">&gt;&gt;&gt; max_per_page = 25</span>
+<span class="sd">&gt;&gt;&gt; max_per_url = 10</span>
+<span class="sd">&gt;&gt;&gt; lib_dailymotion_api.get_dailymotion_links(url, max_per_page)</span>
+<span class="sd">&gt;&gt;&gt; lib_dailymotion_api.get_related_urls(url, max_per_page, max_per_url)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">with_statement</span><span class="p">,</span> <span class="n">absolute_import</span>
+<span class="kn">import</span> <span class="nn">urllib2</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">from</span> <span class="nn">ast</span> <span class="kn">import</span> <span class="n">literal_eval</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">itemgetter</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">lib_links_extractor</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">lib_links_extractor</span>
+<span class="c"># global config</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">config_pytomo</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">config_pytomo</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.lib_general_download</span> <span class="kn">import</span> <span class="n">STD_HEADERS</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">lib_general_download</span> <span class="kn">import</span> <span class="n">STD_HEADERS</span>
+
+<span class="n">MAX_VIDEO_PER_PAGE</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="c"># dailymotion links</span>
+<span class="n">DM_LINK</span> <span class="o">=</span> <span class="s">&#39;http://www.dailymotion.com&#39;</span>
+<span class="n">COUNTRY</span> <span class="o">=</span> <span class="s">&#39;fr&#39;</span>
+<span class="n">DM_API_LINK</span> <span class="o">=</span> <span class="s">&#39;https://api.dailymotion.com/video/</span><span class="si">%s</span><span class="s">/related?fields=id,title&amp;limit=</span><span class="si">%i</span><span class="s">&#39;</span>
+<span class="n">DM_VIDEO_LINK</span> <span class="o">=</span> <span class="s">&#39;http://www.dailymotion.com/video/&#39;</span>
+<span class="c"># limitation of Dailymotion API</span>
+<span class="n">MAX_PER_PAGE_DM_API</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="c"># the page returned by the Dailymotion API with related links is not well</span>
+<span class="c"># formed, some words need to be replaced</span>
+<span class="n">TRUTH_DICT</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;true&#39;</span><span class="p">:</span> <span class="s">&#39;True&#39;</span><span class="p">,</span> <span class="s">&#39;false&#39;</span><span class="p">:</span><span class="s">&#39;False&#39;</span><span class="p">}</span>
+<span class="c"># parameters to be retrieved from the Dailymotion API</span>
+<span class="n">DM_URL_ID_FIELD</span> <span class="o">=</span> <span class="s">&#39;id&#39;</span>
+<span class="n">DM_URL_TITLE_FIELD</span> <span class="o">=</span> <span class="s">&#39;title&#39;</span>
+<span class="n">DM_URL_LIST_FIELD</span> <span class="o">=</span> <span class="s">&#39;list&#39;</span>
+<span class="c"># text used to retrieve the correct id of a video</span>
+<span class="n">TEXT_TO_PARTITION_ID</span> <span class="o">=</span> <span class="s">&#39;mp4&#39;</span>
+<span class="c"># number of attempts to try to retrieve the related links</span>
+<span class="n">MAX_ATTEMPTS</span> <span class="o">=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="get_id"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.get_id">[docs]</a><span class="k">def</span> <span class="nf">get_id</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">keep_all</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the id of a Dailymotion url.</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://www.dailymotion.com/video/xkqa0p&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;xkqa0p&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://www.dailymotion.com/video/xkqa0p_angry-birds-theme-covered-by-pomplamoose_music&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;xkqa0p&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://www.dailymotion.com/video/xkqa0p?background=493D27&amp;foreground=E8D9AC&amp;highlight=FFFFF0&amp;autoPlay=1&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;xkqa0p&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://vid.ak.dmcdn.net/video/986/034/42430689_mp4_h264_aac.mp4?primaryToken=1343398942_d77027d09aac0c5d5de74d5428fb9e5b&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;42430689&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://www.dailymotion.com/video/xscdm4_le-losc-au-pays-basque_sport?no_track=1&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;xscdm4&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://vid.ec.dmcdn.net/cdn/H264-512x384/video/xmcyww.mp4?77838fedd64fa52abe6a11b3bdbb4e62f4387ebf7cbce2147ea4becc5eee5c418aaa6598bb98a61fc95a02997247e59bfb0dcd58cdf05c1601ded04f75ae357b225da725baad5e97ea6cce6d6a12e17d1c01&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;xmcyww&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://proxy-60.dailymotion.com/video/246/655/37556642_mp4_h264_aac.mp4?auth=1343399602-4098-bdkyfgul-eb00ad223e1964e40b327d75367b273b&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;37556642&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://docs.python.org/tutorial/inputoutput.html&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_id(url)</span>
+<span class="sd">    &#39;inputoutput.html&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># get the url without parameters (split at &#39;?&#39;)</span>
+    <span class="c"># get the last part of the url (split at &#39;/&#39;)</span>
+    <span class="c"># get the last element of the split</span>
+    <span class="n">url_id</span> <span class="o">=</span> <span class="p">(</span><span class="n">url</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;?&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">keep_all</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">url_id</span>
+    <span class="k">if</span> <span class="n">url_id</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">TEXT_TO_PARTITION_ID</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">url_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># split at the first &#39;mp4&#39; and retrieve first part</span>
+        <span class="c"># retrieve before last element (that is &#39;_&#39; or &#39;.&#39;)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">url_id</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="n">TEXT_TO_PARTITION_ID</span><span class="p">)[</span><span class="mi">0</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c"># TODO: check outside this function if the ID is not a Dailymotion link</span></div>
+<div class="viewcode-block" id="set_id"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.set_id">[docs]</a><span class="k">def</span> <span class="nf">set_id</span><span class="p">(</span><span class="n">url_id</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the complete link of a Dailymotion url.</span>
+<span class="sd">    &gt;&gt;&gt; url_id = &#39;x1y0ap&#39;</span>
+<span class="sd">    &gt;&gt;&gt; set_id(url_id)</span>
+<span class="sd">    &#39;http://www.dailymotion.com/video/x1y0ap&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">DM_VIDEO_LINK</span><span class="p">,</span> <span class="n">url_id</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="get_time_frame_global"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.get_time_frame_global">[docs]</a><span class="k">def</span> <span class="nf">get_time_frame_global</span><span class="p">(</span><span class="n">input_time</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TIME_FRAME</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Returns the time frame in the form accepted by youtube_api</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;today&#39;)</span>
+<span class="sd">    &#39;popular-today&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;week&#39;)</span>
+<span class="sd">    &#39;popular-week&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;month&#39;)</span>
+<span class="sd">    &#39;popular-month&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;all_time&#39;)</span>
+<span class="sd">    &#39;popular&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;today&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;popular-today&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;week&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;popular-week&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;month&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;popular-month&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;all_time&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;popular&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Time frame not recognised. &#39;</span>
+                               <span class="s">&#39;Assuming All time Popular videos.&#39;</span><span class="p">)</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;popular&#39;</span>
+    <span class="k">return</span> <span class="n">time_frame</span>
+</div>
+<div class="viewcode-block" id="get_time_frame"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.get_time_frame">[docs]</a><span class="k">def</span> <span class="nf">get_time_frame</span><span class="p">(</span><span class="n">input_time</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TIME_FRAME</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Returns the time frame in the form accepted by youtube_api</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;today&#39;)</span>
+<span class="sd">    &#39;popular-today&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;week&#39;)</span>
+<span class="sd">    &#39;popular-week&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;month&#39;)</span>
+<span class="sd">    &#39;popular-month&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;all_time&#39;)</span>
+<span class="sd">    &#39;popular&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;today&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;visited-today&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;week&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;visited-week&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;month&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;visited-month&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;all_time&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;popular&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Time frame not recognised. &#39;</span>
+                               <span class="s">&#39;Assuming All time Popular videos.&#39;</span><span class="p">)</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;popular&#39;</span>
+    <span class="k">return</span> <span class="n">time_frame</span>
+</div>
+<div class="viewcode-block" id="get_popular_links"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.get_popular_links">[docs]</a><span class="k">def</span> <span class="nf">get_popular_links</span><span class="p">(</span><span class="n">input_time</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TIME_FRAME</span><span class="p">,</span>
+                      <span class="n">max_results</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">MAX_PER_PAGE</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Returns the most popular dailymotion links for France.</span>
+<span class="sd">    The country should be set as parameter in start_pytomo if user should</span>
+<span class="sd">    specify it.</span>
+<span class="sd">    The number of videos returned is given as Total_pages.</span>
+<span class="sd">    (The results returned are in no particular order).</span>
+<span class="sd">    A set of only dailymotion links from url</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Getting popular links per country&#39;</span><span class="p">)</span>
+    <span class="n">time_frame</span> <span class="o">=</span> <span class="n">get_time_frame</span><span class="p">(</span><span class="n">input_time</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">max_results</span> <span class="o">&gt;</span> <span class="n">MAX_VIDEO_PER_PAGE</span><span class="p">:</span>
+        <span class="n">pages</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_results</span><span class="p">)</span> <span class="o">/</span> <span class="n">MAX_VIDEO_PER_PAGE</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pages</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">pages</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">DM_LINK</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="n">COUNTRY</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="n">time_frame</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">page</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="n">lib_links_extractor</span><span class="o">.</span><span class="n">get_all_links</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">links</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;No popular link was found&#39;</span><span class="p">)</span>
+        <span class="n">popular_links</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">r&#39;/video/&#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+                    <span class="n">link</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">DM_LINK</span><span class="p">,</span> <span class="n">link</span><span class="p">))</span>
+                <span class="n">popular_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">popular_links</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">max_results</span><span class="p">:</span>
+                    <span class="k">break</span>
+    <span class="k">return</span> <span class="n">popular_links</span>
+</div>
+<div class="viewcode-block" id="get_all_related_ids"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.get_all_related_ids">[docs]</a><span class="k">def</span> <span class="nf">get_all_related_ids</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Parse and return a list of the ids of the related videos from the</span>
+<span class="sd">    Dailymotion api:</span>
+<span class="sd">        - use:</span>
+<span class="sd">        https://api.dailymotion.com/video/ID/related?fields=id&amp;limit=NR</span>
+<span class="sd">        - example online:</span>
+<span class="sd">        http://www.dailymotion.com/doc/api/explorer#/video/related/list</span>
+<span class="sd">    &gt;&gt;&gt; get_all_related_ids(&#39;http://www.dailymotion.com/video/xv7ent&#39;, 20)</span>
+<span class="sd">    [&#39;xv8xoj&#39;, &#39;xvajbn&#39;, &#39;xvbhdi&#39;, &#39;xvam4y&#39;, &#39;xv8x1t&#39;, &#39;xv8sn2&#39;, &#39;xvbx1x&#39;,</span>
+<span class="sd">     &#39;xv7gkf&#39;, &#39;xv5cnr&#39;, &#39;xvajng&#39;, &#39;xv9ir4&#39;, &#39;xvakfr&#39;, &#39;xv9hjr&#39;, &#39;xvbwax&#39;,</span>
+<span class="sd">     &#39;xv8ttw&#39;, &#39;xv75ou&#39;, &#39;xv587j&#39;, &#39;xvakwj&#39;, &#39;xv8xqp&#39;, &#39;xv9ihm&#39;]</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># get the API link for only the URL id, cut the title</span>
+    <span class="n">url_dm_api</span> <span class="o">=</span> <span class="n">DM_API_LINK</span> <span class="o">%</span> <span class="p">(</span><span class="n">get_id</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="bp">False</span><span class="p">),</span>
+                                <span class="nb">min</span><span class="p">(</span><span class="n">max_per_page</span><span class="p">,</span> <span class="n">MAX_PER_PAGE_DM_API</span><span class="p">))</span>
+    <span class="c"># added to solve timeout error when calling function from start_pytomo</span>
+    <span class="k">if</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">PROXIES</span><span class="p">:</span>
+        <span class="n">proxy</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">ProxyHandler</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">PROXIES</span><span class="p">)</span>
+        <span class="n">opener</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">build_opener</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">opener</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">build_opener</span><span class="p">()</span>
+    <span class="n">urllib2</span><span class="o">.</span><span class="n">install_opener</span><span class="p">(</span><span class="n">opener</span><span class="p">)</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">url_dm_api</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">STD_HEADERS</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">MAX_ATTEMPTS</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">opener</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">except</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">URLError</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+            <span class="n">sleep_secs</span> <span class="o">=</span> <span class="n">attempt</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;ERROR: </span><span class="si">%s</span><span class="s">.</span><span class="se">\n</span><span class="s">Retrying in </span><span class="si">%s</span><span class="s"> seconds...&#39;</span> <span class="o">%</span>
+                                    <span class="p">(</span><span class="n">mes</span><span class="p">,</span> <span class="n">sleep_secs</span><span class="p">))</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sleep_secs</span><span class="p">)</span>
+    <span class="c"># data is malformed as a python structure because it contains &#39;true&#39;</span>
+    <span class="c"># instead of True as bolean value, same for false</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&quot;|&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TRUTH_DICT</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="c"># TODO check error in case of readline()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">well_formed_data</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">TRUTH_DICT</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span>
+                                       <span class="n">data</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span>
+    <span class="k">except</span> <span class="ne">UnboundLocalError</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Could not retrieve related links data&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="c"># parse the string in a dictionary</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">related_dict</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">well_formed_data</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndentationError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">):</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;The data for related links of </span><span class="si">%s</span><span class="s"> cannot be&#39;</span>
+                                <span class="s">&#39;parsed, malformed string&#39;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">list_dict</span> <span class="o">=</span> <span class="n">related_dict</span><span class="p">[</span><span class="n">DM_URL_LIST_FIELD</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;The list of related links of </span><span class="si">%s</span><span class="s"> cannot be&#39;</span>
+                                <span class="s">&#39; retrieved&#39;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">id_title_list</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">itemgetter</span><span class="p">(</span><span class="n">DM_URL_ID_FIELD</span><span class="p">,</span> <span class="n">DM_URL_TITLE_FIELD</span><span class="p">),</span>
+                            <span class="n">list_dict</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;The id or title list of related links of </span><span class="si">%s</span><span class="s"> &#39;</span>
+                                <span class="s">&#39;cannot be retrieved&#39;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">url_id</span><span class="p">,</span> <span class="n">url_title</span><span class="p">))</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">url_id</span><span class="p">,</span> <span class="n">url_title</span><span class="p">)</span> <span class="ow">in</span> <span class="n">id_title_list</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="get_dailymotion_links"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.get_dailymotion_links">[docs]</a><span class="k">def</span> <span class="nf">get_dailymotion_links</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return a set of only Dailymotion links from url&#39;&#39;&#39;</span>
+    <span class="c"># TODO: temporary, the proxy links shouldn&#39;t be urls</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="s">&#39;dailymotion&#39;</span> <span class="ow">in</span> <span class="n">url</span> <span class="ow">or</span> <span class="s">&#39;dmcdn&#39;</span> <span class="ow">in</span> <span class="n">url</span><span class="p">):</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Only dailymotion is implemented, got url: </span><span class="si">%s</span><span class="s">&quot;</span>
+                                <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">get_all_related_ids</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ids</span><span class="p">:</span>
+        <span class="n">dailymotion_links</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Found </span><span class="si">%d</span><span class="s"> links for url </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">),</span> <span class="n">url</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">url_id</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">:</span>
+            <span class="n">dailymotion_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">set_id</span><span class="p">(</span><span class="n">url_id</span><span class="p">))</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Found </span><span class="si">%d</span><span class="s"> related video links for url </span><span class="si">%s</span><span class="s">&quot;</span>
+                                <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dailymotion_links</span><span class="p">),</span> <span class="n">url</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dailymotion_links</span>
+    <span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="get_related_urls"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_dailymotion_api.get_related_urls">[docs]</a><span class="k">def</span> <span class="nf">get_related_urls</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">,</span> <span class="n">max_per_url</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return a set of max_links randomly chosen related urls&#39;&#39;&#39;</span>
+    <span class="n">dailymotion_links</span> <span class="o">=</span> <span class="n">get_dailymotion_links</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">selected_links</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">dailymotion_links</span><span class="p">,</span>
+                                       <span class="nb">min</span><span class="p">(</span><span class="n">max_per_url</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">dailymotion_links</span><span class="p">)))</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Could not retrieve related urls for </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Selected </span><span class="si">%d</span><span class="s"> links for url </span><span class="si">%s</span><span class="s">&quot;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">selected_links</span><span class="p">),</span> <span class="n">url</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">selected_links</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">doctest</span>
+    <span class="n">doctest</span><span class="o">.</span><span class="n">testmod</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

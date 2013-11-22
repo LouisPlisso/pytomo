@@ -1,0 +1,796 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.name &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.name</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS Names.</span>
+
+<span class="sd">@var root: The DNS root name.</span>
+<span class="sd">@type root: dns_name.Name object</span>
+<span class="sd">@var empty: The empty DNS name.</span>
+<span class="sd">@type empty: dns_name.Name object</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">cStringIO</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">hexversion</span> <span class="o">&gt;=</span> <span class="mh">0x02030000</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">encodings.idna</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+
+<span class="n">NAMERELN_NONE</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">NAMERELN_SUPERDOMAIN</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">NAMERELN_SUBDOMAIN</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">NAMERELN_EQUAL</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">NAMERELN_COMMONANCESTOR</span> <span class="o">=</span> <span class="mi">4</span>
+
+<div class="viewcode-block" id="EmptyLabel"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.EmptyLabel">[docs]</a><span class="k">class</span> <span class="nc">EmptyLabel</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if a label is empty.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="BadEscape"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.BadEscape">[docs]</a><span class="k">class</span> <span class="nc">BadEscape</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if an escaped code in a text format name is invalid.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="BadPointer"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.BadPointer">[docs]</a><span class="k">class</span> <span class="nc">BadPointer</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if a compression pointer points forward instead of backward.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="BadLabelType"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.BadLabelType">[docs]</a><span class="k">class</span> <span class="nc">BadLabelType</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if the label type of a wire format name is unknown.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NeedAbsoluteNameOrOrigin"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.NeedAbsoluteNameOrOrigin">[docs]</a><span class="k">class</span> <span class="nc">NeedAbsoluteNameOrOrigin</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if an attempt is made to convert a non-absolute name to</span>
+<span class="sd">    wire when there is also a non-absolute (or missing) origin.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NameTooLong"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.NameTooLong">[docs]</a><span class="k">class</span> <span class="nc">NameTooLong</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if a name is &gt; 255 octets long.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="LabelTooLong"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.LabelTooLong">[docs]</a><span class="k">class</span> <span class="nc">LabelTooLong</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if a label is &gt; 63 octets long.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="AbsoluteConcatenation"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.AbsoluteConcatenation">[docs]</a><span class="k">class</span> <span class="nc">AbsoluteConcatenation</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if an attempt is made to append anything other than the</span>
+<span class="sd">    empty name to an absolute name.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NoParent"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.NoParent">[docs]</a><span class="k">class</span> <span class="nc">NoParent</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised if an attempt is made to get the parent of the root name</span>
+<span class="sd">    or the empty name.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<span class="n">_escaped</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;&quot;&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;(&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;)&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;.&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;;&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;@&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;$&#39;</span> <span class="p">:</span> <span class="bp">True</span>
+    <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">_escapify</span><span class="p">(</span><span class="n">label</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Escape the characters in label which need it.</span>
+<span class="sd">    @returns: the escaped string</span>
+<span class="sd">    @rtype: string&quot;&quot;&quot;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">_escaped</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span> <span class="o">+</span> <span class="n">c</span>
+        <span class="k">elif</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mh">0x20</span> <span class="ow">and</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mh">0x7F</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="n">c</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\\</span><span class="si">%03d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+
+<span class="k">def</span> <span class="nf">_validate_labels</span><span class="p">(</span><span class="n">labels</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check for empty labels in the middle of a label sequence,</span>
+<span class="sd">    labels that are too long, and for too many labels.</span>
+<span class="sd">    @raises NameTooLong: the name as a whole is too long</span>
+<span class="sd">    @raises LabelTooLong: an individual label is too long</span>
+<span class="sd">    @raises EmptyLabel: a label is empty (i.e. the root label) and appears</span>
+<span class="sd">    in a position other than the end of the label sequence&quot;&quot;&quot;</span>
+
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+        <span class="n">ll</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="n">total</span> <span class="o">+=</span> <span class="n">ll</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ll</span> <span class="o">&gt;</span> <span class="mi">63</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">LabelTooLong</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">label</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">j</span>
+        <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">total</span> <span class="o">&gt;</span> <span class="mi">255</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NameTooLong</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">l</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">EmptyLabel</span>
+
+<div class="viewcode-block" id="Name"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name">[docs]</a><span class="k">class</span> <span class="nc">Name</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A DNS name.</span>
+
+<span class="sd">    The dns_name.Name class represents a DNS name as a tuple of labels.</span>
+<span class="sd">    Instances of the class are immutable.</span>
+
+<span class="sd">    @ivar labels: The tuple of labels in the name. Each label is a string of</span>
+<span class="sd">    up to 63 octets.&quot;&quot;&quot;</span>
+
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;labels&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a domain name from a list of labels.</span>
+<span class="sd">        @param labels: the labels</span>
+<span class="sd">        @type labels: any iterable whose values are strings</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">Name</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__setattr__</span><span class="p">(</span><span class="s">&#39;labels&#39;</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">labels</span><span class="p">))</span>
+        <span class="n">_validate_labels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;object doesn&#39;t support attribute assignment&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Name.is_absolute"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.is_absolute">[docs]</a>    <span class="k">def</span> <span class="nf">is_absolute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Is the most significant label of this name the root label?</span>
+<span class="sd">        @rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;&#39;</span>
+</div>
+<div class="viewcode-block" id="Name.is_wild"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.is_wild">[docs]</a>    <span class="k">def</span> <span class="nf">is_wild</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Is this name wild?  (I.e. Is the least significant label &#39;*&#39;?)</span>
+<span class="sd">        @rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;*&#39;</span>
+</div>
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a case-insensitive hash of the name.</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">h</span> <span class="o">=</span> <span class="il">0L</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+                <span class="n">h</span> <span class="o">+=</span> <span class="p">(</span> <span class="n">h</span> <span class="o">&lt;&lt;</span> <span class="mi">3</span> <span class="p">)</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">h</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">maxint</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Name.fullcompare"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.fullcompare">[docs]</a>    <span class="k">def</span> <span class="nf">fullcompare</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compare two names, returning a 3-tuple (relation, order, nlabels).</span>
+
+<span class="sd">        I{relation} describes the relation ship beween the names,</span>
+<span class="sd">        and is one of: dns_name.NAMERELN_NONE,</span>
+<span class="sd">        dns_name.NAMERELN_SUPERDOMAIN, dns_name.NAMERELN_SUBDOMAIN,</span>
+<span class="sd">        dns_name.NAMERELN_EQUAL, or dns_name.NAMERELN_COMMONANCESTOR</span>
+
+<span class="sd">        I{order} is &lt; 0 if self &lt; other, &gt; 0 if self &gt; other, and ==</span>
+<span class="sd">        0 if self == other.  A relative name is always less than an</span>
+<span class="sd">        absolute name.  If both names have the same relativity, then</span>
+<span class="sd">        the DNSSEC order relation is used to order them.</span>
+
+<span class="sd">        I{nlabels} is the number of significant labels that the two names</span>
+<span class="sd">        have in common.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">sabs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span>
+        <span class="n">oabs</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">sabs</span> <span class="o">!=</span> <span class="n">oabs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sabs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">NAMERELN_NONE</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">NAMERELN_NONE</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">l1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+        <span class="n">l2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+        <span class="n">ldiff</span> <span class="o">=</span> <span class="n">l1</span> <span class="o">-</span> <span class="n">l2</span>
+        <span class="k">if</span> <span class="n">ldiff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="n">l1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="n">l2</span>
+
+        <span class="n">order</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">nlabels</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">namereln</span> <span class="o">=</span> <span class="n">NAMERELN_NONE</span>
+        <span class="k">while</span> <span class="n">l</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">l</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="n">l1</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="n">l2</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="n">label1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="n">label2</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">label1</span> <span class="o">&lt;</span> <span class="n">label2</span><span class="p">:</span>
+                <span class="n">order</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">if</span> <span class="n">nlabels</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">namereln</span> <span class="o">=</span> <span class="n">NAMERELN_COMMONANCESTOR</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">namereln</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nlabels</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">label1</span> <span class="o">&gt;</span> <span class="n">label2</span><span class="p">:</span>
+                <span class="n">order</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">nlabels</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">namereln</span> <span class="o">=</span> <span class="n">NAMERELN_COMMONANCESTOR</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">namereln</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nlabels</span><span class="p">)</span>
+            <span class="n">nlabels</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">ldiff</span>
+        <span class="k">if</span> <span class="n">ldiff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">namereln</span> <span class="o">=</span> <span class="n">NAMERELN_SUPERDOMAIN</span>
+        <span class="k">elif</span> <span class="n">ldiff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">namereln</span> <span class="o">=</span> <span class="n">NAMERELN_SUBDOMAIN</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">namereln</span> <span class="o">=</span> <span class="n">NAMERELN_EQUAL</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">namereln</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nlabels</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Name.is_subdomain"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.is_subdomain">[docs]</a>    <span class="k">def</span> <span class="nf">is_subdomain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Is self a subdomain of other?</span>
+
+<span class="sd">        The notion of subdomain includes equality.</span>
+<span class="sd">        @rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="p">(</span><span class="n">nr</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">nl</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nr</span> <span class="o">==</span> <span class="n">NAMERELN_SUBDOMAIN</span> <span class="ow">or</span> <span class="n">nr</span> <span class="o">==</span> <span class="n">NAMERELN_EQUAL</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="Name.is_superdomain"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.is_superdomain">[docs]</a>    <span class="k">def</span> <span class="nf">is_superdomain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Is self a superdomain of other?</span>
+
+<span class="sd">        The notion of subdomain includes equality.</span>
+<span class="sd">        @rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="p">(</span><span class="n">nr</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">nl</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nr</span> <span class="o">==</span> <span class="n">NAMERELN_SUPERDOMAIN</span> <span class="ow">or</span> <span class="n">nr</span> <span class="o">==</span> <span class="n">NAMERELN_EQUAL</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="Name.canonicalize"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.canonicalize">[docs]</a>    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a name which is equal to the current name, but is in</span>
+<span class="sd">        DNSSEC canonical form.</span>
+<span class="sd">        @rtype: dns_name.Name object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">Name</span><span class="p">([</span><span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">])</span>
+</div>
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__le__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__ge__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__gt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fullcompare</span><span class="p">(</span><span class="n">other</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;DNS name &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__str__</span><span class="p">()</span> <span class="o">+</span> <span class="s">&#39;&gt;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Name.to_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.to_text">[docs]</a>    <span class="k">def</span> <span class="nf">to_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">omit_final_dot</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert name to text format.</span>
+<span class="sd">        @param omit_final_dot: If True, don&#39;t emit the final dot (denoting the</span>
+<span class="sd">        root label) for absolute names.  The default is False.</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;@&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;.&#39;</span>
+        <span class="k">if</span> <span class="n">omit_final_dot</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">_escapify</span><span class="p">,</span> <span class="n">l</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">s</span>
+</div>
+<div class="viewcode-block" id="Name.to_unicode"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.to_unicode">[docs]</a>    <span class="k">def</span> <span class="nf">to_unicode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">omit_final_dot</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert name to Unicode text format.</span>
+
+<span class="sd">        IDN ACE lables are converted to Unicode.</span>
+
+<span class="sd">        @param omit_final_dot: If True, don&#39;t emit the final dot (denoting the</span>
+<span class="sd">        root label) for absolute names.  The default is False.</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">u&#39;@&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">u&#39;.&#39;</span>
+        <span class="k">if</span> <span class="n">omit_final_dot</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s">u&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">encodings</span><span class="o">.</span><span class="n">idna</span><span class="o">.</span><span class="n">ToUnicode</span><span class="p">(</span><span class="n">_escapify</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">l</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">s</span>
+</div>
+<div class="viewcode-block" id="Name.to_digestable"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.to_digestable">[docs]</a>    <span class="k">def</span> <span class="nf">to_digestable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert name to a format suitable for digesting in hashes.</span>
+
+<span class="sd">        The name is canonicalized and converted to uncompressed wire format.</span>
+
+<span class="sd">        @param origin: If the name is relative and origin is not None, then</span>
+<span class="sd">        origin will be appended to it.</span>
+<span class="sd">        @type origin: dns_name.Name object</span>
+<span class="sd">        @raises NeedAbsoluteNameOrOrigin: All names in wire format are</span>
+<span class="sd">        absolute.  If self is a relative name, then an origin must be supplied;</span>
+<span class="sd">        if it is missing, then this exception is raised</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">origin</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">NeedAbsoluteNameOrOrigin</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">origin</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span>
+        <span class="n">dlabels</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;</span><span class="si">%s%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">chr</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span>
+        <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dlabels</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Name.to_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">compress</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert name to wire format, possibly compressing it.</span>
+
+<span class="sd">        @param file: the file where the name is emitted (typically</span>
+<span class="sd">        a cStringIO file).  If None, a string containing the wire name</span>
+<span class="sd">        will be returned.</span>
+<span class="sd">        @type file: file or None</span>
+<span class="sd">        @param compress: The compression table.  If None (the default) names</span>
+<span class="sd">        will not be compressed.</span>
+<span class="sd">        @type compress: dict</span>
+<span class="sd">        @param origin: If the name is relative and origin is not None, then</span>
+<span class="sd">        origin will be appended to it.</span>
+<span class="sd">        @type origin: dns_name.Name object</span>
+<span class="sd">        @raises NeedAbsoluteNameOrOrigin: All names in wire format are</span>
+<span class="sd">        absolute.  If self is a relative name, then an origin must be supplied;</span>
+<span class="sd">        if it is missing, then this exception is raised</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">file</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="nb">file</span> <span class="o">=</span> <span class="n">cStringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+            <span class="n">want_return</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">want_return</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">origin</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">NeedAbsoluteNameOrOrigin</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">origin</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">Name</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">:])</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">compress</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="n">compress</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pos</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mh">0xc000</span> <span class="o">+</span> <span class="n">pos</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">compress</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">pos</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="mh">0xc000</span><span class="p">:</span>
+                        <span class="n">compress</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">pos</span>
+                <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">chr</span><span class="p">(</span><span class="n">l</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">l</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">want_return</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">file</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+</div>
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The length of the name (in labels).</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__getslice__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Name.split"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.split">[docs]</a>    <span class="k">def</span> <span class="nf">split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">depth</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Split a name into a prefix and suffix at depth.</span>
+
+<span class="sd">        @param depth: the number of labels in the suffix</span>
+<span class="sd">        @type depth: int</span>
+<span class="sd">        @raises ValueError: the depth was not &gt;= 0 and &lt;= the length of the</span>
+<span class="sd">        name.</span>
+<span class="sd">        @returns: the tuple (prefix, suffix)</span>
+<span class="sd">        @rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">empty</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">depth</span> <span class="o">==</span> <span class="n">l</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">empty</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">depth</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">depth</span> <span class="o">&gt;</span> <span class="n">l</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;depth must be &gt;= 0 and &lt;= the length of the name&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">Name</span><span class="p">(</span><span class="bp">self</span><span class="p">[:</span> <span class="o">-</span><span class="n">depth</span><span class="p">]),</span> <span class="n">Name</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="o">-</span><span class="n">depth</span> <span class="p">:]))</span>
+</div>
+<div class="viewcode-block" id="Name.concatenate"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.concatenate">[docs]</a>    <span class="k">def</span> <span class="nf">concatenate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a new name which is the concatenation of self and other.</span>
+<span class="sd">        @rtype: dns_name.Name object</span>
+<span class="sd">        @raises AbsoluteConcatenation: self is absolute and other is</span>
+<span class="sd">        not the empty name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AbsoluteConcatenation</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+        <span class="n">labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">Name</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Name.relativize"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.relativize">[docs]</a>    <span class="k">def</span> <span class="nf">relativize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If self is a subdomain of origin, return a new name which is self</span>
+<span class="sd">        relative to origin.  Otherwise return self.</span>
+<span class="sd">        @rtype: dns_name.Name object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_subdomain</span><span class="p">(</span><span class="n">origin</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">Name</span><span class="p">(</span><span class="bp">self</span><span class="p">[:</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">origin</span><span class="p">)])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+</div>
+<div class="viewcode-block" id="Name.derelativize"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.derelativize">[docs]</a>    <span class="k">def</span> <span class="nf">derelativize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If self is a relative name, return a new name which is the</span>
+<span class="sd">        concatenation of self and origin.  Otherwise return self.</span>
+<span class="sd">        @rtype: dns_name.Name object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+</div>
+<div class="viewcode-block" id="Name.choose_relativity"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.choose_relativity">[docs]</a>    <span class="k">def</span> <span class="nf">choose_relativity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a name with the relativity desired by the caller.  If</span>
+<span class="sd">        origin is None, then self is returned.  Otherwise, if</span>
+<span class="sd">        relativize is true the name is relativized, and if relativize is</span>
+<span class="sd">        false the name is derelativized.</span>
+<span class="sd">        @rtype: dns_name.Name object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">origin</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">relativize</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">derelativize</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+</div>
+<div class="viewcode-block" id="Name.parent"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.Name.parent">[docs]</a>    <span class="k">def</span> <span class="nf">parent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the parent of the name.</span>
+<span class="sd">        @rtype: dns_name.Name object</span>
+<span class="sd">        @raises NoParent: the name is either the root name or the empty name,</span>
+<span class="sd">        and thus has no parent.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="o">==</span> <span class="n">root</span> <span class="ow">or</span> <span class="bp">self</span> <span class="o">==</span> <span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoParent</span>
+        <span class="k">return</span> <span class="n">Name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+</div></div>
+<span class="n">root</span> <span class="o">=</span> <span class="n">Name</span><span class="p">([</span><span class="s">&#39;&#39;</span><span class="p">])</span>
+<span class="n">empty</span> <span class="o">=</span> <span class="n">Name</span><span class="p">([])</span>
+
+<div class="viewcode-block" id="from_unicode"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.from_unicode">[docs]</a><span class="k">def</span> <span class="nf">from_unicode</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="n">root</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert unicode text into a Name object.</span>
+
+<span class="sd">    Lables are encoded in IDN ACE form.</span>
+
+<span class="sd">    @rtype: dns_name.Name object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;input to from_unicode() must be a unicode string&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">Name</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;origin must be a Name or None&quot;</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+    <span class="n">escaping</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">edigits</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">text</span> <span class="o">==</span> <span class="s">u&#39;@&#39;</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">text</span> <span class="o">==</span> <span class="s">u&#39;.&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Name</span><span class="p">([</span><span class="s">&#39;&#39;</span><span class="p">])</span>	<span class="c"># no Unicode &quot;u&quot; on this constant!</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">escaping</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">edigits</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                        <span class="n">total</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                        <span class="n">edigits</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">label</span> <span class="o">+=</span> <span class="n">c</span>
+                        <span class="n">escaping</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                        <span class="k">raise</span> <span class="n">BadEscape</span>
+                    <span class="n">total</span> <span class="o">*=</span> <span class="mi">10</span>
+                    <span class="n">total</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                    <span class="n">edigits</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">edigits</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                        <span class="n">escaping</span> <span class="o">=</span> <span class="bp">False</span>
+                        <span class="n">label</span> <span class="o">+=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">u&#39;.&#39;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">u&#39;</span><span class="se">\u3002</span><span class="s">&#39;</span> <span class="ow">or</span> \
+                 <span class="n">c</span> <span class="o">==</span> <span class="s">u&#39;</span><span class="se">\uff0e</span><span class="s">&#39;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">u&#39;</span><span class="se">\uff61</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">EmptyLabel</span>
+                <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">encodings</span><span class="o">.</span><span class="n">idna</span><span class="o">.</span><span class="n">ToASCII</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">u&#39;</span><span class="se">\\</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="n">escaping</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">edigits</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">label</span> <span class="o">+=</span> <span class="n">c</span>
+        <span class="k">if</span> <span class="n">escaping</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BadEscape</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">encodings</span><span class="o">.</span><span class="n">idna</span><span class="o">.</span><span class="n">ToASCII</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">labels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">origin</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">Name</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.from_text">[docs]</a><span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="n">root</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert text into a Name object.</span>
+<span class="sd">    @rtype: dns_name.Name object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">hexversion</span> <span class="o">&gt;=</span> <span class="mh">0x02030000</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">from_unicode</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">origin</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;input to from_text() must be a string&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">Name</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;origin must be a Name or None&quot;</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">escaping</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">edigits</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">text</span> <span class="o">==</span> <span class="s">&#39;@&#39;</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">text</span> <span class="o">==</span> <span class="s">&#39;.&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Name</span><span class="p">([</span><span class="s">&#39;&#39;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">escaping</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">edigits</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                        <span class="n">total</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                        <span class="n">edigits</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">label</span> <span class="o">+=</span> <span class="n">c</span>
+                        <span class="n">escaping</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                        <span class="k">raise</span> <span class="n">BadEscape</span>
+                    <span class="n">total</span> <span class="o">*=</span> <span class="mi">10</span>
+                    <span class="n">total</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                    <span class="n">edigits</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">edigits</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                        <span class="n">escaping</span> <span class="o">=</span> <span class="bp">False</span>
+                        <span class="n">label</span> <span class="o">+=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;.&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">EmptyLabel</span>
+                <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="n">escaping</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">edigits</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">label</span> <span class="o">+=</span> <span class="n">c</span>
+        <span class="k">if</span> <span class="n">escaping</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BadEscape</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">labels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">origin</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">Name</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="from_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.name.from_wire">[docs]</a><span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">current</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert possibly compressed wire format into a Name.</span>
+<span class="sd">    @param message: the entire DNS message</span>
+<span class="sd">    @type message: string</span>
+<span class="sd">    @param current: the offset of the beginning of the name from the start</span>
+<span class="sd">    of the message</span>
+<span class="sd">    @type current: int</span>
+<span class="sd">    @raises dns_name.BadPointer: a compression pointer did not point backwards</span>
+<span class="sd">    in the message</span>
+<span class="sd">    @raises dns_name.BadLabelType: an invalid label type was encountered.</span>
+<span class="sd">    @returns: a tuple consisting of the name that was read and the number</span>
+<span class="sd">    of bytes of the wire format message which were consumed reading it</span>
+<span class="sd">    @rtype: (dns_name.Name object, int) tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;input to from_wire() must be a byte string&quot;</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">biggest_pointer</span> <span class="o">=</span> <span class="n">current</span>
+    <span class="n">hops</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="n">current</span><span class="p">])</span>
+    <span class="n">current</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">cused</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">count</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="mi">64</span><span class="p">:</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="n">current</span> <span class="p">:</span> <span class="n">current</span> <span class="o">+</span> <span class="n">count</span><span class="p">])</span>
+            <span class="n">current</span> <span class="o">+=</span> <span class="n">count</span>
+            <span class="k">if</span> <span class="n">hops</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">cused</span> <span class="o">+=</span> <span class="n">count</span>
+        <span class="k">elif</span> <span class="n">count</span> <span class="o">&gt;=</span> <span class="mi">192</span><span class="p">:</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="p">(</span><span class="n">count</span> <span class="o">&amp;</span> <span class="mh">0x3f</span><span class="p">)</span> <span class="o">*</span> <span class="mi">256</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="n">current</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">hops</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">cused</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">current</span> <span class="o">&gt;=</span> <span class="n">biggest_pointer</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">BadPointer</span>
+            <span class="n">biggest_pointer</span> <span class="o">=</span> <span class="n">current</span>
+            <span class="n">hops</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BadLabelType</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="n">current</span><span class="p">])</span>
+        <span class="n">current</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">hops</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cused</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">Name</span><span class="p">(</span><span class="n">labels</span><span class="p">),</span> <span class="n">cused</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

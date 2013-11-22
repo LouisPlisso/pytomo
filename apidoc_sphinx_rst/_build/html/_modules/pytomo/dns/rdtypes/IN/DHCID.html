@@ -1,0 +1,157 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.rdtypes.IN.DHCID &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.rdtypes.IN.DHCID</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2006, 2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">from</span> <span class="nn">...</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">...</span> <span class="kn">import</span> <span class="n">rdata</span> <span class="k">as</span> <span class="n">dns_rdata</span>
+
+<div class="viewcode-block" id="DHCID"><a class="viewcode-back" href="../../../../../pytomo.dns.rdtypes.IN.html#pytomo.dns.rdtypes.IN.DHCID.DHCID">[docs]</a><span class="k">class</span> <span class="nc">DHCID</span><span class="p">(</span><span class="n">dns_rdata</span><span class="o">.</span><span class="n">Rdata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;DHCID record</span>
+
+<span class="sd">    @ivar data: the data (the content of the RR is opaque as far as the</span>
+<span class="sd">    DNS is concerned)</span>
+<span class="sd">    @type data: string</span>
+<span class="sd">    @see: RFC 4701&quot;&quot;&quot;</span>
+
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;data&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DHCID</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+
+<div class="viewcode-block" id="DHCID.to_text"><a class="viewcode-back" href="../../../../../pytomo.dns.rdtypes.IN.html#pytomo.dns.rdtypes.IN.DHCID.DHCID.to_text">[docs]</a>    <span class="k">def</span> <span class="nf">to_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">_base64ify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DHCID.from_text"><a class="viewcode-back" href="../../../../../pytomo.dns.rdtypes.IN.html#pytomo.dns.rdtypes.IN.DHCID.DHCID.from_text">[docs]</a>    <span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">is_eol_or_eof</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">b64</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">b64</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;base64_codec&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+</div>
+    <span class="n">from_text</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_text</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DHCID.to_wire"><a class="viewcode-back" href="../../../../../pytomo.dns.rdtypes.IN.html#pytomo.dns.rdtypes.IN.DHCID.DHCID.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">compress</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DHCID.from_wire"><a class="viewcode-back" href="../../../../../pytomo.dns.rdtypes.IN.html#pytomo.dns.rdtypes.IN.DHCID.DHCID.from_wire">[docs]</a>    <span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">rdlen</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span> <span class="p">:</span> <span class="n">current</span> <span class="o">+</span> <span class="n">rdlen</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+</div>
+    <span class="n">from_wire</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_wire</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_cmp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">cmp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">data</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

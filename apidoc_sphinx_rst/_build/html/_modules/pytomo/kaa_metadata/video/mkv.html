@@ -1,0 +1,711 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.video.mkv &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.video.mkv</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># mkv.py - Matroska Streaming Video Files</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: mkv.py 3996 2009-05-16 14:12:36Z tack $</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer, Jason Tackaberry</span>
+<span class="c">#</span>
+<span class="c"># Maintainer:    Jason Tackaberry &lt;tack@urandom.ca&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">from</span> <span class="nn">struct</span> <span class="kn">import</span> <span class="n">unpack</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="c"># import kaa_metadata.video core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="c"># Main IDs for the Matroska streams</span>
+<span class="n">MATROSKA_VIDEO_TRACK</span>              <span class="o">=</span> <span class="mh">0x01</span>
+<span class="n">MATROSKA_AUDIO_TRACK</span>              <span class="o">=</span> <span class="mh">0x02</span>
+<span class="n">MATROSKA_SUBTITLES_TRACK</span>          <span class="o">=</span> <span class="mh">0x11</span>
+
+<span class="n">MATROSKA_HEADER_ID</span>                <span class="o">=</span> <span class="mh">0x1A45DFA3</span>
+<span class="n">MATROSKA_TRACKS_ID</span>                <span class="o">=</span> <span class="mh">0x1654AE6B</span>
+<span class="n">MATROSKA_CUES_ID</span>                  <span class="o">=</span> <span class="mh">0x1C53BB6B</span>
+<span class="n">MATROSKA_SEGMENT_ID</span>               <span class="o">=</span> <span class="mh">0x18538067</span>
+<span class="n">MATROSKA_SEGMENT_INFO_ID</span>          <span class="o">=</span> <span class="mh">0x1549A966</span>
+<span class="n">MATROSKA_CLUSTER_ID</span>               <span class="o">=</span> <span class="mh">0x1F43B675</span>
+<span class="n">MATROSKA_VOID_ID</span>                  <span class="o">=</span> <span class="mh">0xEC</span>
+<span class="n">MATROSKA_CRC_ID</span>                   <span class="o">=</span> <span class="mh">0xBF</span>
+<span class="n">MATROSKA_TIMECODESCALE_ID</span>         <span class="o">=</span> <span class="mh">0x2AD7B1</span>
+<span class="n">MATROSKA_DURATION_ID</span>              <span class="o">=</span> <span class="mh">0x4489</span>
+<span class="n">MATROSKA_CRC32_ID</span>                 <span class="o">=</span> <span class="mh">0xBF</span>
+<span class="n">MATROSKA_TIMECODESCALE_ID</span>         <span class="o">=</span> <span class="mh">0x2AD7B1</span>
+<span class="n">MATROSKA_MUXING_APP_ID</span>            <span class="o">=</span> <span class="mh">0x4D80</span>
+<span class="n">MATROSKA_WRITING_APP_ID</span>           <span class="o">=</span> <span class="mh">0x5741</span>
+<span class="n">MATROSKA_CODEC_ID</span>                 <span class="o">=</span> <span class="mh">0x86</span>
+<span class="n">MATROSKA_CODEC_PRIVATE_ID</span>         <span class="o">=</span> <span class="mh">0x63A2</span>
+<span class="n">MATROSKA_FRAME_DURATION_ID</span>        <span class="o">=</span> <span class="mh">0x23E383</span>
+<span class="n">MATROSKA_VIDEO_SETTINGS_ID</span>        <span class="o">=</span> <span class="mh">0xE0</span>
+<span class="n">MATROSKA_VID_WIDTH_ID</span>             <span class="o">=</span> <span class="mh">0xB0</span>
+<span class="n">MATROSKA_VID_HEIGHT_ID</span>            <span class="o">=</span> <span class="mh">0xBA</span>
+<span class="n">MATROSKA_VID_INTERLACED</span>           <span class="o">=</span> <span class="mh">0x9A</span>
+<span class="n">MATROSKA_DISPLAY_VID_WIDTH_ID</span>     <span class="o">=</span> <span class="mh">0x54B0</span>
+<span class="n">MATROSKA_DISPLAY_VID_HEIGHT_ID</span>    <span class="o">=</span> <span class="mh">0x54BA</span>
+<span class="n">MATROSKA_AUDIO_SETTINGS_ID</span>        <span class="o">=</span> <span class="mh">0xE1</span>
+<span class="n">MATROSKA_AUDIO_SAMPLERATE_ID</span>      <span class="o">=</span> <span class="mh">0xB5</span>
+<span class="n">MATROSKA_AUDIO_CHANNELS_ID</span>        <span class="o">=</span> <span class="mh">0x9F</span>
+<span class="n">MATROSKA_TRACK_UID_ID</span>             <span class="o">=</span> <span class="mh">0x73C5</span>
+<span class="n">MATROSKA_TRACK_NUMBER_ID</span>          <span class="o">=</span> <span class="mh">0xD7</span>
+<span class="n">MATROSKA_TRACK_TYPE_ID</span>            <span class="o">=</span> <span class="mh">0x83</span>
+<span class="n">MATROSKA_TRACK_LANGUAGE_ID</span>        <span class="o">=</span> <span class="mh">0x22B59C</span>
+<span class="n">MATROSKA_TRACK_OFFSET</span>             <span class="o">=</span> <span class="mh">0x537F</span>
+<span class="n">MATROSKA_TITLE_ID</span>                 <span class="o">=</span> <span class="mh">0x7BA9</span>
+<span class="n">MATROSKA_DATE_UTC_ID</span>              <span class="o">=</span> <span class="mh">0x4461</span>
+<span class="n">MATROSKA_NAME_ID</span>                  <span class="o">=</span> <span class="mh">0x536E</span>
+
+<span class="n">MATROSKA_CHAPTERS_ID</span>              <span class="o">=</span> <span class="mh">0x1043A770</span>
+<span class="n">MATROSKA_EDITION_ENTRY_ID</span>         <span class="o">=</span> <span class="mh">0x45B9</span>
+<span class="n">MATROSKA_CHAPTER_ATOM_ID</span>          <span class="o">=</span> <span class="mh">0xB6</span>
+<span class="n">MATROSKA_CHAPTER_TIME_START_ID</span>    <span class="o">=</span> <span class="mh">0x91</span>
+<span class="n">MATROSKA_CHAPTER_TIME_END_ID</span>      <span class="o">=</span> <span class="mh">0x92</span>
+<span class="n">MATROSKA_CHAPTER_FLAG_ENABLED_ID</span>  <span class="o">=</span> <span class="mh">0x4598</span>
+<span class="n">MATROSKA_CHAPTER_DISPLAY_ID</span>       <span class="o">=</span> <span class="mh">0x80</span>
+<span class="n">MATROSKA_CHAPTER_LANGUAGE_ID</span>      <span class="o">=</span> <span class="mh">0x437C</span>
+<span class="n">MATROSKA_CHAPTER_STRING_ID</span>        <span class="o">=</span> <span class="mh">0x85</span>
+
+<span class="n">MATROSKA_ATTACHMENTS_ID</span>           <span class="o">=</span> <span class="mh">0x1941A469</span>
+<span class="n">MATROSKA_ATTACHED_FILE_ID</span>         <span class="o">=</span> <span class="mh">0x61A7</span>
+<span class="n">MATROSKA_FILE_DESC_ID</span>             <span class="o">=</span> <span class="mh">0x467E</span>
+<span class="n">MATROSKA_FILE_NAME_ID</span>             <span class="o">=</span> <span class="mh">0x466E</span>
+<span class="n">MATROSKA_FILE_MIME_TYPE_ID</span>        <span class="o">=</span> <span class="mh">0x4660</span>
+<span class="n">MATROSKA_FILE_DATA_ID</span>             <span class="o">=</span> <span class="mh">0x465C</span>
+
+<span class="n">MATROSKA_SEEKHEAD_ID</span>              <span class="o">=</span> <span class="mh">0x114D9B74</span>
+<span class="n">MATROSKA_SEEK_ID</span>                  <span class="o">=</span> <span class="mh">0x4DBB</span>
+<span class="n">MATROSKA_SEEKID_ID</span>                <span class="o">=</span> <span class="mh">0x53AB</span>
+<span class="n">MATROSKA_SEEK_POSITION_ID</span>         <span class="o">=</span> <span class="mh">0x53AC</span>
+
+<span class="c"># See mkv spec for details:</span>
+<span class="c"># http://www.matroska.org/technical/specs/index.html</span>
+
+<span class="c"># Map to convert to well known codes</span>
+<span class="c"># http://haali.cs.msu.ru/mkv/codecs.pdf</span>
+<span class="n">FOURCCMap</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;V_THEORA&#39;</span><span class="p">:</span> <span class="s">&#39;THEO&#39;</span><span class="p">,</span>
+    <span class="s">&#39;V_SNOW&#39;</span><span class="p">:</span> <span class="s">&#39;SNOW&#39;</span><span class="p">,</span>
+    <span class="s">&#39;V_MPEG4/ISO/ASP&#39;</span><span class="p">:</span> <span class="s">&#39;MP4V&#39;</span><span class="p">,</span>
+    <span class="s">&#39;V_MPEG4/ISO/AVC&#39;</span><span class="p">:</span> <span class="s">&#39;AVC1&#39;</span><span class="p">,</span>
+    <span class="s">&#39;A_AC3&#39;</span><span class="p">:</span> <span class="mh">0x2000</span><span class="p">,</span>
+    <span class="s">&#39;A_MPEG/L3&#39;</span><span class="p">:</span> <span class="mh">0x0055</span><span class="p">,</span>
+    <span class="s">&#39;A_MPEG/L2&#39;</span><span class="p">:</span> <span class="mh">0x0050</span><span class="p">,</span>
+    <span class="s">&#39;A_MPEG/L1&#39;</span><span class="p">:</span> <span class="mh">0x0050</span><span class="p">,</span>
+    <span class="s">&#39;A_DTS&#39;</span><span class="p">:</span> <span class="mh">0x2001</span><span class="p">,</span>
+    <span class="s">&#39;A_PCM/INT/LIT&#39;</span><span class="p">:</span> <span class="mh">0x0001</span><span class="p">,</span>
+    <span class="s">&#39;A_PCM/FLOAT/IEEE&#39;</span><span class="p">:</span> <span class="mh">0x003</span><span class="p">,</span>
+    <span class="s">&#39;A_TTA1&#39;</span><span class="p">:</span> <span class="mh">0x77a1</span><span class="p">,</span>
+    <span class="s">&#39;A_WAVPACK4&#39;</span><span class="p">:</span> <span class="mh">0x5756</span><span class="p">,</span>
+    <span class="s">&#39;A_VORBIS&#39;</span><span class="p">:</span> <span class="mh">0x6750</span><span class="p">,</span>
+    <span class="s">&#39;A_FLAC&#39;</span><span class="p">:</span> <span class="mh">0xF1AC</span><span class="p">,</span>
+    <span class="s">&#39;A_AAC&#39;</span><span class="p">:</span> <span class="mh">0x00ff</span><span class="p">,</span>
+    <span class="s">&#39;A_AAC/&#39;</span><span class="p">:</span> <span class="mh">0x00ff</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">EbmlEntity</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is class that is responsible to handle one Ebml entity as described in</span>
+<span class="sd">    the Matroska/Ebml spec</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inbuf</span><span class="p">):</span>
+        <span class="c"># Compute the EBML id</span>
+        <span class="c"># Set the CRC len to zero</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">crc_len</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c"># Now loop until we find an entity without CRC</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_entity</span><span class="p">(</span><span class="n">inbuf</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_CRC32_ID</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">crc_len</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">()</span>
+            <span class="n">inbuf</span> <span class="o">=</span> <span class="n">inbuf</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">():]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_entity</span><span class="p">(</span><span class="n">inbuf</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">build_entity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inbuf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_id</span><span class="p">(</span><span class="n">inbuf</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;EBML entity not found, bad file format&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">len_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_len</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id_len</span><span class="p">:])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span> <span class="o">=</span> <span class="n">inbuf</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">get_header_len</span><span class="p">()</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebml_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span><span class="p">)</span>
+
+        <span class="c"># if the data size is 8 or less, it could be a numeric value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">shift</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span><span class="p">),</span> <span class="nb">range</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="mi">8</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">8</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">|=</span> <span class="nb">ord</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">[</span><span class="n">pos</span><span class="p">])</span> <span class="o">&lt;&lt;</span> <span class="n">shift</span>
+
+
+    <span class="k">def</span> <span class="nf">add_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">maxlen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebml_length</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">maxlen</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span> <span class="o">+=</span> <span class="n">data</span><span class="p">[:</span><span class="n">maxlen</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">compute_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inbuf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inbuf</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">first</span> <span class="o">&amp;</span> <span class="mh">0x80</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">entity_id</span> <span class="o">=</span> <span class="n">first</span>
+        <span class="k">elif</span> <span class="n">first</span> <span class="o">&amp;</span> <span class="mh">0x40</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inbuf</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">entity_id</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&lt;&lt;</span><span class="mi">8</span> <span class="o">|</span> <span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">first</span> <span class="o">&amp;</span> <span class="mh">0x20</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inbuf</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">=</span> <span class="mi">3</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">entity_id</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&lt;&lt;</span><span class="mi">16</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">&lt;&lt;</span><span class="mi">8</span><span class="p">)</span> <span class="o">|</span> \
+                             <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">elif</span> <span class="n">first</span> <span class="o">&amp;</span> <span class="mh">0x10</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inbuf</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">=</span> <span class="mi">4</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">entity_id</span> <span class="o">=</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&lt;&lt;</span><span class="mi">24</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">&lt;&lt;</span><span class="mi">16</span><span class="p">)</span> <span class="o">|</span> \
+                             <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span><span class="o">&lt;&lt;</span><span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_str</span> <span class="o">=</span> <span class="n">inbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id_len</span><span class="p">]</span>
+
+
+    <span class="k">def</span> <span class="nf">compute_len</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inbuf</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">inbuf</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">num_ffs</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">len_mask</span> <span class="o">=</span> <span class="mh">0x80</span>
+        <span class="nb">len</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="nb">len</span> <span class="o">&amp;</span> <span class="n">len_mask</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">len_mask</span> <span class="o">&gt;&gt;=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">8</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+
+        <span class="nb">len</span> <span class="o">&amp;=</span> <span class="n">len_mask</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="nb">len</span> <span class="o">==</span> <span class="n">len_mask</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">num_ffs</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+            <span class="nb">len</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="nb">ord</span><span class="p">(</span><span class="n">inbuf</span><span class="p">[</span><span class="n">p</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">len</span> <span class="o">&amp;</span> <span class="mh">0xff</span> <span class="o">==</span> <span class="mh">0xff</span><span class="p">:</span>
+                <span class="n">num_ffs</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">num_ffs</span> <span class="o">==</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">len</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+
+
+    <span class="k">def</span> <span class="nf">get_crc_len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">crc_len</span>
+
+
+    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+
+
+    <span class="k">def</span> <span class="nf">get_float_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!f&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!d&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+
+
+    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span>
+
+
+    <span class="k">def</span> <span class="nf">get_utf8</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">,</span> <span class="s">&#39;utf-8&#39;</span><span class="p">,</span> <span class="s">&#39;replace&#39;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">get_str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entity_data</span><span class="p">,</span> <span class="s">&#39;ascii&#39;</span><span class="p">,</span> <span class="s">&#39;replace&#39;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">get_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_id</span>
+
+
+    <span class="k">def</span> <span class="nf">get_str_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_str</span>
+
+
+    <span class="k">def</span> <span class="nf">get_len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span>
+
+
+    <span class="k">def</span> <span class="nf">get_total_len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_len</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">len_size</span>
+
+
+    <span class="k">def</span> <span class="nf">get_header_len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_len</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">len_size</span>
+
+
+
+<span class="k">class</span> <span class="nc">Matroska</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Matroska video and audio parser. If at least one video stream is</span>
+<span class="sd">    detected it will set the type to MEDIA_AV.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">media</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">MEDIA_AUDIO</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="nb">file</span>
+        <span class="c"># Read enough that we&#39;re likely to get the full seekhead (FIXME: kludge)</span>
+        <span class="nb">buffer</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c"># Regular File end</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="c"># Check the Matroska header</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">EbmlEntity</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">!=</span> <span class="n">MATROSKA_HEADER_ID</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;HEADER ID found </span><span class="si">%08X</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">header</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;application/mkv&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;Matroska&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_idx</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="c"># Now get the segment</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">segment</span> <span class="o">=</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">EbmlEntity</span><span class="p">(</span><span class="nb">buffer</span><span class="p">[</span><span class="n">header</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">():])</span>
+        <span class="c"># Record file offset of segment data for seekheads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">()</span> <span class="o">+</span> <span class="n">segment</span><span class="o">.</span><span class="n">get_header_len</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">segment</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">!=</span> <span class="n">MATROSKA_SEGMENT_ID</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;SEGMENT ID not found </span><span class="si">%08X</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">segment</span><span class="o">.</span><span class="n">get_id</span><span class="p">())</span>
+            <span class="k">return</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;SEGMENT ID found </span><span class="si">%08X</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">segment</span><span class="o">.</span><span class="n">get_id</span><span class="p">())</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">segment</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_SEEKHEAD_ID</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">process_elem</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_idx</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;WARNING: file has no index&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;corrupt&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">process_elem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elem</span><span class="p">):</span>
+        <span class="n">elem_id</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;BEGIN: process element </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">hex</span><span class="p">(</span><span class="n">elem_id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_SEGMENT_INFO_ID</span><span class="p">:</span>
+            <span class="n">duration</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">scalecode</span> <span class="o">=</span> <span class="mf">1000000.0</span>
+
+            <span class="k">for</span> <span class="n">ielem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+                <span class="n">ielem_id</span> <span class="o">=</span> <span class="n">ielem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">ielem_id</span> <span class="o">==</span> <span class="n">MATROSKA_TIMECODESCALE_ID</span><span class="p">:</span>
+                    <span class="n">scalecode</span> <span class="o">=</span> <span class="n">ielem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+                <span class="k">elif</span> <span class="n">ielem_id</span> <span class="o">==</span> <span class="n">MATROSKA_DURATION_ID</span><span class="p">:</span>
+                    <span class="n">duration</span> <span class="o">=</span> <span class="n">ielem</span><span class="o">.</span><span class="n">get_float_value</span><span class="p">()</span>
+                <span class="k">elif</span> <span class="n">ielem_id</span> <span class="o">==</span> <span class="n">MATROSKA_TITLE_ID</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">ielem</span><span class="o">.</span><span class="n">get_utf8</span><span class="p">()</span>
+                <span class="k">elif</span> <span class="n">ielem_id</span> <span class="o">==</span> <span class="n">MATROSKA_DATE_UTC_ID</span><span class="p">:</span>
+                    <span class="n">timestamp</span> <span class="o">=</span>  <span class="n">unpack</span><span class="p">(</span><span class="s">&#39;!q&#39;</span><span class="p">,</span> <span class="n">ielem</span><span class="o">.</span><span class="n">get_data</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mf">10.0</span><span class="o">**</span><span class="mi">9</span>
+                    <span class="c"># Date is offset 2001-01-01 00:00:00 (timestamp 978307200.0)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">timestamp</span> <span class="o">+</span> <span class="mi">978307200</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">duration</span> <span class="o">*</span> <span class="n">scalecode</span> <span class="o">/</span> <span class="mf">1000000000.0</span>
+
+        <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_TRACKS_ID</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process_tracks</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CHAPTERS_ID</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process_chapters</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_ATTACHMENTS_ID</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process_attachments</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_SEEKHEAD_ID</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process_seekhead</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CUES_ID</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">has_idx</span> <span class="o">=</span> <span class="bp">True</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;END: process element </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">hex</span><span class="p">(</span><span class="n">elem_id</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+
+    <span class="k">def</span> <span class="nf">process_seekhead</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elem</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">seek_elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">seek_elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">!=</span> <span class="n">MATROSKA_SEEK_ID</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">sub_elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">seek_elem</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_SEEKID_ID</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_CLUSTER_ID</span><span class="p">:</span>
+                        <span class="c"># Not interested in these.</span>
+                        <span class="k">return</span>
+
+                <span class="k">elif</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_SEEK_POSITION_ID</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">offset</span> <span class="o">+</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">())</span>
+                    <span class="nb">buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">elem</span> <span class="o">=</span> <span class="n">EbmlEntity</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">:</span>
+                        <span class="k">continue</span>
+
+                    <span class="c"># Fetch all data necessary for this element.</span>
+                    <span class="n">elem</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">elem</span><span class="o">.</span><span class="n">ebml_length</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">process_elem</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">process_tracks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">):</span>
+        <span class="n">tracksbuf</span> <span class="o">=</span> <span class="n">tracks</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">tracks</span><span class="o">.</span><span class="n">get_len</span><span class="p">():</span>
+            <span class="n">trackelem</span> <span class="o">=</span> <span class="n">EbmlEntity</span><span class="p">(</span><span class="n">tracksbuf</span><span class="p">[</span><span class="n">index</span><span class="p">:])</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span> <span class="p">(</span><span class="s">&quot;ELEMENT </span><span class="si">%X</span><span class="s"> found&quot;</span> <span class="o">%</span> <span class="n">trackelem</span><span class="o">.</span><span class="n">get_id</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process_track</span><span class="p">(</span><span class="n">trackelem</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="n">trackelem</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">()</span> <span class="o">+</span> <span class="n">trackelem</span><span class="o">.</span><span class="n">get_crc_len</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">process_one_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">item</span><span class="o">.</span><span class="n">get_len</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="n">index</span><span class="p">:])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">elem</span> <span class="o">=</span> <span class="n">EbmlEntity</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="n">index</span><span class="p">:])</span>
+            <span class="k">yield</span> <span class="n">elem</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">()</span> <span class="o">+</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_crc_len</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">process_track</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">track</span><span class="p">):</span>
+        <span class="c"># Collapse generator into a list since we need to iterate over it</span>
+        <span class="c"># twice.</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="p">[</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">track</span><span class="p">)</span> <span class="p">]</span>
+        <span class="n">track_type</span> <span class="o">=</span> <span class="p">[</span> <span class="n">x</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">elements</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_TRACK_TYPE_ID</span> <span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">track_type</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Bad track: no type id found&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">track_type</span> <span class="o">=</span> <span class="n">track_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">track</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">track_type</span> <span class="o">==</span> <span class="n">MATROSKA_VIDEO_TRACK</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Video track found&quot;</span><span class="p">)</span>
+            <span class="n">track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_video_track</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">track_type</span> <span class="o">==</span> <span class="n">MATROSKA_AUDIO_TRACK</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Audio track found&quot;</span><span class="p">)</span>
+            <span class="n">track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_audio_track</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">track_type</span> <span class="o">==</span> <span class="n">MATROSKA_SUBTITLES_TRACK</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Subtitle track found&quot;</span><span class="p">)</span>
+            <span class="n">track</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">Subtitle</span><span class="p">()</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subtitles</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subtitles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">track</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">process_track_common</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">track</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">process_track_common</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elem</span><span class="p">,</span> <span class="n">track</span><span class="p">):</span>
+        <span class="n">elem_id</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_TRACK_LANGUAGE_ID</span><span class="p">:</span>
+            <span class="n">lang</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_str</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s">u&#39;und&#39;</span><span class="p">:</span>
+                <span class="n">track</span><span class="o">.</span><span class="n">language</span> <span class="o">=</span> <span class="n">lang</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Track language found: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">track</span><span class="o">.</span><span class="n">language</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_NAME_ID</span><span class="p">:</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_utf8</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_TRACK_NUMBER_ID</span><span class="p">:</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">trackno</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">process_video_track</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
+        <span class="n">track</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">()</span>
+        <span class="n">codec_private_id</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="c"># Defaults</span>
+        <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="s">u&#39;Unknown&#39;</span>
+        <span class="n">track</span><span class="o">.</span><span class="n">fps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="n">elem_id</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CODEC_ID</span><span class="p">:</span>
+                <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_str</span><span class="p">()</span>
+
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_FRAME_DURATION_ID</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">track</span><span class="o">.</span><span class="n">fps</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="nb">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="mi">9</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()))</span>
+                <span class="k">except</span> <span class="ne">ZeroDivisionError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_VIDEO_SETTINGS_ID</span><span class="p">:</span>
+                <span class="n">d_width</span> <span class="o">=</span> <span class="n">d_height</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">for</span> <span class="n">settings_elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+                    <span class="n">settings_elem_id</span> <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">settings_elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_VID_WIDTH_ID</span><span class="p">:</span>
+                        <span class="n">track</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">settings_elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_VID_HEIGHT_ID</span><span class="p">:</span>
+                        <span class="n">track</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">settings_elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_DISPLAY_VID_WIDTH_ID</span><span class="p">:</span>
+                        <span class="n">d_width</span> <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">settings_elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_DISPLAY_VID_HEIGHT_ID</span><span class="p">:</span>
+                        <span class="n">d_height</span> <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">settings_elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_VID_INTERLACED</span><span class="p">:</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">settings_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">())</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;interlaced&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">None</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">d_width</span><span class="p">,</span> <span class="n">d_height</span><span class="p">):</span>
+                    <span class="n">track</span><span class="o">.</span><span class="n">aspect</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">d_width</span><span class="p">)</span> <span class="o">/</span> <span class="n">d_height</span>
+
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CODEC_PRIVATE_ID</span><span class="p">:</span>
+                <span class="n">codec_private_id</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">process_track_common</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">track</span><span class="p">)</span>
+
+        <span class="c"># convert codec information</span>
+        <span class="c"># http://haali.cs.msu.ru/mkv/codecs.pdf</span>
+        <span class="k">if</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="ow">in</span> <span class="n">FOURCCMap</span><span class="p">:</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">FOURCCMap</span><span class="p">[</span><span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="s">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="ow">and</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">FOURCCMap</span><span class="p">:</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">FOURCCMap</span><span class="p">[</span><span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;FOURCC&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">codec_private_id</span><span class="p">)</span> <span class="o">==</span> <span class="mi">40</span><span class="p">:</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">codec_private_id</span><span class="p">[</span><span class="mi">16</span><span class="p">:</span><span class="mi">20</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;V_REAL/&#39;</span><span class="p">):</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="p">[</span><span class="mi">7</span><span class="p">:]</span>
+        <span class="k">elif</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;V_&#39;</span><span class="p">):</span>
+            <span class="c"># FIXME: add more video codecs here</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">media</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">MEDIA_AV</span>
+        <span class="n">track</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">track</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">track</span>
+
+
+    <span class="k">def</span> <span class="nf">process_audio_track</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
+        <span class="n">track</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">()</span>
+        <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="s">u&#39;Unknown&#39;</span>
+
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="n">elem_id</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CODEC_ID</span><span class="p">:</span>
+                <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_str</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_AUDIO_SETTINGS_ID</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">settings_elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+                    <span class="n">settings_elem_id</span> <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">settings_elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_AUDIO_SAMPLERATE_ID</span><span class="p">:</span>
+                        <span class="n">track</span><span class="o">.</span><span class="n">samplerate</span>  <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_float_value</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">settings_elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_AUDIO_CHANNELS_ID</span><span class="p">:</span>
+                        <span class="n">track</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">settings_elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">process_track_common</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">track</span><span class="p">)</span>
+
+
+        <span class="k">if</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="ow">in</span> <span class="n">FOURCCMap</span><span class="p">:</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">FOURCCMap</span><span class="p">[</span><span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="s">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="ow">and</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">FOURCCMap</span><span class="p">:</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">FOURCCMap</span><span class="p">[</span><span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;A_&#39;</span><span class="p">):</span>
+            <span class="n">track</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">codec</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+        <span class="n">track</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">track</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">track</span>
+
+
+    <span class="k">def</span> <span class="nf">process_chapters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chapters</span><span class="p">):</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">chapters</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_EDITION_ENTRY_ID</span><span class="p">:</span>
+                <span class="n">buf</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_len</span><span class="p">():</span>
+                    <span class="n">sub_elem</span> <span class="o">=</span> <span class="n">EbmlEntity</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="n">index</span><span class="p">:])</span>
+                    <span class="k">if</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_CHAPTER_ATOM_ID</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">process_chapter_atom</span><span class="p">(</span><span class="n">sub_elem</span><span class="p">)</span>
+                    <span class="n">index</span> <span class="o">+=</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">()</span> <span class="o">+</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">get_crc_len</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">process_chapter_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+        <span class="n">chap</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">Chapter</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="n">elem_id</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CHAPTER_TIME_START_ID</span><span class="p">:</span>
+                <span class="c"># Scale timecode to seconds (float)</span>
+                <span class="n">chap</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="o">/</span> <span class="mi">1000000</span> <span class="o">/</span> <span class="mf">1000.0</span>
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CHAPTER_FLAG_ENABLED_ID</span><span class="p">:</span>
+                <span class="n">chap</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_CHAPTER_DISPLAY_ID</span><span class="p">:</span>
+                <span class="c"># Matroska supports multiple (chapter name, language) pairs for</span>
+                <span class="c"># each chapter, so chapter names can be internationalized.  This</span>
+                <span class="c"># logic will only take the last one in the list.</span>
+                <span class="k">for</span> <span class="n">display_elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">display_elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_CHAPTER_STRING_ID</span><span class="p">:</span>
+                        <span class="n">chap</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">display_elem</span><span class="o">.</span><span class="n">get_utf8</span><span class="p">()</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Chapter &quot;</span><span class="si">%s</span><span class="s">&quot; found&#39;</span><span class="p">,</span> <span class="n">chap</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">chap</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chapters</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chapters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chap</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">process_attachments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attachments</span><span class="p">):</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="n">attachments</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">attachments</span><span class="o">.</span><span class="n">get_len</span><span class="p">():</span>
+            <span class="n">elem</span> <span class="o">=</span> <span class="n">EbmlEntity</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="n">index</span><span class="p">:])</span>
+            <span class="k">if</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span> <span class="o">==</span> <span class="n">MATROSKA_ATTACHED_FILE_ID</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">process_attachment</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_total_len</span><span class="p">()</span> <span class="o">+</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_crc_len</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">process_attachment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attachment</span><span class="p">):</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_one_level</span><span class="p">(</span><span class="n">attachment</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">desc</span> <span class="o">=</span> <span class="n">mimetype</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="n">elem_id</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_FILE_NAME_ID</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_utf8</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_FILE_DESC_ID</span><span class="p">:</span>
+                <span class="n">desc</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_utf8</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_FILE_MIME_TYPE_ID</span><span class="p">:</span>
+                <span class="n">mimetype</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">elem_id</span> <span class="o">==</span> <span class="n">MATROSKA_FILE_DATA_ID</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+
+        <span class="c"># Right now we only support attachments that could be cover images.</span>
+        <span class="c"># Make a guess to see if this attachment is a cover image.</span>
+        <span class="k">if</span> <span class="n">mimetype</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;image/&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="s">u&quot;cover&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">name</span><span class="o">+</span><span class="n">desc</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span> <span class="o">=</span> <span class="n">data</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Attachment &quot;</span><span class="si">%s</span><span class="s">&quot; found&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+
+<span class="n">Parser</span> <span class="o">=</span> <span class="n">Matroska</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

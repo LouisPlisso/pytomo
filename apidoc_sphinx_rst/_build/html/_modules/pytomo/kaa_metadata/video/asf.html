@@ -1,0 +1,503 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.kaa_metadata.video.asf &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.kaa_metadata.video.asf</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: iso-8859-1 -*-</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># asf.py - asf file parser</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># $Id: asf.py 3996 2009-05-16 14:12:36Z tack $</span>
+<span class="c">#</span>
+<span class="c"># See http://download.microsoft.com/download/e/0/6/e06db390-1e2a-4978-\</span>
+<span class="c">#     82bb-311810d8a28d/ASF_Specification.doc</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># kaa-Metadata - Media Metadata for Python</span>
+<span class="c"># Copyright (C) 2003-2006 Thomas Schueppel, Dirk Meyer</span>
+<span class="c">#</span>
+<span class="c"># First Edition: Thomas Schueppel &lt;stain@acm.org&gt;</span>
+<span class="c"># Maintainer:    Dirk Meyer &lt;dischi@freevo.org&gt;</span>
+<span class="c">#</span>
+<span class="c"># Please see the file AUTHORS for a complete list of authors.</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 2 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but</span>
+<span class="c"># WITHOUT ANY WARRANTY; without even the implied warranty of MER-</span>
+<span class="c"># CHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General</span>
+<span class="c"># Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License along</span>
+<span class="c"># with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="c"># 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</span>
+<span class="c">#</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span>
+
+<span class="c"># python imports</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="c"># import kaa_metadata.video core</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">core</span>
+<span class="c"># import kaa_metadata.audio for asf files without video stream</span>
+<span class="kn">from</span> <span class="nn">..audio</span> <span class="kn">import</span> <span class="n">core</span> <span class="k">as</span> <span class="n">audiocore</span>
+
+<span class="c"># get logging object</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_guid</span><span class="p">(</span><span class="nb">input</span><span class="p">):</span>
+    <span class="c"># Remove any &#39;-&#39;</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span><span class="s">&#39;-&#39;</span><span class="p">),</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">32</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;&#39;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">16</span><span class="p">):</span>
+        <span class="n">r</span><span class="o">+=</span><span class="nb">chr</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">:</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">],</span><span class="mi">16</span><span class="p">))</span>
+    <span class="n">guid</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&gt;IHHBB6s&#39;</span><span class="p">,</span><span class="n">r</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">guid</span>
+
+<span class="n">GUIDS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;ASF_Header_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;75B22630-668E-11CF-A6D9-00AA0062CE6C&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Data_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;75B22636-668E-11CF-A6D9-00AA0062CE6C&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Simple_Index_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;33000890-E5B1-11CF-89F4-00A0C90349CB&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Index_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;D6E229D3-35DA-11D1-9034-00A0C90349BE&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Media_Object_Index_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;FEB103F8-12AD-4C64-840F-2A1D2F7AD48C&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Timecode_Index_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;3CB73FD0-0C4A-4803-953D-EDF7B6228F0C&#39;</span><span class="p">),</span>
+
+    <span class="s">&#39;ASF_File_Properties_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;8CABDCA1-A947-11CF-8EE4-00C00C205365&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Stream_Properties_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;B7DC0791-A9B7-11CF-8EE6-00C00C205365&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Header_Extension_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;5FBF03B5-A92E-11CF-8EE3-00C00C205365&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Codec_List_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;86D15240-311D-11D0-A3A4-00A0C90348F6&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Script_Command_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;1EFB1A30-0B62-11D0-A39B-00A0C90348F6&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Marker_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;F487CD01-A951-11CF-8EE6-00C00C205365&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Bitrate_Mutual_Exclusion_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;D6E229DC-35DA-11D1-9034-00A0C90349BE&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Error_Correction_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;75B22635-668E-11CF-A6D9-00AA0062CE6C&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Content_Description_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;75B22633-668E-11CF-A6D9-00AA0062CE6C&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Extended_Content_Description_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;D2D0A440-E307-11D2-97F0-00A0C95EA850&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Content_Branding_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;2211B3FA-BD23-11D2-B4B7-00A0C955FC6E&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Stream_Bitrate_Properties_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;7BF875CE-468D-11D1-8D82-006097C9A2B2&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Content_Encryption_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;2211B3FB-BD23-11D2-B4B7-00A0C955FC6E&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Extended_Content_Encryption_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;298AE614-2622-4C17-B935-DAE07EE9289C&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Alt_Extended_Content_Encryption_Obj&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;FF889EF1-ADEE-40DA-9E71-98704BB928CE&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Digital_Signature_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;2211B3FC-BD23-11D2-B4B7-00A0C955FC6E&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Padding_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;1806D474-CADF-4509-A4BA-9AABCB96AAE8&#39;</span><span class="p">),</span>
+
+    <span class="s">&#39;ASF_Extended_Stream_Properties_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;14E6A5CB-C672-4332-8399-A96952065B5A&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Advanced_Mutual_Exclusion_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;A08649CF-4775-4670-8A16-6E35357566CD&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Group_Mutual_Exclusion_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;D1465A40-5A79-4338-B71B-E36B8FD6C249&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Stream_Prioritization_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;D4FED15B-88D3-454F-81F0-ED5C45999E24&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Bandwidth_Sharing_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;A69609E6-517B-11D2-B6AF-00C04FD908E9&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Language_List_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;7C4346A9-EFE0-4BFC-B229-393EDE415C85&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Metadata_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;C5F8CBEA-5BAF-4877-8467-AA8C44FA4CCA&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Metadata_Library_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;44231C94-9498-49D1-A141-1D134E457054&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Index_Parameters_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;D6E229DF-35DA-11D1-9034-00A0C90349BE&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Media_Object_Index_Parameters_Obj&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;6B203BAD-3F11-4E84-ACA8-D7613DE2CFA7&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Timecode_Index_Parameters_Object&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;F55E496D-9797-4B5D-8C8B-604DFE9BFB24&#39;</span><span class="p">),</span>
+
+    <span class="s">&#39;ASF_Audio_Media&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;F8699E40-5B4D-11CF-A8FD-00805F5C442B&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Video_Media&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;BC19EFC0-5B4D-11CF-A8FD-00805F5C442B&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Command_Media&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;59DACFC0-59E6-11D0-A3AC-00A0C90348F6&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_JFIF_Media&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;B61BE100-5B4E-11CF-A8FD-00805F5C442B&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Degradable_JPEG_Media&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;35907DE0-E415-11CF-A917-00805F5C442B&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_File_Transfer_Media&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;91BD222C-F21C-497A-8B6D-5AA86BFC0185&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Binary_Media&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;3AFB65E2-47EF-40F2-AC2C-70A90D71D343&#39;</span><span class="p">),</span>
+
+    <span class="s">&#39;ASF_Web_Stream_Media_Subtype&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;776257D4-C627-41CB-8F81-7AC7FF1C40CC&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Web_Stream_Format&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;DA1E6B13-8359-4050-B398-388E965BF00C&#39;</span><span class="p">),</span>
+
+    <span class="s">&#39;ASF_No_Error_Correction&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;20FB5700-5B55-11CF-A8FD-00805F5C442B&#39;</span><span class="p">),</span>
+    <span class="s">&#39;ASF_Audio_Spread&#39;</span> <span class="p">:</span> <span class="n">_guid</span><span class="p">(</span><span class="s">&#39;BFC3CD50-618F-11CF-8BB2-00AA00B4E220&#39;</span><span class="p">),</span>
+    <span class="p">}</span>
+
+
+<span class="k">class</span> <span class="nc">Asf</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ASF video parser. The ASF format is also used for Microsft Windows</span>
+<span class="sd">    Media files like wmv.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">AVContainer</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;video/x-ms-asf&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;asf format&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_languages</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">h</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="p">(</span><span class="n">guidstr</span><span class="p">,</span> <span class="n">objsize</span><span class="p">,</span> <span class="n">objnum</span><span class="p">,</span> <span class="n">reserved1</span><span class="p">,</span> \
+         <span class="n">reserved2</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;16sQIBB&#39;</span><span class="p">,</span><span class="n">h</span><span class="p">)</span>
+        <span class="n">guid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseguid</span><span class="p">(</span><span class="n">guidstr</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">guid</span> <span class="o">!=</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Header_Object&#39;</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">reserved1</span> <span class="o">!=</span> <span class="mh">0x01</span> <span class="ow">or</span> <span class="n">reserved2</span> <span class="o">!=</span> <span class="mh">0x02</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">core</span><span class="o">.</span><span class="n">ParseError</span><span class="p">()</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;asf header size: </span><span class="si">%d</span><span class="s"> / </span><span class="si">%d</span><span class="s"> objects&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">objsize</span><span class="p">,</span><span class="n">objnum</span><span class="p">))</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">objsize</span><span class="o">-</span><span class="mi">30</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">objnum</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getnextheader</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">]:]</span>
+
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_languages</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span>
+
+
+    <span class="k">def</span> <span class="nf">_findstream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">video</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">stream</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">stream</span>
+
+    <span class="k">def</span> <span class="nf">_apply_extinfo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">streamid</span><span class="p">):</span>
+        <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_findstream</span><span class="p">(</span><span class="n">streamid</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">stream</span> <span class="ow">or</span> <span class="n">streamid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">stream</span><span class="o">.</span><span class="n">bitrate</span><span class="p">,</span> <span class="n">stream</span><span class="o">.</span><span class="n">fps</span><span class="p">,</span> <span class="n">langid</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">[</span><span class="n">streamid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">langid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">langid</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">langid</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_languages</span><span class="p">):</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">language</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_languages</span><span class="p">[</span><span class="n">langid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;ASFMETADATA&#39;</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_parseguid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">string</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;IHHBB6s&#39;</span><span class="p">,</span> <span class="n">string</span><span class="p">[:</span><span class="mi">16</span><span class="p">])</span>
+
+
+    <span class="k">def</span> <span class="nf">_parsekv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">s</span><span class="p">):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="p">(</span><span class="n">descriptorlen</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="mi">2</span>
+        <span class="n">descriptorname</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="n">descriptorlen</span><span class="p">]</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="n">descriptorlen</span>
+        <span class="n">descriptortype</span><span class="p">,</span> <span class="n">valuelen</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;HH&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="mi">4</span>
+        <span class="n">descriptorvalue</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="n">valuelen</span><span class="p">]</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="n">valuelen</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0000</span><span class="p">:</span>
+            <span class="c"># Unicode string</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">descriptorvalue</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0001</span><span class="p">:</span>
+            <span class="c"># Byte Array</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">descriptorvalue</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0002</span><span class="p">:</span>
+            <span class="c"># Bool (?)</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0003</span><span class="p">:</span>
+            <span class="c"># DWORD</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0004</span><span class="p">:</span>
+            <span class="c"># QWORD</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;Q&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0005</span><span class="p">:</span>
+            <span class="c"># WORD</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Unknown Descriptor Type </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">descriptortype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">descriptorname</span><span class="p">,</span><span class="n">value</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_parsekv2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">s</span><span class="p">):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">strno</span><span class="p">,</span> <span class="n">descriptorlen</span><span class="p">,</span> <span class="n">descriptortype</span><span class="p">,</span> <span class="n">valuelen</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;2xHHHI&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="mi">12</span><span class="p">])</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="mi">12</span>
+        <span class="n">descriptorname</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="n">descriptorlen</span><span class="p">]</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="n">descriptorlen</span>
+        <span class="n">descriptorvalue</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="n">valuelen</span><span class="p">]</span>
+        <span class="n">pos</span> <span class="o">+=</span> <span class="n">valuelen</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0000</span><span class="p">:</span>
+            <span class="c"># Unicode string</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">descriptorvalue</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0001</span><span class="p">:</span>
+            <span class="c"># Byte Array</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">descriptorvalue</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0002</span><span class="p">:</span>
+            <span class="c"># Bool</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0003</span><span class="p">:</span>
+            <span class="c"># DWORD</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0004</span><span class="p">:</span>
+            <span class="c"># QWORD</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;Q&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">descriptortype</span> <span class="o">==</span> <span class="mh">0x0005</span><span class="p">:</span>
+            <span class="c"># WORD</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">descriptorvalue</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Unknown Descriptor Type </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">descriptortype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">descriptorname</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">strno</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_getnextheader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">s</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;16sQ&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">[:</span><span class="mi">24</span><span class="p">])</span>
+        <span class="p">(</span><span class="n">guidstr</span><span class="p">,</span><span class="n">objsize</span><span class="p">)</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="n">guid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseguid</span><span class="p">(</span><span class="n">guidstr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_File_Properties_Object&#39;</span><span class="p">]:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;File Properties Object&quot;</span><span class="p">)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;16s6Q4I&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">24</span><span class="o">+</span><span class="mi">80</span><span class="p">])</span>
+            <span class="p">(</span><span class="n">fileid</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">packetcount</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> \
+             <span class="n">senddur</span><span class="p">,</span> <span class="n">preroll</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">minpack</span><span class="p">,</span> <span class="n">maxpack</span><span class="p">,</span> <span class="n">maxbr</span><span class="p">)</span> <span class="o">=</span> \
+             <span class="n">val</span>
+            <span class="c"># FIXME: parse date to timestamp</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">duration</span><span class="o">/</span><span class="mf">10000000.0</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Stream_Properties_Object&#39;</span><span class="p">]:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Stream Properties Object [</span><span class="si">%d</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="n">objsize</span><span class="p">)</span>
+            <span class="n">streamtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseguid</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">40</span><span class="p">])</span>
+            <span class="n">errortype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parseguid</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">40</span><span class="p">:</span><span class="mi">56</span><span class="p">])</span>
+            <span class="n">offset</span><span class="p">,</span> <span class="n">typelen</span><span class="p">,</span> <span class="n">errorlen</span><span class="p">,</span> <span class="n">flags</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;QIIH&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">56</span><span class="p">:</span><span class="mi">74</span><span class="p">])</span>
+            <span class="n">strno</span> <span class="o">=</span> <span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0x7f</span>
+            <span class="n">encrypted</span> <span class="o">=</span> <span class="n">flags</span> <span class="o">&gt;&gt;</span> <span class="mi">15</span>
+            <span class="k">if</span> <span class="n">encrypted</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;encrypted&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">streamtype</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Video_Media&#39;</span><span class="p">]:</span>
+                <span class="n">vi</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">VideoStream</span><span class="p">()</span>
+                <span class="n">vi</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">vi</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">codec</span><span class="p">,</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;4xII2xH4s&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">89</span><span class="p">:</span><span class="mi">89</span><span class="o">+</span><span class="mi">20</span><span class="p">])</span>
+                <span class="n">vi</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">codec</span>
+                <span class="n">vi</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">strno</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vi</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">streamtype</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Audio_Media&#39;</span><span class="p">]:</span>
+                <span class="n">ai</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">AudioStream</span><span class="p">()</span>
+                <span class="n">twocc</span><span class="p">,</span> <span class="n">ai</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span> <span class="n">ai</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">bitrate</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> \
+                       <span class="n">ai</span><span class="o">.</span><span class="n">samplebits</span><span class="p">,</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;HHIIHH&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">78</span><span class="p">:</span><span class="mi">78</span><span class="o">+</span><span class="mi">16</span><span class="p">])</span>
+                <span class="n">ai</span><span class="o">.</span><span class="n">bitrate</span> <span class="o">=</span> <span class="mi">8</span><span class="o">*</span><span class="n">bitrate</span>
+                <span class="n">ai</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">twocc</span>
+                <span class="n">ai</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">strno</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ai</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_apply_extinfo</span><span class="p">(</span><span class="n">strno</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Extended_Stream_Properties_Object&#39;</span><span class="p">]:</span>
+            <span class="n">streamid</span><span class="p">,</span> <span class="n">langid</span><span class="p">,</span> <span class="n">frametime</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;HHQ&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">[</span><span class="mi">72</span><span class="p">:</span><span class="mi">84</span><span class="p">])</span>
+            <span class="p">(</span><span class="n">bitrate</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">40</span><span class="p">:</span><span class="mi">40</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">streamid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">[</span><span class="n">streamid</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="p">{}]</span>
+            <span class="k">if</span> <span class="n">frametime</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># Problaby VFR, report as 1000fps (which is what MPlayer does)</span>
+                <span class="n">frametime</span> <span class="o">=</span> <span class="mf">10000.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">[</span><span class="n">streamid</span><span class="p">][:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">bitrate</span><span class="p">,</span> <span class="mf">10000000.0</span> <span class="o">/</span> <span class="n">frametime</span><span class="p">,</span> <span class="n">langid</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_apply_extinfo</span><span class="p">(</span><span class="n">streamid</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Header_Extension_Object&#39;</span><span class="p">]:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;ASF_Header_Extension_Object </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">objsize</span><span class="p">)</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">[</span><span class="mi">42</span><span class="p">:</span><span class="mi">46</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">46</span><span class="p">:</span><span class="mi">46</span><span class="o">+</span><span class="n">size</span><span class="p">]</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Sub:&quot;</span><span class="p">)</span>
+                <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getnextheader</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">]:]</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Codec_List_Object&#39;</span><span class="p">]:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;List Object&quot;</span><span class="p">)</span>
+            <span class="k">pass</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Error_Correction_Object&#39;</span><span class="p">]:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Error Correction&quot;</span><span class="p">)</span>
+            <span class="k">pass</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Content_Description_Object&#39;</span><span class="p">]:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Content Description Object&quot;</span><span class="p">)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;5H&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">24</span><span class="o">+</span><span class="mi">10</span><span class="p">])</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="mi">34</span>
+            <span class="n">strings</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">val</span><span class="p">:</span>
+                <span class="n">ss</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+                <span class="n">strings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span>
+                <span class="n">pos</span><span class="o">+=</span><span class="n">i</span>
+
+            <span class="c"># Set empty strings to None</span>
+            <span class="n">strings</span> <span class="o">=</span> <span class="p">[</span> <span class="n">x</span> <span class="ow">or</span> <span class="bp">None</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">strings</span> <span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">artist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">copyright</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">caption</span><span class="p">,</span> <span class="n">rating</span> <span class="o">=</span> <span class="n">strings</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Extended_Content_Description_Object&#39;</span><span class="p">]:</span>
+            <span class="p">(</span><span class="n">count</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">26</span><span class="p">])</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="mi">26</span>
+            <span class="n">descriptor</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">count</span><span class="p">):</span>
+                <span class="c"># Read additional content descriptors</span>
+                <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parsekv</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
+                <span class="n">pos</span> <span class="o">+=</span> <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">descriptor</span><span class="p">[</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_appendtable</span><span class="p">(</span><span class="s">&#39;ASFDESCRIPTOR&#39;</span><span class="p">,</span> <span class="n">descriptor</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Metadata_Object&#39;</span><span class="p">]:</span>
+            <span class="p">(</span><span class="n">count</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">26</span><span class="p">])</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="mi">26</span>
+            <span class="n">streams</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">count</span><span class="p">):</span>
+                <span class="c"># Read additional content descriptors</span>
+                <span class="n">size</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">strno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parsekv2</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
+                <span class="k">if</span> <span class="n">strno</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">:</span>
+                    <span class="n">streams</span><span class="p">[</span><span class="n">strno</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">streams</span><span class="p">[</span><span class="n">strno</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="n">pos</span> <span class="o">+=</span> <span class="n">size</span>
+
+            <span class="k">for</span> <span class="n">strno</span><span class="p">,</span> <span class="n">metadata</span> <span class="ow">in</span> <span class="n">streams</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">strno</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">[</span><span class="n">strno</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="p">{}]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extinfo</span><span class="p">[</span><span class="n">strno</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_apply_extinfo</span><span class="p">(</span><span class="n">strno</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Language_List_Object&#39;</span><span class="p">]:</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">26</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="mi">26</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">count</span><span class="p">):</span>
+                <span class="n">idlen</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;B&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">idstring</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="o">+</span><span class="n">idlen</span><span class="p">]</span>
+                <span class="n">idstring</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">idstring</span><span class="p">,</span> <span class="s">&#39;utf-16&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\0</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Language: </span><span class="si">%d</span><span class="s">/</span><span class="si">%d</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">idstring</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_languages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idstring</span><span class="p">)</span>
+                <span class="n">pos</span> <span class="o">+=</span> <span class="mi">1</span><span class="o">+</span><span class="n">idlen</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Stream_Bitrate_Properties_Object&#39;</span><span class="p">]:</span>
+            <span class="c"># This record contains stream bitrate with payload overhead.  For</span>
+            <span class="c"># audio streams, we should have the average bitrate from</span>
+            <span class="c"># ASF_Stream_Properties_Object.  For video streams, we get it from</span>
+            <span class="c"># ASF_Extended_Stream_Properties_Object.  So this record is not</span>
+            <span class="c"># used.</span>
+            <span class="k">pass</span>
+
+        <span class="k">elif</span> <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Content_Encryption_Object&#39;</span><span class="p">]</span> <span class="ow">or</span> \
+             <span class="n">guid</span> <span class="o">==</span> <span class="n">GUIDS</span><span class="p">[</span><span class="s">&#39;ASF_Extended_Content_Encryption_Object&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set</span><span class="p">(</span><span class="s">&#39;encrypted&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Just print the type:</span>
+            <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">GUIDS</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">GUIDS</span><span class="p">[</span><span class="n">h</span><span class="p">]</span> <span class="o">==</span> <span class="n">guid</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Unparsed </span><span class="si">%s</span><span class="s"> [</span><span class="si">%d</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span><span class="n">objsize</span><span class="p">))</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">u</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%.8X</span><span class="s">-</span><span class="si">%.4X</span><span class="s">-</span><span class="si">%.4X</span><span class="s">-</span><span class="si">%.2X%.2X</span><span class="s">-</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">guid</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;unknown: len=</span><span class="si">%d</span><span class="s"> [</span><span class="si">%d</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">objsize</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+
+<span class="k">class</span> <span class="nc">AsfAudio</span><span class="p">(</span><span class="n">audiocore</span><span class="o">.</span><span class="n">Audio</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ASF audio parser for wma files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">audiocore</span><span class="o">.</span><span class="n">Audio</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mime</span> <span class="o">=</span> <span class="s">&#39;audio/x-ms-asf&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;asf format&#39;</span>
+
+
+<div class="viewcode-block" id="Parser"><a class="viewcode-back" href="../../../../pytomo.kaa_metadata.video.html#pytomo.kaa_metadata.video.asf.Parser">[docs]</a><span class="k">def</span> <span class="nf">Parser</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper around audio and av content.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">asf</span> <span class="o">=</span> <span class="n">Asf</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">asf</span><span class="o">.</span><span class="n">audio</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">asf</span><span class="o">.</span><span class="n">video</span><span class="p">):</span>
+        <span class="c"># AV container</span>
+        <span class="k">return</span> <span class="n">asf</span>
+    <span class="c"># No video but audio streams. Handle has audio core</span>
+    <span class="n">audio</span> <span class="o">=</span> <span class="n">AsfAudio</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">audio</span><span class="o">.</span><span class="n">_keys</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">asf</span><span class="o">.</span><span class="n">_keys</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">asf</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">audio</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

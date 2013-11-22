@@ -1,0 +1,299 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.config_pytomo &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.config_pytomo</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;The config file for the pytomo setup</span>
+<span class="sd">Lines starting with # are comments</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">DEBUG</span><span class="p">,</span> <span class="n">INFO</span><span class="p">,</span> <span class="n">WARNING</span><span class="p">,</span> <span class="n">ERROR</span><span class="p">,</span> <span class="n">CRITICAL</span>
+
+<span class="c"># use package directory for storing files</span>
+<span class="c"># put it False if you want files in the current working dir (from where pytomo</span>
+<span class="c"># is launched)</span>
+<span class="n">USE_PACKAGE_DIR</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c"># execute crawl without prompting user for any parameters</span>
+<span class="c"># put to True if you are running jobs automatically</span>
+<span class="n">BATCH_MODE</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c">#PROVIDER = None</span>
+<span class="n">PROVIDER</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+<span class="n">RESULT_DIR</span> <span class="o">=</span> <span class="s">&#39;results&#39;</span>
+<span class="n">RESULT_FILE</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="c">#RESULT_FILE = &#39;pytomo.result&#39;</span>
+
+<span class="n">DATABASE_DIR</span> <span class="o">=</span> <span class="s">&#39;databases&#39;</span>
+<span class="n">DATABASE</span> <span class="o">=</span> <span class="s">&#39;pytomo_database.db&#39;</span>
+<span class="c"># DO NOT USE ANY . OR - IN THE TABLE NAME</span>
+<span class="n">TABLE</span> <span class="o">=</span> <span class="s">&#39;pytomo_crawl&#39;</span>
+
+<span class="n">LOG_DIR</span> <span class="o">=</span> <span class="s">&#39;logs&#39;</span>
+<span class="c"># log file use &#39;-&#39; for standard output</span>
+<span class="n">LOG_FILE</span> <span class="o">=</span> <span class="s">&#39;pytomo.log&#39;</span>
+<span class="c">#LOG_FILE = &#39;-&#39;</span>
+
+<span class="c"># log level</span>
+<span class="c"># choose from: DEBUG, INFO, WARNING, ERROR and CRITICAL</span>
+<span class="n">LOG_LEVEL</span> <span class="o">=</span> <span class="n">DEBUG</span>
+
+<span class="c"># log the public IP address</span>
+<span class="n">LOG_PUBLIC_IP</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="c"># send the archive with the database and logs to the centralisation server</span>
+<span class="n">CENTRALISE_DATA</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c"># loop on input links</span>
+<span class="c">#LOOP = False</span>
+<span class="n">LOOP</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="c"># take related links</span>
+<span class="c">#RELATED = True</span>
+<span class="n">RELATED</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c"># Image file to save the graphs</span>
+<span class="n">PLOT</span> <span class="o">=</span> <span class="bp">False</span>
+ <span class="c"># List containig the column names to be plotted</span>
+<span class="n">COLUMN_NAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;DownloadBytes&#39;</span><span class="p">,</span> <span class="s">&#39;MaxInstantThp&#39;</span><span class="p">]</span>
+<span class="c"># Choose from  [ PingMin , PingAvg , PingMax , DownloadTime, VideoDuration</span>
+<span class="c"># VideoLength, EncodingRate, DownloadBytes, DownloadInterruptions,</span>
+<span class="c"># BufferingDuration, PlaybackDuration, BufferDurationAtEnd, MaxInstantThp]</span>
+
+<span class="n">IMAGE_FILE</span> <span class="o">=</span> <span class="s">&#39;pytomo_image.png&#39;</span>
+<span class="n">IMAGE_DIR</span> <span class="o">=</span> <span class="s">&#39;plots&#39;</span>
+
+<span class="c"># directories used by the graphical interface</span>
+<span class="n">RRD_FILE</span> <span class="o">=</span> <span class="s">&#39;pytomo.rrd&#39;</span>
+<span class="n">RRD_DIR</span> <span class="o">=</span> <span class="s">&#39;rrds&#39;</span>
+<span class="n">RRD_PLOT_DIR</span> <span class="o">=</span> <span class="s">&#39;images&#39;</span>
+<span class="n">TEMPLATE_FILE</span> <span class="o">=</span> <span class="s">&#39;index.html&#39;</span>
+<span class="n">TEMPLATES_DIR</span> <span class="o">=</span> <span class="s">&#39;templates&#39;</span>
+<span class="n">DOC_DIR</span> <span class="o">=</span> <span class="s">&#39;templates/doc/&#39;</span>
+<span class="n">PDF_FILE</span> <span class="o">=</span> <span class="s">&#39;report.pdf&#39;</span>
+<span class="n">PDF_DIR</span> <span class="o">=</span> <span class="s">&#39;pdfs&#39;</span>
+<span class="c"># graphical interface default port to run on</span>
+<span class="n">WEB_DEFAULT_PORT</span> <span class="o">=</span> <span class="s">&#39;5555&#39;</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># for start_pytomo.py</span>
+
+<span class="n">STATIC_URL_LIST</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">INPUT_FILE</span> <span class="o">=</span> <span class="bp">None</span>
+
+<span class="c"># Max number of rounds to perform</span>
+<span class="n">MAX_ROUNDS</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">MAX_CRAWLED_URLS</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="c"># Max number of related videos from each url</span>
+<span class="n">MAX_PER_URL</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="c"># Max number of related videos from each page</span>
+<span class="n">MAX_PER_PAGE</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="c"># timeframe for the most popular videos fetch at start of crawl</span>
+<span class="c"># put &#39;today&#39;, &#39;week&#39;, &#39;month&#39; or &#39;all_time&#39; (default case)</span>
+<span class="n">TIME_FRAME</span> <span class="o">=</span> <span class="s">&#39;week&#39;</span>
+
+<span class="c">#Time delay between consecutive url crawls and download requests (in seconds)</span>
+<span class="n">DELAY_BETWEEN_REQUESTS</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="c"># Max duration of round for getting input links</span>
+<span class="n">MAX_ROUND_DURATION</span> <span class="o">=</span> <span class="mi">600</span>
+
+<span class="n">IPADDR_TIMEOUT</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="c"># choose between &#39;youtube&#39; and &#39;dailymotion&#39;</span>
+<span class="n">CRAWL_SERVICE</span> <span class="o">=</span> <span class="s">&#39;youtube&#39;</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># for lib_cache_url.py</span>
+<span class="c"># proxy to set at command line</span>
+<span class="n">PROXIES</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="c"># replace with your values</span>
+<span class="c">#PROXIES = {&#39;http&#39;: &#39;http://www.example.com:3128/&#39;}</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># for lib_dns.py</span>
+
+<span class="c"># other DNS servers to query</span>
+<span class="n">GOOGLE_PUBLIC_DNS</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;google_public_dns&#39;</span><span class="p">,</span> <span class="s">&#39;8.8.8.8&#39;</span><span class="p">)</span>
+<span class="n">OPEN_DNS</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;open_dns&#39;</span><span class="p">,</span> <span class="s">&#39;208.67.220.220&#39;</span><span class="p">)</span>
+<span class="c"># The lifetime of a DNS query(in seconds). The default is 30 seconds.</span>
+<span class="n">DNS_TIMEOUT</span> <span class="o">=</span> <span class="mf">4.0</span>
+<span class="n">EXTRA_NAME_SERVERS</span> <span class="o">=</span> <span class="p">[</span><span class="n">GOOGLE_PUBLIC_DNS</span><span class="p">,</span> <span class="n">OPEN_DNS</span><span class="p">]</span>
+<span class="c">#EXTRA_NAME_SERVERS = []</span>
+<span class="c"># also download video from IPs resolved by other DNS servers</span>
+<span class="n">DOWNLOAD_FROM_EXTRA_IPS</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c"># just for sharing the servers between the modules</span>
+<span class="n">EXTRA_NAME_SERVERS_CC</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c"># HTTP codes to check for redirects.</span>
+<span class="n">HTTP_REDIRECT_CODE</span> <span class="o">=</span> <span class="mi">301</span>
+<span class="n">HTTP_OK</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">MAX_NB_REDIRECT</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># for lib_ping.py</span>
+<span class="c"># nb of packets to send for ping stats</span>
+<span class="n">PING_PACKETS</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># for lib_youtube_download.py</span>
+<span class="n">DOWNLOAD_TIME</span> <span class="o">=</span> <span class="mf">30.0</span>
+<span class="n">FREQ_FULL_DOWNLOAD</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="c">#FREQ_FULL_DOWNLOAD = 40</span>
+<span class="n">MAX_DOWNLOAD_TIME</span> <span class="o">=</span> <span class="mf">600.0</span>
+<span class="n">INITIAL_BUFFER</span> <span class="o">=</span> <span class="mf">2.0</span>
+<span class="n">MIN_PLAYOUT_BUFFER</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="n">MIN_PLAYOUT_RESTART</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="c"># Initial playback buffer duration in milliseconds</span>
+<span class="n">INITIAL_PLAYBACK_DURATION</span> <span class="o">=</span> <span class="mi">2000</span>
+
+<span class="c"># nb of tries for extracting metadata info from video</span>
+<span class="n">MAX_NB_TRIES_ENCODING</span> <span class="o">=</span> <span class="mi">9</span>
+
+<span class="c"># demo mode!</span>
+<span class="n">DEMO</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c">#EXTRA_COUNTRY = None</span>
+<span class="c"># for Tunisia</span>
+<span class="c">#EXTRA_COUNTRY = &#39;TN&#39;</span>
+<span class="c"># for France</span>
+<span class="n">EXTRA_COUNTRY</span> <span class="o">=</span> <span class="s">&#39;FR&#39;</span>
+
+<span class="c">################################################################################</span>
+<span class="c">################################################################################</span>
+<span class="c"># to be set by start_pytomo.py: DO NOT CHANGE</span>
+<span class="n">LOG</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">LOG_FILE_TIMESTAMP</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">DATABASE_TIMESTAMP</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">TABLE_TIMESTAMP</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">SYSTEM</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">RTT</span> <span class="o">=</span> <span class="bp">None</span>
+
+<span class="n">SEP_LINE</span> <span class="o">=</span> <span class="mi">80</span> <span class="o">*</span> <span class="s">&#39;#&#39;</span>
+<span class="n">NB_IDENT_VALUES</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">NB_PING_VALUES</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">NB_DOWNLOAD_VALUES</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">NB_RELATED_VALUES</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">NB_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="n">NB_IDENT_VALUES</span> <span class="o">+</span> <span class="n">NB_PING_VALUES</span> <span class="o">+</span> <span class="n">NB_DOWNLOAD_VALUES</span>
+             <span class="o">+</span> <span class="n">NB_RELATED_VALUES</span><span class="p">)</span>
+
+<span class="n">USER_INPUT_TIMEOUT</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">CRAWLED_URLS_MODULO</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="n">LEVEL_TO_NAME</span> <span class="o">=</span> <span class="p">{</span><span class="n">DEBUG</span><span class="p">:</span> <span class="s">&#39;DEBUG&#39;</span><span class="p">,</span>
+                 <span class="n">INFO</span><span class="p">:</span> <span class="s">&#39;INFO&#39;</span><span class="p">,</span>
+                 <span class="n">WARNING</span><span class="p">:</span> <span class="s">&#39;WARNING&#39;</span><span class="p">,</span>
+                 <span class="n">ERROR</span><span class="p">:</span> <span class="s">&#39;ERROR&#39;</span><span class="p">,</span>
+                 <span class="n">CRITICAL</span><span class="p">:</span> <span class="s">&#39;CRITICAL&#39;</span><span class="p">}</span>
+
+<span class="n">NAME_TO_LEVEL</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;DEBUG&#39;</span><span class="p">:</span> <span class="n">DEBUG</span><span class="p">,</span>
+                 <span class="s">&#39;INFO&#39;</span><span class="p">:</span> <span class="n">INFO</span><span class="p">,</span>
+                 <span class="s">&#39;WARNING&#39;</span><span class="p">:</span> <span class="n">WARNING</span><span class="p">,</span>
+                 <span class="s">&#39;ERROR&#39;</span><span class="p">:</span> <span class="n">ERROR</span><span class="p">,</span>
+                 <span class="s">&#39;CRITICAL&#39;</span><span class="p">:</span> <span class="n">CRITICAL</span><span class="p">}</span>
+
+<span class="c"># set for NOT computing stats on already seen IP addresses</span>
+<span class="n">SKIP_COMPUTED</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># black list utils</span>
+
+<span class="n">BLACK_LISTED</span> <span class="o">=</span> <span class="s">&#39;das_captcha&#39;</span>
+
+<div class="viewcode-block" id="BlackListException"><a class="viewcode-back" href="../../pytomo.html#pytomo.config_pytomo.BlackListException">[docs]</a><span class="k">class</span> <span class="nc">BlackListException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="s">&quot;Exception in case the crawler has been blacklisted&quot;</span>
+    <span class="k">pass</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

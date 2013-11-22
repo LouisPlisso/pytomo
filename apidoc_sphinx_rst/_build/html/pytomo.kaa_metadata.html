@@ -1,0 +1,372 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>kaa_metadata Package &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="index.html" />
+    <link rel="up" title="pytomo Package" href="pytomo.html" />
+    <link rel="next" title="audio Package" href="pytomo.kaa_metadata.audio.html" />
+    <link rel="prev" title="scripts Package" href="pytomo.flvlib.scripts.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.audio.html" title="audio Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.flvlib.scripts.html" title="scripts Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" accesskey="U">pytomo Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="kaa-metadata-package">
+<h1>kaa_metadata Package<a class="headerlink" href="#kaa-metadata-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">kaa_metadata</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pytomo.kaa_metadata"></span></div>
+<div class="section" id="module-pytomo.kaa_metadata.core">
+<span id="core-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">core</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.core" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.kaa_metadata.core.Collection">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.core.</tt><tt class="descname">Collection</tt><a class="reference internal" href="_modules/pytomo/kaa_metadata/core.html#Collection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.core.Collection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytomo.kaa_metadata.core.Media" title="pytomo.kaa_metadata.core.Media"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.kaa_metadata.core.Media</span></tt></a></p>
+<p>Collection of Digial Media like CD, DVD, Directory, Playlist</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.kaa_metadata.core.Media">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.core.</tt><tt class="descname">Media</tt><big>(</big><em>hash=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/core.html#Media"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.core.Media" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="pytomo.kaa_metadata.core.Media.convert">
+<tt class="descname">convert</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/core.html#Media.convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.core.Media.convert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert Media to dict.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.core.Media.get">
+<tt class="descname">get</tt><big>(</big><em>attr</em>, <em>default=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/core.html#Media.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.core.Media.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the given attribute. If the attribute is not set by
+the parser return &#8216;default&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.core.Media.has_key">
+<tt class="descname">has_key</tt><big>(</big><em>key</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/core.html#Media.has_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.core.Media.has_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if the object has an attribute &#8216;key&#8217;</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pytomo.kaa_metadata.core.Media.keys">
+<tt class="descname">keys</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/core.html#Media.keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.core.Media.keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return all keys for the attributes set by the parser.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.core.Media.media">
+<tt class="descname">media</tt><em class="property"> = None</em><a class="headerlink" href="#pytomo.kaa_metadata.core.Media.media" title="Permalink to this definition">¶</a></dt>
+<dd><p>Media is the base class to all Media Metadata Containers. It defines
+the basic structures that handle metadata. Media and its derivates
+contain a common set of metadata attributes that is listed in keys.
+Specific derivates contain additional keys to the dublin core set that is
+defined in Media.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.core.Media.table_mapping">
+<tt class="descname">table_mapping</tt><em class="property"> = {}</em><a class="headerlink" href="#pytomo.kaa_metadata.core.Media.table_mapping" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="pytomo.kaa_metadata.core.ParseError">
+<em class="property">exception </em><tt class="descclassname">pytomo.kaa_metadata.core.</tt><tt class="descname">ParseError</tt><a class="reference internal" href="_modules/pytomo/kaa_metadata/core.html#ParseError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.core.ParseError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.factory">
+<span id="factory-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">factory</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.factory" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pytomo.kaa_metadata.factory.register">
+<tt class="descclassname">pytomo.kaa_metadata.factory.</tt><tt class="descname">register</tt><big>(</big><em>mimetype</em>, <em>extensions</em>, <em>c</em>, <em>magic=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/factory.html#register"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.factory.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a parser to the factory.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.factory.gettype">
+<tt class="descclassname">pytomo.kaa_metadata.factory.</tt><tt class="descname">gettype</tt><big>(</big><em>mimetype</em>, <em>extensions</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/factory.html#gettype"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.factory.gettype" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return parser for mimetype / extensions</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.factory.parse">
+<tt class="descclassname">pytomo.kaa_metadata.factory.</tt><tt class="descname">parse</tt><big>(</big><em>filename</em>, <em>force=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/factory.html#parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.factory.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>parse a file</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.fourcc">
+<span id="fourcc-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">fourcc</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.fourcc" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pytomo.kaa_metadata.fourcc.resolve">
+<tt class="descclassname">pytomo.kaa_metadata.fourcc.</tt><tt class="descname">resolve</tt><big>(</big><em>code</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/fourcc.html#resolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.fourcc.resolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform a twocc or fourcc code into a name.  Returns a 2-tuple of (cc,
+codec) where both are strings and cc is a string in the form &#8216;0xXX&#8217; if it&#8217;s
+a twocc, or &#8216;ABCD&#8217; if it&#8217;s a fourcc.  If the given code is not a known
+twocc or fourcc, the return value will be (None, &#8216;Unknown&#8217;), unless the
+code is otherwise a printable string in which case it will be returned as
+the codec.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.language">
+<span id="language-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">language</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.language" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pytomo.kaa_metadata.language.resolve">
+<tt class="descclassname">pytomo.kaa_metadata.language.</tt><tt class="descname">resolve</tt><big>(</big><em>code</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/language.html#resolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.language.resolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform the given (2- or 3-letter) language code to a human readable
+language name.  The return value is a 2-tuple containing the given
+language code and the language name.  If the language code cannot be
+resolved, name will be &#8216;Unknown (&lt;code&gt;)&#8217;.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.strutils">
+<span id="strutils-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">strutils</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.strutils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.get_encoding">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">get_encoding</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#get_encoding"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.get_encoding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the current encoding.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.set_encoding">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">set_encoding</tt><big>(</big><em>encoding</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#set_encoding"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.set_encoding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set default character encoding. This function also sets the global Python
+encoding.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.utf8">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">utf8</tt><big>(</big><em>s</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#utf8"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.utf8" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a UTF-8 string, converting from other character sets if
+necessary.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.str_to_unicode">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">str_to_unicode</tt><big>(</big><em>s</em>, <em>encoding=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#str_to_unicode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.str_to_unicode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to convert a string of unknown character set to a unicode
+string.  First it tries to decode the string based on the locale&#8217;s
+preferred encoding, and if that fails, fall back to UTF-8 and then
+latin-1.  If all fails, it will force encoding to the preferred
+charset, replacing unknown characters. If the given object is no
+string, this function will return the given object.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.unicode_to_str">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">unicode_to_str</tt><big>(</big><em>s</em>, <em>encoding=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#unicode_to_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.unicode_to_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to convert a unicode string of unknown character set to a
+string.  First it tries to encode the string based on the locale&#8217;s
+preferred encoding, and if that fails, fall back to UTF-8 and then
+latin-1.  If all fails, it will force encoding to the preferred
+charset, replacing unknown characters. If the given object is no
+unicode string, this function will return the given object.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.format">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">format</tt><big>(</big><em>s</em>, <em>*args</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#format"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.format" title="Permalink to this definition">¶</a></dt>
+<dd><p>Format a string and make sure all string or unicode arguments are
+converted to the correct type.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.to_unicode">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">to_unicode</tt><big>(</big><em>s</em>, <em>encoding=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#to_unicode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.to_unicode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to convert every object to an unicode string using the objects
+__unicode__ or __str__ function or str_to_unicode.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pytomo.kaa_metadata.strutils.to_str">
+<tt class="descclassname">pytomo.kaa_metadata.strutils.</tt><tt class="descname">to_str</tt><big>(</big><em>s</em>, <em>encoding=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/strutils.html#to_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.strutils.to_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to convert every object to a string using the objects
+__unicode__ or __str__ function or unicode_to_str.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.version">
+<span id="version-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">version</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.version" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pytomo.kaa_metadata.audio.html">audio Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.ID3"><tt class="docutils literal"><span class="pre">ID3</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.ac3"><tt class="docutils literal"><span class="pre">ac3</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.adts"><tt class="docutils literal"><span class="pre">adts</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.flac"><tt class="docutils literal"><span class="pre">flac</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.m4a"><tt class="docutils literal"><span class="pre">m4a</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.mp3"><tt class="docutils literal"><span class="pre">mp3</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.ogg"><tt class="docutils literal"><span class="pre">ogg</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.pcm"><tt class="docutils literal"><span class="pre">pcm</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.audio.html#module-pytomo.kaa_metadata.audio.webradio"><tt class="docutils literal"><span class="pre">webradio</span></tt> Module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pytomo.kaa_metadata.image.html">image Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#id1"><tt class="docutils literal"><span class="pre">image</span></tt> Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.EXIF"><tt class="docutils literal"><span class="pre">EXIF</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.IPTC"><tt class="docutils literal"><span class="pre">IPTC</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.bmp"><tt class="docutils literal"><span class="pre">bmp</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#generic-module"><tt class="docutils literal"><span class="pre">generic</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.gif"><tt class="docutils literal"><span class="pre">gif</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.jpg"><tt class="docutils literal"><span class="pre">jpg</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.png"><tt class="docutils literal"><span class="pre">png</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.image.html#module-pytomo.kaa_metadata.image.tiff"><tt class="docutils literal"><span class="pre">tiff</span></tt> Module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pytomo.kaa_metadata.misc.html">misc Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.misc.html#module-pytomo.kaa_metadata.misc.directory"><tt class="docutils literal"><span class="pre">directory</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.misc.html#module-pytomo.kaa_metadata.misc.xmlfile"><tt class="docutils literal"><span class="pre">xmlfile</span></tt> Module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pytomo.kaa_metadata.video.html">video Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.asf"><tt class="docutils literal"><span class="pre">asf</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.flv"><tt class="docutils literal"><span class="pre">flv</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.mkv"><tt class="docutils literal"><span class="pre">mkv</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.mp4"><tt class="docutils literal"><span class="pre">mp4</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.mpeg"><tt class="docutils literal"><span class="pre">mpeg</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.ogm"><tt class="docutils literal"><span class="pre">ogm</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.real"><tt class="docutils literal"><span class="pre">real</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.riff"><tt class="docutils literal"><span class="pre">riff</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.kaa_metadata.video.html#module-pytomo.kaa_metadata.video.vcd"><tt class="docutils literal"><span class="pre">vcd</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">kaa_metadata Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">kaa_metadata</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.factory"><tt class="docutils literal"><span class="pre">factory</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.fourcc"><tt class="docutils literal"><span class="pre">fourcc</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.language"><tt class="docutils literal"><span class="pre">language</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.strutils"><tt class="docutils literal"><span class="pre">strutils</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.version"><tt class="docutils literal"><span class="pre">version</span></tt> Module</a></li>
+<li><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pytomo.flvlib.scripts.html"
+                        title="previous chapter">scripts Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pytomo.kaa_metadata.audio.html"
+                        title="next chapter">audio Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/pytomo.kaa_metadata.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.audio.html" title="audio Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.flvlib.scripts.html" title="scripts Package"
+             >previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

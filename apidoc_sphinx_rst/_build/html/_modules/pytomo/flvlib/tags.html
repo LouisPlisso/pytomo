@@ -1,0 +1,454 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.flvlib.tags &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.flvlib.tags</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">primitives</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">constants</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">astypes</span> <span class="kn">import</span> <span class="n">MalformedFLV</span>
+<span class="kn">from</span> <span class="nn">astypes</span> <span class="kn">import</span> <span class="n">get_script_data_variable</span><span class="p">,</span> <span class="n">make_script_data_variable</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;flvlib.tags&#39;</span><span class="p">)</span>
+
+<span class="n">STRICT_PARSING</span> <span class="o">=</span> <span class="bp">False</span>
+<div class="viewcode-block" id="strict_parser"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.strict_parser">[docs]</a><span class="k">def</span> <span class="nf">strict_parser</span><span class="p">():</span>
+    <span class="k">return</span> <span class="nb">globals</span><span class="p">()[</span><span class="s">&#39;STRICT_PARSING&#39;</span><span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="EndOfTags"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.EndOfTags">[docs]</a><span class="k">class</span> <span class="nc">EndOfTags</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="ensure"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.ensure">[docs]</a><span class="k">def</span> <span class="nf">ensure</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="n">expected</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">strict_parser</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;Skipping non-conformant value in FLV file&#39;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Tag"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.Tag">[docs]</a><span class="k">class</span> <span class="nc">Tag</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_flv</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_flv</span> <span class="o">=</span> <span class="n">parent_flv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="Tag.parse"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.Tag.parse">[docs]</a>    <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="c"># DataSize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">get_ui24</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="c"># Timestamp + TimestampExtended</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">get_si32_extended</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&quot;The tag at offset 0x</span><span class="si">%08X</span><span class="s"> has negative timestamp: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span>
+
+        <span class="c"># StreamID</span>
+        <span class="n">stream_id</span> <span class="o">=</span> <span class="n">get_ui24</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">ensure</span><span class="p">(</span><span class="n">stream_id</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;StreamID non zero: 0x</span><span class="si">%06X</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">stream_id</span><span class="p">)</span>
+
+        <span class="c"># The rest gets parsed in the subclass, it should move f to the</span>
+        <span class="c"># correct position to read PreviousTagSize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parse_tag_content</span><span class="p">()</span>
+
+        <span class="n">previous_tag_size</span> <span class="o">=</span> <span class="n">get_ui32</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">ensure</span><span class="p">(</span><span class="n">previous_tag_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">11</span><span class="p">,</span>
+               <span class="s">&quot;PreviousTagSize of </span><span class="si">%d</span><span class="s"> (0x</span><span class="si">%08X</span><span class="s">) &quot;</span>
+               <span class="s">&quot;not equal to actual tag size of </span><span class="si">%d</span><span class="s"> (0x</span><span class="si">%08X</span><span class="s">)&quot;</span> <span class="o">%</span>
+               <span class="p">(</span><span class="n">previous_tag_size</span><span class="p">,</span> <span class="n">previous_tag_size</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">11</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">11</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Tag.parse_tag_content"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.Tag.parse_tag_content">[docs]</a>    <span class="k">def</span> <span class="nf">parse_tag_content</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># By default just seek past the tag content</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_CUR</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="AudioTag"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.AudioTag">[docs]</a><span class="k">class</span> <span class="nc">AudioTag</span><span class="p">(</span><span class="n">Tag</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_flv</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="n">Tag</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_flv</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_format</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_rate</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_size</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_type</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aac_packet_type</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c"># always None for non-AAC tags</span>
+
+<div class="viewcode-block" id="AudioTag.parse_tag_content"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.AudioTag.parse_tag_content">[docs]</a>    <span class="k">def</span> <span class="nf">parse_tag_content</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span>
+
+        <span class="n">sound_flags</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">read_bytes</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_format</span> <span class="o">=</span> <span class="p">(</span><span class="n">sound_flags</span> <span class="o">&amp;</span> <span class="mh">0xF0</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_rate</span> <span class="o">=</span> <span class="p">(</span><span class="n">sound_flags</span> <span class="o">&amp;</span> <span class="mh">0xC</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">sound_flags</span> <span class="o">&amp;</span> <span class="mh">0x2</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sound_type</span> <span class="o">=</span> <span class="n">sound_flags</span> <span class="o">&amp;</span> <span class="mh">0x1</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sound_format</span> <span class="o">==</span> <span class="n">SOUND_FORMAT_AAC</span><span class="p">:</span>
+            <span class="c"># AAC packets can be sequence headers or raw data.</span>
+            <span class="c"># The former contain codec information needed by the decoder to be</span>
+            <span class="c"># able to interpret the rest of the data.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aac_packet_type</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">read_bytes</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c"># AAC always has sampling rate of 44 kHz</span>
+            <span class="n">ensure</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sound_rate</span><span class="p">,</span> <span class="n">SOUND_RATE_44_KHZ</span><span class="p">,</span>
+                   <span class="s">&quot;AAC sound format with incorrect sound rate: </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">sound_rate</span><span class="p">)</span>
+            <span class="c"># AAC is always stereo</span>
+            <span class="n">ensure</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sound_type</span><span class="p">,</span> <span class="n">SOUND_TYPE_STEREO</span><span class="p">,</span>
+                   <span class="s">&quot;AAC sound format with incorrect sound type: </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">sound_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">strict_parser</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">sound_format_to_string</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sound_format</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;Invalid sound format: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">sound_format</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aac_packet_type</span> <span class="ow">and</span>
+                 <span class="n">aac_packet_type_to_string</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">aac_packet_type</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;Invalid AAC packet type: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">aac_packet_type</span><span class="p">)</span>
+
+        <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">read_bytes</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_CUR</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;&lt;AudioTag unparsed&gt;&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">aac_packet_type</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s">&quot;&lt;AudioTag at offset 0x</span><span class="si">%08X</span><span class="s">, time </span><span class="si">%d</span><span class="s">, size </span><span class="si">%d</span><span class="s">, </span><span class="si">%s</span><span class="s">&gt;&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                     <span class="n">sound_format_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sound_format</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s">&quot;&lt;AudioTag at offset 0x</span><span class="si">%08X</span><span class="s">, time </span><span class="si">%d</span><span class="s">, size </span><span class="si">%d</span><span class="s">, </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">&gt;&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                     <span class="n">sound_format_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sound_format</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">),</span>
+                     <span class="n">aac_packet_type_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aac_packet_type</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">)))</span>
+
+</div>
+<div class="viewcode-block" id="VideoTag"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.VideoTag">[docs]</a><span class="k">class</span> <span class="nc">VideoTag</span><span class="p">(</span><span class="n">Tag</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_flv</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="n">Tag</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_flv</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame_type</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">codec_id</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h264_packet_type</span> <span class="o">=</span> <span class="bp">None</span> <span class="c"># Always None for non-H.264 tags</span>
+
+<div class="viewcode-block" id="VideoTag.parse_tag_content"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.VideoTag.parse_tag_content">[docs]</a>    <span class="k">def</span> <span class="nf">parse_tag_content</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span>
+
+        <span class="n">video_flags</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">read_bytes</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame_type</span> <span class="o">=</span> <span class="p">(</span><span class="n">video_flags</span> <span class="o">&amp;</span> <span class="mh">0xF0</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">codec_id</span> <span class="o">=</span> <span class="n">video_flags</span> <span class="o">&amp;</span> <span class="mh">0xF</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">codec_id</span> <span class="o">==</span> <span class="n">CODEC_ID_H264</span><span class="p">:</span>
+            <span class="c"># H.264 packets can be sequence headers, NAL units or sequence</span>
+            <span class="c"># ends.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">h264_packet_type</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">read_bytes</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">strict_parser</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">frame_type_to_string</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frame_type</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;Invalid frame type: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame_type</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">codec_id_to_string</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">codec_id</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;Invalid codec ID: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">codec_id</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h264_packet_type</span> <span class="ow">and</span>
+                 <span class="n">h264_packet_type_to_string</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">h264_packet_type</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;Invalid H.264 packet type: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">h264_packet_type</span><span class="p">)</span>
+
+        <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">read_bytes</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_CUR</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;&lt;VideoTag unparsed&gt;&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">h264_packet_type</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s">&quot;&lt;VideoTag at offset 0x</span><span class="si">%08X</span><span class="s">, time </span><span class="si">%d</span><span class="s">, size </span><span class="si">%d</span><span class="s">, </span><span class="si">%s</span><span class="s"> (</span><span class="si">%s</span><span class="s">)&gt;&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                     <span class="n">codec_id_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">codec_id</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">),</span>
+                     <span class="n">frame_type_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame_type</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s">&quot;&lt;VideoTag at offset 0x</span><span class="si">%08X</span><span class="s">, &quot;</span>
+                    <span class="s">&quot;time </span><span class="si">%d</span><span class="s">, size </span><span class="si">%d</span><span class="s">, </span><span class="si">%s</span><span class="s"> (</span><span class="si">%s</span><span class="s">), </span><span class="si">%s</span><span class="s">&gt;&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                     <span class="n">codec_id_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">codec_id</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">),</span>
+                     <span class="n">frame_type_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame_type</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">),</span>
+                     <span class="n">h264_packet_type_to_string</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">h264_packet_type</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">)))</span>
+
+</div>
+<div class="viewcode-block" id="ScriptTag"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.ScriptTag">[docs]</a><span class="k">class</span> <span class="nc">ScriptTag</span><span class="p">(</span><span class="n">Tag</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_flv</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="n">Tag</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_flv</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variable</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="ScriptTag.parse_tag_content"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.ScriptTag.parse_tag_content">[docs]</a>    <span class="k">def</span> <span class="nf">parse_tag_content</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span>
+
+        <span class="c"># Here there&#39;s always a byte with the value of 0x02,</span>
+        <span class="c"># which means &quot;string&quot;, although the spec says NOTHING</span>
+        <span class="c"># about it..</span>
+        <span class="n">value_type</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">ensure</span><span class="p">(</span><span class="n">value_type</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&quot;The name of a script tag is not a string&quot;</span><span class="p">)</span>
+
+        <span class="c"># Need to pass the tag end offset, because apparently YouTube</span>
+        <span class="c"># doesn&#39;t give a *shit* about the FLV spec and just happily</span>
+        <span class="c"># ends the onMetaData tag after self.size bytes, instead of</span>
+        <span class="c"># ending it with the *required* 0x09 marker. Bastards!</span>
+
+        <span class="k">if</span> <span class="n">strict_parser</span><span class="p">():</span>
+            <span class="c"># If we&#39;re strict, just don&#39;t pass this info</span>
+            <span class="n">tag_end</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># 11 = tag type (1) + data size (3) + timestamp (4) + stream id (3)</span>
+            <span class="n">tag_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">+</span> <span class="mi">11</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;max offset is 0x</span><span class="si">%08X</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">tag_end</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span> <span class="o">=</span> \
+                   <span class="n">get_script_data_variable</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">max_offset</span><span class="o">=</span><span class="n">tag_end</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;A script tag with a name of </span><span class="si">%s</span><span class="s"> and value of </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span>
+                  <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;&lt;ScriptTag unparsed&gt;&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s">&quot;&lt;ScriptTag </span><span class="si">%s</span><span class="s"> at offset 0x</span><span class="si">%08X</span><span class="s">, time </span><span class="si">%d</span><span class="s">, size </span><span class="si">%d</span><span class="s">&gt;&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+
+</div>
+<span class="n">tag_to_class</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">TAG_TYPE_AUDIO</span><span class="p">:</span> <span class="n">AudioTag</span><span class="p">,</span>
+    <span class="n">TAG_TYPE_VIDEO</span><span class="p">:</span> <span class="n">VideoTag</span><span class="p">,</span>
+    <span class="n">TAG_TYPE_SCRIPT</span><span class="p">:</span> <span class="n">ScriptTag</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="FLV"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.FLV">[docs]</a><span class="k">class</span> <span class="nc">FLV</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_audio</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_video</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="FLV.parse_header"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.FLV.parse_header">[docs]</a>    <span class="k">def</span> <span class="nf">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c"># FLV header</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;The file is shorter than 3 bytes&quot;</span><span class="p">)</span>
+
+        <span class="c"># Do this irrelevant of STRICT_PARSING, to catch bogus files</span>
+        <span class="k">if</span> <span class="n">header</span> <span class="o">!=</span> <span class="s">&quot;FLV&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;File signature is incorrect: 0x</span><span class="si">%X</span><span class="s"> 0x</span><span class="si">%X</span><span class="s"> 0x</span><span class="si">%X</span><span class="s">&quot;</span> <span class="o">%</span>
+                               <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;3B&quot;</span><span class="p">,</span> <span class="n">header</span><span class="p">))</span>
+
+        <span class="c"># File version</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;File version is </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span><span class="p">)</span>
+
+        <span class="c"># TypeFlags</span>
+        <span class="n">flags</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="n">ensure</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0xF8</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+               <span class="s">&quot;First TypeFlagsReserved field non zero: 0x</span><span class="si">%X</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0xF8</span><span class="p">))</span>
+        <span class="n">ensure</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0x2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+               <span class="s">&quot;Second TypeFlagsReserved field non zero: 0x</span><span class="si">%X</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0x2</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_audio</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_video</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0x4</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">has_audio</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">flags</span> <span class="o">&amp;</span> <span class="mh">0x1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">has_video</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;File </span><span class="si">%s</span><span class="s"> audio&quot;</span><span class="p">,</span>
+                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">has_audio</span> <span class="ow">and</span> <span class="s">&quot;has&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">&quot;does not have&quot;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;File </span><span class="si">%s</span><span class="s"> video&quot;</span><span class="p">,</span>
+                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">has_video</span> <span class="ow">and</span> <span class="s">&quot;has&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">&quot;does not have&quot;</span><span class="p">)</span>
+
+        <span class="n">header_size</span> <span class="o">=</span> <span class="n">get_ui32</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Header size is </span><span class="si">%d</span><span class="s"> bytes&quot;</span><span class="p">,</span> <span class="n">header_size</span><span class="p">)</span>
+
+        <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">header_size</span><span class="p">)</span>
+
+        <span class="n">tag_0_size</span> <span class="o">=</span> <span class="n">get_ui32</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">ensure</span><span class="p">(</span><span class="n">tag_0_size</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;PreviousTagSize0 non zero: 0x</span><span class="si">%08X</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">tag_0_size</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FLV.iter_tags"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.FLV.iter_tags">[docs]</a>    <span class="k">def</span> <span class="nf">iter_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parse_header</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="n">tag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_next_tag</span><span class="p">()</span>
+                <span class="k">yield</span> <span class="n">tag</span>
+        <span class="k">except</span> <span class="n">EndOfTags</span><span class="p">:</span>
+            <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="FLV.read_tags"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.FLV.read_tags">[docs]</a>    <span class="k">def</span> <span class="nf">read_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iter_tags</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="FLV.get_next_tag"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.FLV.get_next_tag">[docs]</a>    <span class="k">def</span> <span class="nf">get_next_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">tag_type</span> <span class="o">=</span> <span class="n">get_ui8</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">EndOfFile</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EndOfTags</span>
+
+        <span class="n">tag_klass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tag_type_to_class</span><span class="p">(</span><span class="n">tag_type</span><span class="p">)</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">tag_klass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+
+        <span class="n">tag</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">tag</span>
+</div>
+<div class="viewcode-block" id="FLV.tag_type_to_class"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.FLV.tag_type_to_class">[docs]</a>    <span class="k">def</span> <span class="nf">tag_type_to_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tag_type</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tag_to_class</span><span class="p">[</span><span class="n">tag_type</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MalformedFLV</span><span class="p">(</span><span class="s">&quot;Invalid tag type: </span><span class="si">%d</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">tag_type</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="create_flv_tag"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.create_flv_tag">[docs]</a><span class="k">def</span> <span class="nf">create_flv_tag</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">tag_type</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;B&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
+    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">make_si32_extended</span><span class="p">(</span><span class="n">timestamp</span><span class="p">)</span>
+    <span class="n">stream_id</span> <span class="o">=</span> <span class="n">make_ui24</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">data_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">tag_size</span> <span class="o">=</span> <span class="n">data_size</span> <span class="o">+</span> <span class="mi">11</span>
+
+    <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tag_type</span><span class="p">,</span> <span class="n">make_ui24</span><span class="p">(</span><span class="n">data_size</span><span class="p">),</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">stream_id</span><span class="p">,</span>
+                    <span class="n">data</span><span class="p">,</span> <span class="n">make_ui32</span><span class="p">(</span><span class="n">tag_size</span><span class="p">)])</span>
+
+</div>
+<div class="viewcode-block" id="create_script_tag"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.create_script_tag">[docs]</a><span class="k">def</span> <span class="nf">create_script_tag</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">make_ui8</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">make_script_data_variable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">create_flv_tag</span><span class="p">(</span><span class="n">TAG_TYPE_SCRIPT</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="create_flv_header"><a class="viewcode-back" href="../../../pytomo.flvlib.html#pytomo.flvlib.tags.create_flv_header">[docs]</a><span class="k">def</span> <span class="nf">create_flv_header</span><span class="p">(</span><span class="n">has_audio</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">has_video</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="n">type_flags</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">has_video</span><span class="p">:</span>
+        <span class="n">type_flags</span> <span class="o">=</span> <span class="n">type_flags</span> <span class="o">|</span> <span class="mh">0x1</span>
+    <span class="k">if</span> <span class="n">has_audio</span><span class="p">:</span>
+        <span class="n">type_flags</span> <span class="o">=</span> <span class="n">type_flags</span> <span class="o">|</span> <span class="mh">0x4</span>
+    <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">&#39;FLV&#39;</span><span class="p">,</span> <span class="n">make_ui8</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">make_ui8</span><span class="p">(</span><span class="n">type_flags</span><span class="p">),</span> <span class="n">make_ui32</span><span class="p">(</span><span class="mi">9</span><span class="p">),</span>
+                    <span class="n">make_ui32</span><span class="p">(</span><span class="mi">0</span><span class="p">)])</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

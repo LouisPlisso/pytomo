@@ -1,0 +1,791 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<title>PYTOMO</title>
+<meta name="author" content="Louis Plissonneau, Parikshit Juluri, Mickaël Meulle" />
+<meta name="copyright" content="GPLv2" />
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: left }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document" id="pytomo">
+<h1 class="title">PYTOMO</h1>
+<table class="docinfo" frame="void" rules="none">
+<col class="docinfo-name" />
+<col class="docinfo-content" />
+<tbody valign="top">
+<tr><th class="docinfo-name">Author:</th>
+<td>Louis Plissonneau, Parikshit Juluri, Mickaël Meulle</td></tr>
+<tr><th class="docinfo-name">Version:</th>
+<td>0.4.0</td></tr>
+<tr><th class="docinfo-name">Copyright:</th>
+<td>GPLv2</td></tr>
+</tbody>
+</table>
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first">Table of Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#description" id="id2">1&nbsp;&nbsp;&nbsp;Description</a></li>
+<li><a class="reference internal" href="#usage-of-the-files" id="id3">2&nbsp;&nbsp;&nbsp;Usage of the files</a><ul class="auto-toc">
+<li><a class="reference internal" href="#start-crawl-py" id="id4">2.1&nbsp;&nbsp;&nbsp;start_crawl.py</a></li>
+<li><a class="reference internal" href="#description-txt" id="id5">2.2&nbsp;&nbsp;&nbsp;DESCRIPTION.txt</a></li>
+<li><a class="reference internal" href="#setup-py" id="id6">2.3&nbsp;&nbsp;&nbsp;setup.py</a></li>
+<li><a class="reference internal" href="#id1" id="id7">2.4&nbsp;&nbsp;&nbsp;pytomo/</a><ul class="auto-toc">
+<li><a class="reference internal" href="#start-pytomo-py" id="id8">2.4.1&nbsp;&nbsp;&nbsp;start_pytomo.py:</a></li>
+<li><a class="reference internal" href="#config-pytomo-py" id="id9">2.4.2&nbsp;&nbsp;&nbsp;config_pytomo.py</a></li>
+<li><a class="reference internal" href="#lib-youtube-download-py" id="id10">2.4.3&nbsp;&nbsp;&nbsp;lib_youtube_download.py</a></li>
+<li><a class="reference internal" href="#lib-dns-py" id="id11">2.4.4&nbsp;&nbsp;&nbsp;lib_dns.py</a></li>
+<li><a class="reference internal" href="#lib-ping-py" id="id12">2.4.5&nbsp;&nbsp;&nbsp;lib_ping.py</a></li>
+<li><a class="reference internal" href="#lib-cache-url-py" id="id13">2.4.6&nbsp;&nbsp;&nbsp;lib_cache_url.py</a></li>
+<li><a class="reference internal" href="#lib-youtube-api-py" id="id14">2.4.7&nbsp;&nbsp;&nbsp;lib_youtube_api.py</a></li>
+<li><a class="reference internal" href="#lib-database-py" id="id15">2.4.8&nbsp;&nbsp;&nbsp;lib_database.py</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kaa-metadata" id="id16">2.5&nbsp;&nbsp;&nbsp;kaa_metadata</a></li>
+<li><a class="reference internal" href="#dns" id="id17">2.6&nbsp;&nbsp;&nbsp;dns</a></li>
+<li><a class="reference internal" href="#logs" id="id18">2.7&nbsp;&nbsp;&nbsp;logs/</a></li>
+<li><a class="reference internal" href="#databases" id="id19">2.8&nbsp;&nbsp;&nbsp;databases/</a></li>
+<li><a class="reference internal" href="#results" id="id20">2.9&nbsp;&nbsp;&nbsp;results/</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#external-links" id="id21">3&nbsp;&nbsp;&nbsp;External Links</a></li>
+</ul>
+</div>
+<div class="section" id="description">
+<h1><a class="toc-backref" href="#id2">1&nbsp;&nbsp;&nbsp;Description</a></h1>
+<p>Pytomo is a Python based tomographic tool to perform analysis of YouTube video
+download rates. We first select an initial list of videos that we would like to
+start the analysis with. For the videos in this list the Pytomo tool first finds
+the IP address of the cache servers on which these videos are located. The cache
+server is pinged to obtain the RTT times. Then we try to download the video for
+a limited amount of time to calculate the different statistics of the download.</p>
+<p>The more measures we get the better, so if you can advertise the use of this
+crawler on top of running it, it would help us improve <em>your</em> YouTube
+experience.</p>
+</div>
+<div class="section" id="usage-of-the-files">
+<h1><a class="toc-backref" href="#id3">2&nbsp;&nbsp;&nbsp;Usage of the files</a></h1>
+<div class="section" id="start-crawl-py">
+<h2><a class="toc-backref" href="#id4">2.1&nbsp;&nbsp;&nbsp;start_crawl.py</a></h2>
+<blockquote>
+The global launcher to launch the Pytomo tool. You will need to run this in
+order to start the data collection.</blockquote>
+</div>
+<div class="section" id="description-txt">
+<h2><a class="toc-backref" href="#id5">2.2&nbsp;&nbsp;&nbsp;DESCRIPTION.txt</a></h2>
+<blockquote>
+This file.</blockquote>
+</div>
+<div class="section" id="setup-py">
+<h2><a class="toc-backref" href="#id6">2.3&nbsp;&nbsp;&nbsp;setup.py</a></h2>
+<blockquote>
+The setup file used to create the python package(To run this tool you do
+not need to install it). This file is used only for development purposes.</blockquote>
+</div>
+<div class="section" id="id1">
+<h2><a class="toc-backref" href="#id7">2.4&nbsp;&nbsp;&nbsp;pytomo/</a></h2>
+<blockquote>
+<p>This folder contains the pytomo package. The contents of it are listed
+below. We have listed the contents of this package so that it could help
+people to understand the tool and help us extend it.</p>
+<p>The following contents are only <em>for the purpose of developers</em>.</p>
+</blockquote>
+<div class="section" id="start-pytomo-py">
+<h3><a class="toc-backref" href="#id8">2.4.1&nbsp;&nbsp;&nbsp;start_pytomo.py:</a></h3>
+<p>The top-most module that is used to run the Pytomo tool.</p>
+<dl class="docutils">
+<dt><strong>Usage</strong>:</dt>
+<dd><dl class="first last docutils">
+<dt>Terminal:</dt>
+<dd>python start_pytomo.py</dd>
+<dt>Interactive python:</dt>
+<dd>import start_pytomo.main
+import config_pytomo
+start_pytomo.main()</dd>
+</dl>
+</dd>
+</dl>
+<p><strong>Functions</strong>.:</p>
+<blockquote>
+<dl class="docutils">
+<dt><strong>compute_stats(url)</strong></dt>
+<dd>Return a list of the statistics related to the url.The
+contents of the list are : (url, cache_url, current_stats)
+where current_stats is a list containing: [Ping_times,
+download_statistics, DNS resolver used]</dd>
+<dt><strong>format_stats(stats)</strong></dt>
+<dd>Functions used to format the stats obtained from compute_stats function
+so that they can be inserted into the sqlite3 database. The stats are
+converted into a tuple. The arguments to this function is the list
+returned by compute_stats().</dd>
+<dt><strong>check_out_files(file_pattern, directory, timestamp):</strong></dt>
+<dd>Returns a full path of the file used for the output. It checks if the
+path exists, if not then the file is created in the path if possible
+else it is created in the default user directory.</dd>
+<dt><strong>do_crawl(result_stream=sys.stdout, timestamp=None):</strong></dt>
+<dd>Crawls the urls given by the url_file.txt(present in the package), The
+crawl is performed upto MAX_ROUNDS or MAX_VISITED_URLS</dd>
+<dt><strong>main(argv=None)</strong></dt>
+<dd>This is the program wrapper for the start_pytomo module. Is
+is mainly used to setup and initialize the logging and
+other startup parameters.</dd>
+</dl>
+</blockquote>
+</div>
+<div class="section" id="config-pytomo-py">
+<h3><a class="toc-backref" href="#id9">2.4.2&nbsp;&nbsp;&nbsp;config_pytomo.py</a></h3>
+<p>File containing the various parameters and constants that are used for the
+analysis. The following parameters determine the nature of the crawl.</p>
+<ul>
+<li><p class="first">INPUT_URL_FILE = The file that has the initial list of urls.</p>
+</li>
+<li><p class="first">MAX_ROUNDS =  Maximum number of crawl rounds to performed.</p>
+</li>
+<li><p class="first">MAX_CRAWLED_URLS = Max number of urls to be visited.</p>
+</li>
+<li><p class="first">MAX_PER_URL =  Max number of related videos to be selected  from each url.</p>
+</li>
+<li><p class="first">MAX_PER_PAGE = Max number of related videos to be considered for selection
+from each page</p>
+</li>
+<li><dl class="first docutils">
+<dt>EXTRA_NAME_SERVERS = A list containing the name of the resolver and its IP</dt>
+<dd><p class="first last">address. This resolver will be used to get the IP
+address of the youtube cache</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">PING_PACKETS = Nb, of ping packets to be sent.</p>
+</li>
+<li><p class="first">DOWNLOAD_TIME = The duration for which the video must be downloaded.</p>
+</li>
+<li><dl class="first docutils">
+<dt>BUFFERING_VIDEO_DURATION = The duration for which the video is to be</dt>
+<dd><p class="first last">buffer.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">MIN_PLAYOUT_BUFFER_SIZE = The size of the buffer for the video stream.</p>
+</li>
+<li><p class="first">RESULT_DIR = The directory to store the text results.</p>
+</li>
+<li><p class="first">RESULT_FILE = The file to store the text results.</p>
+</li>
+<li><p class="first">DATABASE_DIR = The directory to store the result database.</p>
+</li>
+<li><p class="first">DATABASE = The name of the result database</p>
+</li>
+<li><p class="first">TABLE = The name of the result table.</p>
+</li>
+<li><p class="first">LOG_DIR = The directory to store the log files.</p>
+</li>
+<li><p class="first">LOG_FILE = The file to store the logs.</p>
+</li>
+<li><dl class="first docutils">
+<dt>LOG_LEVEL = Parameter to set the log level(choose from DEBUG, INFO, WARNING,</dt>
+<dd><p class="first last">ERROR and CRITICAL)</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">PROXIES = The HTTP Proxy to be used to access the internet(Set as command-line parameter when launched by the user).</p>
+</li>
+</ul>
+</div>
+<div class="section" id="lib-youtube-download-py">
+<h3><a class="toc-backref" href="#id10">2.4.3&nbsp;&nbsp;&nbsp;lib_youtube_download.py</a></h3>
+<p>Module to download youtube video for a limited amount of time and calculate the
+different statistics needed for the analysis.
+It has the FileDownloader class and the YouTube InfoExtractor class.
+The following functions defined in this module are used to get the statistics
+of the download.</p>
+<dl class="docutils">
+<dt><strong>Usage</strong></dt>
+<dd><dl class="first last docutils">
+<dt>Terminal:</dt>
+<dd>python lib_youtube_download.py url</dd>
+</dl>
+</dd>
+<dt><strong>Functions</strong></dt>
+<dd><dl class="first last docutils">
+<dt><strong>get_youtube_cache_url(url):</strong></dt>
+<dd>Return the cache url of the youtube video.</dd>
+<dt><strong>get_download_stats(ip_address_uri, download_time=DOWNLOAD_TIME):</strong></dt>
+<dd>Returns a tuple of stats for download from an url based on ip
+address. The tuple contains stats containing: [download_time,
+data duration, data_length, video encoding_rate, size of video in bytes,
+Nb.of interruptions, accumulated_buffer size, accumulated_playback ,
+current_remaining buffer, Maximum Instant Throughput achieved]</dd>
+</dl>
+</dd>
+</dl>
+</div>
+<div class="section" id="lib-dns-py">
+<h3><a class="toc-backref" href="#id11">2.4.4&nbsp;&nbsp;&nbsp;lib_dns.py</a></h3>
+<p>Module to retrieve the IP address of a URL out of a set of
+nameservers(default nameservers and the ones provided in the
+config_pytomo file as EXTRA_NAME_SERVERS)</p>
+<dl class="docutils">
+<dt><strong>Usage</strong></dt>
+<dd>Not meant to be called directly. But provides the two functions
+discussed below.</dd>
+</dl>
+<p><strong>Functions</strong></p>
+<blockquote>
+<dl class="docutils">
+<dt><strong>get_default_name_servers():</strong></dt>
+<dd>Returns a list of IP addresses of default name servers.</dd>
+<dt><strong>get_ip_addresses(url):</strong></dt>
+<dd>Return a list of tuples with the IP address and the DNS resolver
+used.</dd>
+</dl>
+</blockquote>
+</div>
+<div class="section" id="lib-ping-py">
+<h3><a class="toc-backref" href="#id12">2.4.5&nbsp;&nbsp;&nbsp;lib_ping.py</a></h3>
+<p>Module to generate the RTT times of a ping.</p>
+<dl class="docutils">
+<dt><strong>Usage</strong></dt>
+<dd>Not meant to be called directly. But provides the two functions
+discussed below.</dd>
+<dt><strong>Functions</strong></dt>
+<dd><dl class="first last docutils">
+<dt><strong>ping_ip(ip_address, [ping_packets=config_pytomo.PING_PACKETS]):</strong></dt>
+<dd>Returns a list of the min, avg and max ping values. Currently
+designed to work with Windows and Linux systems.</dd>
+</dl>
+</dd>
+</dl>
+</div>
+<div class="section" id="lib-cache-url-py">
+<h3><a class="toc-backref" href="#id13">2.4.6&nbsp;&nbsp;&nbsp;lib_cache_url.py</a></h3>
+<p>Module to retrieve the related videos from a file with a list of
+YouTube links and to store it for next round of the crawl.</p>
+<dl class="docutils">
+<dt><strong>Usage</strong></dt>
+<dd><dl class="first last docutils">
+<dt>Terminal:</dt>
+<dd>lib_cache_url.py [-w out_file] [-p 10] [-u 2] [-V] url_file_in</dd>
+<dt>Interactive python:</dt>
+<dd><div class="first last line-block">
+<div class="line">import lib_cache_url</div>
+<div class="line">url_file_in = 'url_file.txt'</div>
+<div class="line">lib_cache_url.get_next_round_urls(url_file_in, [max_per_page=20,
+max_per_url=5, out_file_name=None, pickle_output=False])</div>
+</div>
+</dd>
+</dl>
+</dd>
+<dt><strong>Arguments</strong></dt>
+<dd><dl class="first last docutils">
+<dt><strong>url_file_in:</strong></dt>
+<dd>File with a list of URLs to crawl (only YouTube is implemented).</dd>
+<dt><strong>max_per_page:</strong></dt>
+<dd>Number of links to consider per page(only the first MAX_PER_PAGE
+related video links will be considered).</dd>
+<dt><strong>max_per_url:</strong></dt>
+<dd>Number of links to select per page (MAX_PER_URL links
+will be randomly selected out of the MAX_PER_PAGE
+considered).</dd>
+<dt><strong>out_file_name:</strong></dt>
+<dd>File name to store the list of related video urls.</dd>
+<dt><strong>pickle_output:</strong></dt>
+<dd>Boolean to tell if the file is a pickle file or a text
+file</dd>
+</dl>
+</dd>
+<dt><strong>Functions</strong></dt>
+<dd><dl class="first last docutils">
+<dt><strong>get_all_links(url):</strong></dt>
+<dd>Returns a list of all links from the url.</dd>
+<dt><strong>get_youtube_links(url, max_per_page):</strong></dt>
+<dd>Returns a set of links that direct to YouTube. All the</dd>
+<dt><strong>trunk_url(url):</strong></dt>
+<dd>Returns the interesting part of a YouTube url(the url with
+only the video ID).</dd>
+<dt><strong>get_related_urls(url, max_per_page, max_per_url):</strong></dt>
+<dd>Return a set of max_per_url links from max_per_page randomly
+chosen related urls (other links are ignored).</dd>
+<dt><strong>get_next_round_urls(input_links, max_per_page=20, max_per_url=5):</strong></dt>
+<dd>Return a tuple of the set of input urls and a set of related url of
+videos.</dd>
+</dl>
+</dd>
+</dl>
+</div>
+<div class="section" id="lib-youtube-api-py">
+<h3><a class="toc-backref" href="#id14">2.4.7&nbsp;&nbsp;&nbsp;lib_youtube_api.py</a></h3>
+<p>Function to get the most popular YouTube videos according to the time frame.</p>
+<dl class="docutils">
+<dt><strong>Usage</strong></dt>
+<dd>Not meant to be called directly. But provides one function as discussed
+below.</dd>
+<dt><strong>Arguments</strong></dt>
+<dd>time = 'today' or 'month' or 'week' or all_time'.
+max_results = Total top videos needed (in  multiples of 25)</dd>
+<dt><strong>Function</strong></dt>
+<dd><dl class="first last docutils">
+<dt><strong>get_popular_links(time='today', max_results=25):</strong></dt>
+<dd>Returns the most popular youtube links(world-wide). The number of
+videos needed is given as max_results. (The results returned are in
+no particular order).</dd>
+</dl>
+</dd>
+</dl>
+</div>
+<div class="section" id="lib-database-py">
+<h3><a class="toc-backref" href="#id15">2.4.8&nbsp;&nbsp;&nbsp;lib_database.py</a></h3>
+<p>Module that creates and manages the database for th Pytomo results. It has
+a PytomoDatabase class.The columns of the database are listed in the docstring
+of the module.</p>
+<dl class="docutils">
+<dt><strong>Usage</strong></dt>
+<dd>Not meant to be called directly but the PytomoDatabase class is to be
+used.</dd>
+</dl>
+<p><strong>Functions</strong>
+The PytomoDatabase class has the following functions:</p>
+<blockquote>
+<dl class="docutils">
+<dt><strong>create_pytomo_table(self, table=config_pytomo.TABLE_TIMESTAMP):</strong></dt>
+<dd>Function to create a table.</dd>
+<dt><strong>insert_record(self, row):</strong></dt>
+<dd>Function to insert a record into the database.</dd>
+<dt><strong>fetch_all(self):</strong></dt>
+<dd>Function to print all the records of the table.</dd>
+<dt><strong>close_handle(self):</strong></dt>
+<dd>Closes the connection to the database.</dd>
+</dl>
+</blockquote>
+</div>
+</div>
+<div class="section" id="kaa-metadata">
+<h2><a class="toc-backref" href="#id16">2.5&nbsp;&nbsp;&nbsp;kaa_metadata</a></h2>
+<p>This is a stripped down version of the <a class="reference external" href="http://packages.debian.org/sid/python-kaa-metadata">Kaa Metadata Python Package</a> (Version :
+'0.7.7').The package has been modified to be used with the
+lib_youtube_download.py module so that we can obtain the metadata of the video.
+The main modification was to make it independent of kaa_base.</p>
+</div>
+<div class="section" id="dns">
+<h2><a class="toc-backref" href="#id17">2.6&nbsp;&nbsp;&nbsp;dns</a></h2>
+<p>This is the <a class="reference external" href="http://pypi.python.org/pypi/dnspython">DNS Python Package</a> (Version : 1.9.2) that is used to obtain the nameservers for
+the machine and also to send DNS queries to the nameservers to obtain the
+IP addresses of the YouTube cache servers.</p>
+</div>
+<div class="section" id="logs">
+<h2><a class="toc-backref" href="#id18">2.7&nbsp;&nbsp;&nbsp;logs/</a></h2>
+<p>This folder contains the log files generated by the logger. These files contain the log details generated during the crawl run.</p>
+</div>
+<div class="section" id="databases">
+<h2><a class="toc-backref" href="#id19">2.8&nbsp;&nbsp;&nbsp;databases/</a></h2>
+<p>This folder contains the database files used to store the results.
+The columns of the database are as follows:</p>
+<ul>
+<li><p class="first">Timestamp -  A timestamp indicating the time of inserting the row.</p>
+</li>
+<li><dl class="first docutils">
+<dt>Service       - The website on which the analysis is performed.</dt>
+<dd><p class="first last">Example: YouTube, Megavideo.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">Url           - The url of the webpage.</p>
+</li>
+<li><p class="first">CacheUrl      - The Url of the cache server hosting the video.</p>
+</li>
+<li><dl class="first docutils">
+<dt>IP            - The IP address of the cache server from which the</dt>
+<dd><p class="first last">video is downloaded.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Resolver      - The DNS resolver used to get obtain the IP address</dt>
+<dd><p class="first last">of the cache server.
+Example Google DNS, Local DNS</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>DownloadTime  - The Time taken to download the video sample</dt>
+<dd><dl class="first last docutils">
+<dt>(We do not download the entire video but only for a</dt>
+<dd><p class="first last">limited download time.)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><p class="first">VideoType - The format of the video that was downloaded.</p>
+</li>
+<li><p class="first">VideoDuration - The actual duration of the complete video.</p>
+</li>
+<li><p class="first">VideoLength   - The length(in bytes) of the complete video.</p>
+</li>
+<li><p class="first">EncodingRate  - The encoding rate of the video.</p>
+</li>
+<li><p class="first">DownloadBytes - The length of the video sample(in bytes).</p>
+</li>
+<li><dl class="first docutils">
+<dt>DownloadInterruptions -  Nb of interruptions experienced during the</dt>
+<dd><p class="first last">download.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">BufferingDuration     -  Accumulate time spend in buffering state</p>
+</li>
+<li><p class="first">PlaybackDuration      - Accumulate time spend in playing state.</p>
+</li>
+<li><p class="first">BufferDurationAtEnd   - The buffer length at the end of download.</p>
+</li>
+<li><dl class="first docutils">
+<dt>PingMin       - The minimum recorded ping time to the resolved IP</dt>
+<dd><p class="first last">address of the cache server.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>PingAvg       - The average recorded ping time to the resolved IP</dt>
+<dd><p class="first last">address of the cache server.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>PingMax       - The maximum recorded ping time to the resolved IP</dt>
+<dd><p class="first last">address of the cache server.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>RedirectUrl - In case of HTTP redirect while downloading the video from the</dt>
+<dd><p class="first last">cache server. The address of the URL to which the request has been
+redirected is stored in this field.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="results">
+<h2><a class="toc-backref" href="#id20">2.9&nbsp;&nbsp;&nbsp;results/</a></h2>
+<p>This folder contains the result files. The results in these file are listed in
+text format. It is a list containing [Video url, Cache url, IP address of cache
+server, Ping RTT times to the Cache server, Download stats, Name_IP_address of
+the DNS resolver] where Download stats = [download_time, data duration,
+data_length, video encoding_rate, size of video in bytes, Nb.of interruptions,
+accumulated_buffer size, accumulated_playback , current_remaining buffer]</p>
+</div>
+</div>
+<div class="section" id="external-links">
+<h1><a class="toc-backref" href="#id21">3&nbsp;&nbsp;&nbsp;External Links</a></h1>
+<ol class="arabic simple">
+<li><a class="reference external" href="http://rg3.github.com/youtube-dl/">YouTube Download</a>.</li>
+<li><a class="reference external" href="http://packages.debian.org/sid/python-kaa-metadata">Kaa Metadata Python Package</a>.</li>
+<li><a class="reference external" href="http://pypi.python.org/pypi/dnspython">DNS Python Package</a></li>
+</ol>
+</div>
+</div>
+</body>
+</html>

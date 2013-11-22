@@ -1,0 +1,403 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to Pytomo’s documentation! &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="#" />
+    <link rel="next" title="Pytomo-1.9.8" href="modules.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="Pytomo-1.9.8"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">Pytomo 2.8.6 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-pytomo-s-documentation">
+<h1>Welcome to Pytomo&#8217;s documentation!<a class="headerlink" href="#welcome-to-pytomo-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Pytomo is a Python based tomographic tool to perform analysis of video download
+rates on websites that provide streaming services, like YouTube and
+Dailymotion. The main purpose of the application is to offer an estimation for
+the Quality of Experience the user perceives by gathering numerous statistics,
+like the number of interruptions experienced or the average throughput of the
+download.</p>
+<p>We can start Pytomo either by providing an initial list of videos or by telling
+it to select the most popular videos during a specific time frame. For each
+video, Pytomo first retrieves the cache server where it is located, saving in a
+list each redirect server it goes through to get there. Then, each cache server
+is pinged to obtain the RTT times. We calculate the different statistics of the
+download only on the cache server where the video is actually located.</p>
+<p>After the first round of videos is crawled, Pytomo can retrieve their related
+links and continue applying the same operations until the maximum number of
+crawled videos is reached.</p>
+<p>The more measures we get the better, so if you can advertise the use of this
+crawler on top of running it, it would help us improve <em>your</em> YouTube and
+Dailymotion experience.</p>
+</div>
+<div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="video-crawl">
+<h2>Video crawl<a class="headerlink" href="#video-crawl" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="linux-video-crawl">
+<h3>Linux video crawl<a class="headerlink" href="#linux-video-crawl" title="Permalink to this headline">¶</a></h3>
+<p>You need to have Python2.6+ installed. The current version has been tested
+against Python 2.6/2.7.</p>
+<p><a class="reference external" href="mailto:user&#37;&#52;&#48;host">user<span>&#64;</span>host</a>:~/Pytomo$ <strong>./start_crawl.py</strong> &#8211;help</p>
+<p>Usage: start_crawl.py [-r max_rounds] [-u max_crawled_url] [-p max_per_url] [-P
+max_per_page] [-t time_frame] [-s {youtube, dailymotion}][-n ping_packets] [-D
+download_time] [-B buffering_video_duration] [-M min_playout_buffer_size] [-x]
+[-L log_level] [-R] [input_urls]</p>
+<dl class="docutils">
+<dt>Options:</dt>
+<dd><table class="first last docutils option-list" frame="void" rules="none">
+<col class="option" />
+<col class="description" />
+<tbody valign="top">
+<tr><td class="option-group">
+<kbd><span class="option">-h</span>, <span class="option">--help</span></kbd></td>
+<td>show this help message and exit</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-r <var>MAX_ROUNDS</var></span></kbd></td>
+<td>Max number of rounds to perform (default 10000)</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-l</span>, <span class="option">--loop</span></kbd></td>
+<td>Loop after completing the max nb of rounds</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-u <var>MAX_CRAWLED_URL</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Max number of urls to visit (default 10000)</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-p <var>MAX_PER_URL</var></span></kbd></td>
+<td>Max number of related urls from each page (default 20)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-P <var>MAX_PER_PAGE</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Max number of related videos from each page (default
+20)</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-t <var>TIME_FRAME</var></span></kbd></td>
+<td>Timeframe for the most popular videos to fetch at
+start of crawl put &#8216;today&#8217;, &#8216;week&#8217;, &#8216;month&#8217; or
+&#8216;all_time&#8217; (default &#8216;week&#8217;)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-s <var>CRAWL_SERVICE</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Service for the most popular videos to fetch at start
+of crawl: select between &#8216;youtube&#8217;, or &#8216;dailymotion&#8217;
+(default &#8216;youtube&#8217;)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-n <var>PING_PACKETS</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Number of packets to be sent for each ping (default
+10)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-D <var>DOWNLOAD_TIME</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Download time for the video in seconds (default
+30.000000)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-B <var>INITIAL_PLAYBACK_DURATION</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Buffering video duration in seconds (default
+2000.000000)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-M <var>MIN_PLAYOUT_BUFFER_SIZE</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Minimum Playout Buffer Size in seconds (default
+0.100000)</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-x</span></kbd></td>
+<td>Do NOT store public IP address of the machine in the
+logs</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-L <var>LOG_LEVEL</var></span></kbd></td>
+<td>The log level setting for the Logging module.Choose
+from: &#8216;DEBUG&#8217;, &#8216;INFO&#8217;, &#8216;WARNING&#8217;, &#8216;ERROR&#8217; and
+&#8216;CRITICAL&#8217; (default &#8216;DEBUG&#8217;)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--http-proxy=<var>PROXIES</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>in case of http proxy to reach Internet (default None)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--provider=<var>PROVIDER</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Indicate the ISP</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-R</span>, <span class="option">--no-related</span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Do NOT crawl related videos (stays with the first urls
+found: either most popular or arguments given)</td></tr>
+</tbody>
+</table>
+</dd>
+</dl>
+</div>
+<div class="section" id="windows-video-crawl">
+<h3>Windows video crawl<a class="headerlink" href="#windows-video-crawl" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt>Double click on:</dt>
+<dd><strong>pytomo_windows_x86.exe</strong></dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>In case you use a proxy to connect to the internet, make sure you
+specify it in the correct format when asked:</p>
+<p><em>Please enter the proxies you use to connect to the internet, in the format:
+{&#8216;http&#8217;: &#8216;http://proxy:8080/&#8217;}(press Enter for default None):
+(or wait 20 seconds)</em></p>
+<p class="last"><strong>{&#8216;http&#8217;: &#8216;http://proxy:8080/&#8217;}</strong></p>
+</div>
+</div>
+</div>
+<div class="section" id="graphical-web-interface">
+<h2>Graphical web interface<a class="headerlink" href="#graphical-web-interface" title="Permalink to this headline">¶</a></h2>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">When you start the graphical interface, make sure you have already
+started a crawl following <a class="reference internal" href="#linux-video-crawl">Linux video crawl</a> or <a class="reference internal" href="#windows-video-crawl">Windows video crawl</a>
+or you have a pytomo database from which to extract the data in the
+<em>databases</em> folder.</p>
+</div>
+<div class="section" id="linux-graphical-web-interface">
+<h3>Linux graphical web interface<a class="headerlink" href="#linux-graphical-web-interface" title="Permalink to this headline">¶</a></h3>
+<p>You need to have Python2.6+ and RRDtool python binding installed (See the
+<a class="reference internal" href="#external-resources">External resources</a> section for information on how to install it). The
+current version has been tested against Python 2.6/2.7 and
+python-rrdtool 0.2.1.</p>
+<p><a class="reference external" href="mailto:user&#37;&#52;&#48;host">user<span>&#64;</span>host</a>:~/Pytomo$ <strong>./start_server.py</strong> &#8211;help</p>
+<p>Usage: start_server.py [-v] [-f database] [-d database_directory] [port]</p>
+<dl class="docutils">
+<dt>Options:</dt>
+<dd><table class="first last docutils option-list" frame="void" rules="none">
+<col class="option" />
+<col class="description" />
+<tbody valign="top">
+<tr><td class="option-group">
+<kbd><span class="option">-h</span>, <span class="option">--help</span></kbd></td>
+<td>show this help message and exit</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-v</span>, <span class="option">--verbose</span></kbd></td>
+<td>run as verbose mode</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-f <var>DB_NAME</var></span>, <span class="option">--file=<var>DB_NAME</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>run on a specific database (by default the latest
+database in the default database directory is
+selected)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-d <var>DB_DIR_NAME</var></span>, <span class="option">--dir=<var>DB_DIR_NAME</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>run on a specific directory where the latest database
+will be selected</td></tr>
+</tbody>
+</table>
+</dd>
+</dl>
+</div>
+<div class="section" id="windows-graphical-web-interface">
+<h3>Windows graphical web interface<a class="headerlink" href="#windows-graphical-web-interface" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt>Double click on:</dt>
+<dd><strong>pytomo_web_interface_windows_x86.exe</strong></dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The graphical web interface is started, by default, on <strong>port 5555</strong>
+on your machine and uses information from the latest database located in the
+directory the server is started with (by default <em>databases</em>).</p>
+<p>You can connect on the respective machine (you need to know its IP and
+make sure it allows external connections, otherwise you will only be able
+to see the graphs locally on that machine):</p>
+<blockquote>
+<div><p><a class="reference external" href="http://127.0.0.1:5555/">http://127.0.0.1:5555/</a>          &lt;= visualisation on local machine</p>
+<p><a class="reference external" href="http://18.88.11.18:5555/">http://18.88.11.18:5555/</a>        &lt;= visualisation from remote host</p>
+</div></blockquote>
+<p>By default, the graphs are collected with information from the
+latest database in the default <em>databases</em> directory. If a new live
+crawl is started, it is recommened to stop and start again the
+graphical web interface and refresh the page from your browser.</p>
+<p>Furthermore, you can display graphs from other databases located in the
+directory you started the web server with. To do this, go to the link on
+the left of the page and select the desired database:</p>
+<blockquote>
+<div>Database_archive</div></blockquote>
+<p class="last">To display the graphs related to the latest database and the changes in a
+live crawl, you should select the latest database in this archive, the one
+on top of the list mentioned at the link above.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="external-resources">
+<h1>External resources<a class="headerlink" href="#external-resources" title="Permalink to this headline">¶</a></h1>
+<p>We based the lib_youtube_download on <a class="reference external" href="http://rg3.github.com/youtube-dl/">YouTube Download</a> script: we simplified
+it at most and include only the classes we needed (and only YouTube video
+retrieval).</p>
+<p>The dns module is taken from the <a class="reference external" href="http://pypi.python.org/pypi/dnspython">DNS Python Package</a>: we just modified rdata
+so that <a class="reference external" href="http://www.pyinstaller.org/">Pyinstaller</a> includes all needed modules.</p>
+<p>The extraction of metadata out of video files is an adaptation of <a class="reference external" href="http://packages.debian.org/sid/python-kaa-metadata">Kaa Metadata
+Python Package</a>: it has been modified in order to be independent of Kaa-base
+(thus pure Python and portable).</p>
+<p>The web server necessary for the graphical web interface is based on <a class="reference external" href="http://webpy.org/">web.py</a>
+that is included in the Pytomo distribution sources.</p>
+<p>The <a class="reference external" href="http://oss.oetiker.ch/rrdtool/">RRDtool</a> python binding necassary for the graphical web interface should
+be installed from the repository of your OS distribution:</p>
+<ul>
+<li><dl class="first docutils">
+<dt>For Debian based OS:</dt>
+<dd><p class="first last">sudo apt-get install python-rrdtool</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>For RHEL based OS:</dt>
+<dd><p class="first last">yum install python-rrdtool</p>
+</dd>
+</dl>
+</li>
+</ul>
+<ol class="arabic simple">
+<li><a class="reference external" href="http://rg3.github.com/youtube-dl/">YouTube Download</a>.</li>
+<li><a class="reference external" href="http://packages.debian.org/sid/python-kaa-metadata">Kaa Metadata Python Package</a>.</li>
+<li><a class="reference external" href="http://pypi.python.org/pypi/dnspython">DNS Python Package</a></li>
+<li><a class="reference external" href="http://www.pyinstaller.org/">Pyinstaller</a></li>
+<li><a class="reference external" href="http://oss.oetiker.ch/rrdtool/">RRDtool</a></li>
+<li><a class="reference external" href="http://webpy.org/">web.py</a></li>
+</ol>
+</div>
+<div class="section" id="package-contents">
+<h1>Package contents<a class="headerlink" href="#package-contents" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Pytomo-1.9.8</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pytomo.html">pytomo Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="setup_windows.html">setup_windows Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="start_crawl.html">start_crawl Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="start_server.html">start_server Module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to Pytomo&#8217;s documentation!</a></li>
+<li><a class="reference internal" href="#usage">Usage</a><ul>
+<li><a class="reference internal" href="#video-crawl">Video crawl</a><ul>
+<li><a class="reference internal" href="#linux-video-crawl">Linux video crawl</a></li>
+<li><a class="reference internal" href="#windows-video-crawl">Windows video crawl</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#graphical-web-interface">Graphical web interface</a><ul>
+<li><a class="reference internal" href="#linux-graphical-web-interface">Linux graphical web interface</a></li>
+<li><a class="reference internal" href="#windows-graphical-web-interface">Windows graphical web interface</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#external-resources">External resources</a></li>
+<li><a class="reference internal" href="#package-contents">Package contents</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="modules.html"
+                        title="next chapter">Pytomo-1.9.8</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="Pytomo-1.9.8"
+             >next</a> |</li>
+        <li><a href="#">Pytomo 2.8.6 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

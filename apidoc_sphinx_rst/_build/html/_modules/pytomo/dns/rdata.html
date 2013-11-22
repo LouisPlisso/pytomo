@@ -1,0 +1,561 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.rdata &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.rdata</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS rdata.</span>
+
+<span class="sd">@var _rdata_modules: A dictionary mapping a (rdclass, rdtype) tuple to</span>
+<span class="sd">the module which implements that type.</span>
+<span class="sd">@type _rdata_modules: dict</span>
+<span class="sd">@var _module_prefix: The prefix to use when forming modules names.  The</span>
+<span class="sd">default is &#39;dns.rdtypes&#39;.  Changing this value will break the library.</span>
+<span class="sd">Changed for absolute imports</span>
+<span class="sd">@type _module_prefix: string</span>
+<span class="sd">@var _hex_chunk: At most this many octets that will be represented in each</span>
+<span class="sd">chunk of hexstring that _hexify() produces before whitespace occurs.</span>
+<span class="sd">@type _hex_chunk: int&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">cStringIO</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">tokenizer</span> <span class="k">as</span> <span class="n">dns_tokenizer</span>
+
+<span class="k">if</span> <span class="bp">False</span><span class="p">:</span>
+    <span class="c"># to trick the module finder of pyinstaller</span>
+    <span class="c"># but do not compile in python2.5</span>
+    <span class="kn">from</span> <span class="nn">.rdtypes.IN</span> <span class="kn">import</span> <span class="o">*</span>
+    <span class="kn">from</span> <span class="nn">.rdtypes.ANY</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<span class="n">_hex_chunksize</span> <span class="o">=</span> <span class="mi">32</span>
+
+<span class="k">def</span> <span class="nf">_hexify</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">chunksize</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a binary string into its hex encoding, broken up into chunks</span>
+<span class="sd">    of I{chunksize} characters separated by a space.</span>
+
+<span class="sd">    @param data: the binary string</span>
+<span class="sd">    @type data: string</span>
+<span class="sd">    @param chunksize: the chunk size.  Default is L{dns_rdata._hex_chunksize}</span>
+<span class="sd">    @rtype: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">chunksize</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">chunksize</span> <span class="o">=</span> <span class="n">_hex_chunksize</span>
+    <span class="nb">hex</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;hex_codec&#39;</span><span class="p">)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">hex</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">&gt;</span> <span class="n">chunksize</span><span class="p">:</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">l</span><span class="p">:</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">hex</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">chunksize</span><span class="p">])</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="n">chunksize</span>
+        <span class="nb">hex</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">hex</span>
+
+<span class="n">_base64_chunksize</span> <span class="o">=</span> <span class="mi">32</span>
+
+<span class="k">def</span> <span class="nf">_base64ify</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">chunksize</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a binary string into its base64 encoding, broken up into chunks</span>
+<span class="sd">    of I{chunksize} characters separated by a space.</span>
+
+<span class="sd">    @param data: the binary string</span>
+<span class="sd">    @type data: string</span>
+<span class="sd">    @param chunksize: the chunk size.  Default is</span>
+<span class="sd">    L{dns_rdata._base64_chunksize}</span>
+<span class="sd">    @rtype: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">chunksize</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">chunksize</span> <span class="o">=</span> <span class="n">_base64_chunksize</span>
+    <span class="n">b64</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;base64_codec&#39;</span><span class="p">)</span>
+    <span class="n">b64</span> <span class="o">=</span> <span class="n">b64</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">b64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">&gt;</span> <span class="n">chunksize</span><span class="p">:</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">l</span><span class="p">:</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">b64</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">chunksize</span><span class="p">])</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="n">chunksize</span>
+        <span class="n">b64</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">b64</span>
+
+<span class="n">__escaped</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;&quot;&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">_escapify</span><span class="p">(</span><span class="n">qstring</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Escape the characters in a quoted string which need it.</span>
+
+<span class="sd">    @param qstring: the string</span>
+<span class="sd">    @type qstring: string</span>
+<span class="sd">    @returns: the escaped string</span>
+<span class="sd">    @rtype: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">qstring</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">__escaped</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span> <span class="o">+</span> <span class="n">c</span>
+        <span class="k">elif</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mh">0x20</span> <span class="ow">and</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mh">0x7F</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="n">c</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\\</span><span class="si">%03d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+
+<span class="k">def</span> <span class="nf">_truncate_bitmap</span><span class="p">(</span><span class="n">what</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Determine the index of greatest byte that isn&#39;t all zeros, and</span>
+<span class="sd">    return the bitmap that contains all the bytes less than that index.</span>
+
+<span class="sd">    @param what: a string of octets representing a bitmap.</span>
+<span class="sd">    @type what: string</span>
+<span class="sd">    @rtype: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">what</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">what</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">what</span><span class="p">[</span><span class="mi">0</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+
+<div class="viewcode-block" id="Rdata"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata">[docs]</a><span class="k">class</span> <span class="nc">Rdata</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for all DNS rdata types.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;rdclass&#39;</span><span class="p">,</span> <span class="s">&#39;rdtype&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize an rdata.</span>
+<span class="sd">        @param rdclass: The rdata class</span>
+<span class="sd">        @type rdclass: int</span>
+<span class="sd">        @param rdtype: The rdata type</span>
+<span class="sd">        @type rdtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">=</span> <span class="n">rdclass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">=</span> <span class="n">rdtype</span>
+
+<div class="viewcode-block" id="Rdata.covers"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.covers">[docs]</a>    <span class="k">def</span> <span class="nf">covers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;DNS SIG/RRSIG rdatas apply to a specific type; this type is</span>
+<span class="sd">        returned by the covers() function.  If the rdata type is not</span>
+<span class="sd">        SIG or RRSIG, dns_rdatatype.NONE is returned.  This is useful when</span>
+<span class="sd">        creating rdatasets, allowing the rdataset to contain only RRSIGs</span>
+<span class="sd">        of a particular type, e.g. RRSIG(NS).</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span>
+</div>
+<div class="viewcode-block" id="Rdata.extended_rdatatype"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.extended_rdatatype">[docs]</a>    <span class="k">def</span> <span class="nf">extended_rdatatype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a 32-bit type value, the least significant 16 bits of</span>
+<span class="sd">        which are the ordinary DNS type, and the upper 16 bits of which are</span>
+<span class="sd">        the &quot;covered&quot; type, if any.</span>
+<span class="sd">        @rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">covers</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span>
+</div>
+<div class="viewcode-block" id="Rdata.to_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.to_text">[docs]</a>    <span class="k">def</span> <span class="nf">to_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert an rdata to text format.</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</div>
+<div class="viewcode-block" id="Rdata.to_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">compress</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert an rdata to wire format.</span>
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</div>
+<div class="viewcode-block" id="Rdata.to_digestable"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.to_digestable">[docs]</a>    <span class="k">def</span> <span class="nf">to_digestable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert rdata to a format suitable for digesting in hashes.  This</span>
+<span class="sd">        is also the DNSSEC canonical form.&quot;&quot;&quot;</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">cStringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">origin</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Rdata.validate"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.validate">[docs]</a>    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check that the current contents of the rdata&#39;s fields are</span>
+<span class="sd">        valid.  If you change an rdata by assigning to its fields,</span>
+<span class="sd">        it is a good idea to call validate() when you are done making</span>
+<span class="sd">        changes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">from_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_text</span><span class="p">())</span>
+</div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">covers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covers</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">covers</span> <span class="o">==</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">:</span>
+            <span class="n">ctext</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ctext</span> <span class="o">=</span> <span class="s">&#39;(&#39;</span> <span class="o">+</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="n">covers</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;)&#39;</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;DNS &#39;</span> <span class="o">+</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39; &#39;</span> <span class="o">+</span> \
+               <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span><span class="p">)</span> <span class="o">+</span> <span class="n">ctext</span> <span class="o">+</span> <span class="s">&#39; rdata: &#39;</span> <span class="o">+</span> \
+               <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;&gt;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_text</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_cmp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compare an rdata with another rdata of the same rdtype and</span>
+<span class="sd">        rdclass.  Return &lt; 0 if self &lt; other in the DNSSEC ordering,</span>
+<span class="sd">        0 if self == other, and &gt; 0 if self &gt; other.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Rdata</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdclass</span> <span class="ow">or</span> \
+           <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Rdata</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdclass</span> <span class="ow">or</span> \
+           <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Rdata</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdclass</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__le__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Rdata</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdclass</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__ge__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Rdata</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdclass</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__gt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Rdata</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdclass</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmp</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="Rdata.from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.from_text">[docs]</a>    <span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build an rdata object from text format.</span>
+
+<span class="sd">        @param rdclass: The rdata class</span>
+<span class="sd">        @type rdclass: int</span>
+<span class="sd">        @param rdtype: The rdata type</span>
+<span class="sd">        @type rdtype: int</span>
+<span class="sd">        @param tok: The tokenizer</span>
+<span class="sd">        @type tok: dns_tokenizer.Tokenizer</span>
+<span class="sd">        @param origin: The origin to use for relative names</span>
+<span class="sd">        @type origin: dns_name.Name</span>
+<span class="sd">        @param relativize: should names be relativized?</span>
+<span class="sd">        @type relativize: bool</span>
+<span class="sd">        @rtype: dns_rdata.Rdata instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</div>
+    <span class="n">from_text</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_text</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Rdata.from_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.from_wire">[docs]</a>    <span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">rdlen</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build an rdata object from wire format</span>
+
+<span class="sd">        @param rdclass: The rdata class</span>
+<span class="sd">        @type rdclass: int</span>
+<span class="sd">        @param rdtype: The rdata type</span>
+<span class="sd">        @type rdtype: int</span>
+<span class="sd">        @param wire: The wire-format message</span>
+<span class="sd">        @type wire: string</span>
+<span class="sd">        @param current: The offet in wire of the beginning of the rdata.</span>
+<span class="sd">        @type current: int</span>
+<span class="sd">        @param rdlen: The length of the wire-format rdata</span>
+<span class="sd">        @type rdlen: int</span>
+<span class="sd">        @param origin: The origin to use for relative names</span>
+<span class="sd">        @type origin: dns_name.Name</span>
+<span class="sd">        @rtype: dns_rdata.Rdata instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</div>
+    <span class="n">from_wire</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_wire</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Rdata.choose_relativity"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.Rdata.choose_relativity">[docs]</a>    <span class="k">def</span> <span class="nf">choose_relativity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert any domain names in the rdata to the specified</span>
+<span class="sd">        relativization.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">pass</span>
+
+</div></div>
+<div class="viewcode-block" id="GenericRdata"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.GenericRdata">[docs]</a><span class="k">class</span> <span class="nc">GenericRdata</span><span class="p">(</span><span class="n">Rdata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate Rdata Class</span>
+
+<span class="sd">    This class is used for rdata types for which we have no better</span>
+<span class="sd">    implementation.  It implements the DNS &quot;unknown RRs&quot; scheme.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;data&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GenericRdata</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+
+<div class="viewcode-block" id="GenericRdata.to_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.GenericRdata.to_text">[docs]</a>    <span class="k">def</span> <span class="nf">to_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">r&#39;\# </span><span class="si">%d</span><span class="s"> &#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">+</span> <span class="n">_hexify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GenericRdata.from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.GenericRdata.from_text">[docs]</a>    <span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">()</span> <span class="ow">or</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span> <span class="o">!=</span> <span class="s">&#39;\#&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">r&#39;generic rdata does not start with \#&#39;</span><span class="p">)</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get_int</span><span class="p">()</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eol_or_eof</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="nb">hex</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">hex</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;hex_codec&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">!=</span> <span class="n">length</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&#39;generic rdata hex data has wrong length&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+</div>
+    <span class="n">from_text</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_text</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GenericRdata.to_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.GenericRdata.to_wire">[docs]</a>    <span class="k">def</span> <span class="nf">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">compress</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GenericRdata.from_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.GenericRdata.from_wire">[docs]</a>    <span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">rdlen</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">wire</span><span class="p">[</span><span class="n">current</span> <span class="p">:</span> <span class="n">current</span> <span class="o">+</span> <span class="n">rdlen</span><span class="p">])</span>
+</div>
+    <span class="n">from_wire</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">from_wire</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_cmp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">cmp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</div>
+<span class="n">_rdata_modules</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">_module_prefix</span> <span class="o">=</span> <span class="s">&#39;rdtypes&#39;</span>
+
+<div class="viewcode-block" id="get_rdata_class"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.get_rdata_class">[docs]</a><span class="k">def</span> <span class="nf">get_rdata_class</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">import_module</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="c"># for absolute imports need more arguments: to test</span>
+        <span class="n">mod</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">globals</span><span class="o">=</span><span class="nb">globals</span><span class="p">(),</span> <span class="n">level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">components</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">mod</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">comp</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mod</span>
+
+    <span class="n">mod</span> <span class="o">=</span> <span class="n">_rdata_modules</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">))</span>
+    <span class="n">rdclass_text</span> <span class="o">=</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">)</span>
+    <span class="n">rdtype_text</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+    <span class="n">rdtype_text</span> <span class="o">=</span> <span class="n">rdtype_text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">,</span> <span class="s">&#39;_&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mod</span><span class="p">:</span>
+        <span class="n">mod</span> <span class="o">=</span> <span class="n">_rdata_modules</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">mod</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">mod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">_module_prefix</span><span class="p">,</span>
+                                              <span class="n">rdclass_text</span><span class="p">,</span> <span class="n">rdtype_text</span><span class="p">]))</span>
+                <span class="n">_rdata_modules</span><span class="p">[(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)]</span> <span class="o">=</span> <span class="n">mod</span>
+            <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">mod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">_module_prefix</span><span class="p">,</span>
+                                                  <span class="s">&#39;ANY&#39;</span><span class="p">,</span> <span class="n">rdtype_text</span><span class="p">]))</span>
+                    <span class="n">_rdata_modules</span><span class="p">[(</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)]</span> <span class="o">=</span> <span class="n">mod</span>
+                <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+                    <span class="n">mod</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">mod</span><span class="p">:</span>
+        <span class="n">cls</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">rdtype_text</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">cls</span> <span class="o">=</span> <span class="n">GenericRdata</span>
+    <span class="k">return</span> <span class="n">cls</span>
+</div>
+<div class="viewcode-block" id="from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.from_text">[docs]</a><span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build an rdata object from text format.</span>
+
+<span class="sd">    This function attempts to dynamically load a class which</span>
+<span class="sd">    implements the specified rdata class and type.  If there is no</span>
+<span class="sd">    class-and-type-specific implementation, the GenericRdata class</span>
+<span class="sd">    is used.</span>
+
+<span class="sd">    Once a class is chosen, its from_text() class method is called</span>
+<span class="sd">    with the parameters to this function.</span>
+
+<span class="sd">    @param rdclass: The rdata class</span>
+<span class="sd">    @type rdclass: int</span>
+<span class="sd">    @param rdtype: The rdata type</span>
+<span class="sd">    @type rdtype: int</span>
+<span class="sd">    @param tok: The tokenizer</span>
+<span class="sd">    @type tok: dns_tokenizer.Tokenizer</span>
+<span class="sd">    @param origin: The origin to use for relative names</span>
+<span class="sd">    @type origin: dns_name.Name</span>
+<span class="sd">    @param relativize: Should names be relativized?</span>
+<span class="sd">    @type relativize: bool</span>
+<span class="sd">    @rtype: dns_rdata.Rdata instance&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tok</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">tok</span> <span class="o">=</span> <span class="n">dns_tokenizer</span><span class="o">.</span><span class="n">Tokenizer</span><span class="p">(</span><span class="n">tok</span><span class="p">)</span>
+    <span class="n">cls</span> <span class="o">=</span> <span class="n">get_rdata_class</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cls</span> <span class="o">!=</span> <span class="n">GenericRdata</span><span class="p">:</span>
+        <span class="c"># peek at first token</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">tok</span><span class="o">.</span><span class="n">unget</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">()</span> <span class="ow">and</span> \
+           <span class="n">token</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="s">r&#39;\#&#39;</span><span class="p">:</span>
+            <span class="c">#</span>
+            <span class="c"># Known type using the generic syntax.  Extract the</span>
+            <span class="c"># wire form from the generic syntax, and then run</span>
+            <span class="c"># from_wire on it.</span>
+            <span class="c">#</span>
+            <span class="n">rdata</span> <span class="o">=</span> <span class="n">GenericRdata</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span>
+                                           <span class="n">relativize</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">from_wire</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdata</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">rdata</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
+                             <span class="n">origin</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cls</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">relativize</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="from_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.rdata.from_wire">[docs]</a><span class="k">def</span> <span class="nf">from_wire</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">rdlen</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build an rdata object from wire format</span>
+
+<span class="sd">    This function attempts to dynamically load a class which</span>
+<span class="sd">    implements the specified rdata class and type.  If there is no</span>
+<span class="sd">    class-and-type-specific implementation, the GenericRdata class</span>
+<span class="sd">    is used.</span>
+
+<span class="sd">    Once a class is chosen, its from_wire() class method is called</span>
+<span class="sd">    with the parameters to this function.</span>
+
+<span class="sd">    @param rdclass: The rdata class</span>
+<span class="sd">    @type rdclass: int</span>
+<span class="sd">    @param rdtype: The rdata type</span>
+<span class="sd">    @type rdtype: int</span>
+<span class="sd">    @param wire: The wire-format message</span>
+<span class="sd">    @type wire: string</span>
+<span class="sd">    @param current: The offet in wire of the beginning of the rdata.</span>
+<span class="sd">    @type current: int</span>
+<span class="sd">    @param rdlen: The length of the wire-format rdata</span>
+<span class="sd">    @type rdlen: int</span>
+<span class="sd">    @param origin: The origin to use for relative names</span>
+<span class="sd">    @type origin: dns_name.Name</span>
+<span class="sd">    @rtype: dns_rdata.Rdata instance&quot;&quot;&quot;</span>
+
+    <span class="n">cls</span> <span class="o">=</span> <span class="n">get_rdata_class</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cls</span><span class="o">.</span><span class="n">from_wire</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">wire</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">rdlen</span><span class="p">,</span> <span class="n">origin</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

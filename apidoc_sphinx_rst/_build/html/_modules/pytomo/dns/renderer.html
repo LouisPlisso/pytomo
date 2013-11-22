@@ -1,0 +1,422 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.renderer &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.renderer</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;Help for building DNS wire format messages&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">cStringIO</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">tsig</span> <span class="k">as</span> <span class="n">dns_tsig</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+
+<span class="n">QUESTION</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">ANSWER</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">AUTHORITY</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">ADDITIONAL</span> <span class="o">=</span> <span class="mi">3</span>
+
+<div class="viewcode-block" id="Renderer"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer">[docs]</a><span class="k">class</span> <span class="nc">Renderer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Helper class for building DNS wire-format messages.</span>
+
+<span class="sd">    Most applications can use the higher-level L{dns_message.Message}</span>
+<span class="sd">    class and its to_wire() method to generate wire-format messages.</span>
+<span class="sd">    This class is for those applications which need finer control</span>
+<span class="sd">    over the generation of messages.</span>
+
+<span class="sd">    Typical use::</span>
+
+<span class="sd">        r = dns_renderer.Renderer(id=1, flags=0x80, max_size=512)</span>
+<span class="sd">        r.add_question(qname, qtype, qclass)</span>
+<span class="sd">        r.add_rrset(dns_renderer.ANSWER, rrset_1)</span>
+<span class="sd">        r.add_rrset(dns_renderer.ANSWER, rrset_2)</span>
+<span class="sd">        r.add_rrset(dns_renderer.AUTHORITY, ns_rrset)</span>
+<span class="sd">        r.add_edns(0, 0, 4096)</span>
+<span class="sd">        r.add_rrset(dns_renderer.ADDTIONAL, ad_rrset_1)</span>
+<span class="sd">        r.add_rrset(dns_renderer.ADDTIONAL, ad_rrset_2)</span>
+<span class="sd">        r.write_header()</span>
+<span class="sd">        r.add_tsig(keyname, secret, 300, 1, 0, &#39;&#39;, request_mac)</span>
+<span class="sd">        wire = r.get_wire()</span>
+
+<span class="sd">    @ivar output: where rendering is written</span>
+<span class="sd">    @type output: cStringIO.StringIO object</span>
+<span class="sd">    @ivar id: the message id</span>
+<span class="sd">    @type id: int</span>
+<span class="sd">    @ivar flags: the message flags</span>
+<span class="sd">    @type flags: int</span>
+<span class="sd">    @ivar max_size: the maximum size of the message</span>
+<span class="sd">    @type max_size: int</span>
+<span class="sd">    @ivar origin: the origin to use when rendering relative names</span>
+<span class="sd">    @type origin: dns_name.Name object</span>
+<span class="sd">    @ivar compress: the compression table</span>
+<span class="sd">    @type compress: dict</span>
+<span class="sd">    @ivar section: the section currently being rendered</span>
+<span class="sd">    @type section: int (dns_renderer.QUESTION, dns_renderer.ANSWER,</span>
+<span class="sd">    dns_renderer.AUTHORITY, or dns_renderer.ADDITIONAL)</span>
+<span class="sd">    @ivar counts: list of the number of RRs in each section</span>
+<span class="sd">    @type counts: int list of length 4</span>
+<span class="sd">    @ivar mac: the MAC of the rendered message (if TSIG was used)</span>
+<span class="sd">    @type mac: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">65535</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a new renderer.</span>
+
+<span class="sd">        @param id: the message id</span>
+<span class="sd">        @type id: int</span>
+<span class="sd">        @param flags: the DNS message flags</span>
+<span class="sd">        @type flags: int</span>
+<span class="sd">        @param max_size: the maximum message size; the default is 65535.</span>
+<span class="sd">        If rendering results in a message greater than I{max_size},</span>
+<span class="sd">        then L{dns_exception.TooBig} will be raised.</span>
+<span class="sd">        @type max_size: int</span>
+<span class="sd">        @param origin: the origin to use when rendering relative names</span>
+<span class="sd">        @type origin: dns_name.Namem or None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="n">cStringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">id</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">65535</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flags</span> <span class="o">=</span> <span class="n">flags</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_size</span> <span class="o">=</span> <span class="n">max_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">origin</span> <span class="o">=</span> <span class="n">origin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compress</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">section</span> <span class="o">=</span> <span class="n">QUESTION</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counts</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span> <span class="o">*</span> <span class="mi">12</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">_rollback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">where</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Truncate the output buffer at offset I{where}, and remove any</span>
+<span class="sd">        compression table entries that pointed beyond the truncation</span>
+<span class="sd">        point.</span>
+
+<span class="sd">        @param where: the offset</span>
+<span class="sd">        @type where: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">truncate</span><span class="p">()</span>
+        <span class="n">keys_to_delete</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;=</span> <span class="n">where</span><span class="p">:</span>
+                <span class="n">keys_to_delete</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys_to_delete</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_set_section</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the renderer&#39;s current section.</span>
+
+<span class="sd">        Sections must be rendered order: QUESTION, ANSWER, AUTHORITY,</span>
+<span class="sd">        ADDITIONAL.  Sections may be empty.</span>
+
+<span class="sd">        @param section: the section</span>
+<span class="sd">        @type section: int</span>
+<span class="sd">        @raises dns_exception.FormError: an attempt was made to set</span>
+<span class="sd">        a section value less than the current section.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">section</span> <span class="o">!=</span> <span class="n">section</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">section</span> <span class="o">&gt;</span> <span class="n">section</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">FormError</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">section</span> <span class="o">=</span> <span class="n">section</span>
+
+<div class="viewcode-block" id="Renderer.add_question"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer.add_question">[docs]</a>    <span class="k">def</span> <span class="nf">add_question</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qname</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="o">=</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a question to the message.</span>
+
+<span class="sd">        @param qname: the question name</span>
+<span class="sd">        @type qname: dns_name.Name</span>
+<span class="sd">        @param rdtype: the question rdata type</span>
+<span class="sd">        @type rdtype: int</span>
+<span class="sd">        @param rdclass: the question rdata class</span>
+<span class="sd">        @type rdclass: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_section</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="n">qname</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!HH&quot;</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">))</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">after</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rollback</span><span class="p">(</span><span class="n">before</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">TooBig</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="n">QUESTION</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="Renderer.add_rrset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer.add_rrset">[docs]</a>    <span class="k">def</span> <span class="nf">add_rrset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">rrset</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add the rrset to the specified section.</span>
+
+<span class="sd">        Any keyword arguments are passed on to the rdataset&#39;s to_wire()</span>
+<span class="sd">        routine.</span>
+
+<span class="sd">        @param section: the section</span>
+<span class="sd">        @type section: int</span>
+<span class="sd">        @param rrset: the rrset</span>
+<span class="sd">        @type rrset: dns_rrset.RRset object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_section</span><span class="p">(</span><span class="n">section</span><span class="p">)</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">rrset</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">after</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rollback</span><span class="p">(</span><span class="n">before</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">TooBig</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="n">section</span><span class="p">]</span> <span class="o">+=</span> <span class="n">n</span>
+</div>
+<div class="viewcode-block" id="Renderer.add_rdataset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer.add_rdataset">[docs]</a>    <span class="k">def</span> <span class="nf">add_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add the rdataset to the specified section, using the specified</span>
+<span class="sd">        name as the owner name.</span>
+
+<span class="sd">        Any keyword arguments are passed on to the rdataset&#39;s to_wire()</span>
+<span class="sd">        routine.</span>
+
+<span class="sd">        @param section: the section</span>
+<span class="sd">        @type section: int</span>
+<span class="sd">        @param name: the owner name</span>
+<span class="sd">        @type name: dns_name.Name object</span>
+<span class="sd">        @param rdataset: the rdataset</span>
+<span class="sd">        @type rdataset: dns_rdataset.Rdataset object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_section</span><span class="p">(</span><span class="n">section</span><span class="p">)</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">rdataset</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span>
+                             <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">after</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rollback</span><span class="p">(</span><span class="n">before</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">TooBig</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="n">section</span><span class="p">]</span> <span class="o">+=</span> <span class="n">n</span>
+</div>
+<div class="viewcode-block" id="Renderer.add_edns"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer.add_edns">[docs]</a>    <span class="k">def</span> <span class="nf">add_edns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edns</span><span class="p">,</span> <span class="n">ednsflags</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an EDNS OPT record to the message.</span>
+
+<span class="sd">        @param edns: The EDNS level to use.</span>
+<span class="sd">        @type edns: int</span>
+<span class="sd">        @param ednsflags: EDNS flag values.</span>
+<span class="sd">        @type ednsflags: int</span>
+<span class="sd">        @param payload: The EDNS sender&#39;s payload field, which is the maximum</span>
+<span class="sd">        size of UDP datagram the sender can handle.</span>
+<span class="sd">        @type payload: int</span>
+<span class="sd">        @param options: The EDNS options list</span>
+<span class="sd">        @type options: list of dns_edns_Option instances</span>
+<span class="sd">        @see: RFC 2671</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># make sure the EDNS version in ednsflags agrees with edns</span>
+        <span class="n">ednsflags</span> <span class="o">&amp;=</span> <span class="mh">0xFF00FFFF</span><span class="n">L</span>
+        <span class="n">ednsflags</span> <span class="o">|=</span> <span class="p">(</span><span class="n">edns</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_section</span><span class="p">(</span><span class="n">ADDITIONAL</span><span class="p">)</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!BHHIH&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">OPT</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span>
+                                      <span class="n">ednsflags</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">options</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">lstart</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">opt</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+                <span class="n">stuff</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!HH&quot;</span><span class="p">,</span> <span class="n">opt</span><span class="o">.</span><span class="n">otype</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">stuff</span><span class="p">)</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+                <span class="n">opt</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+                <span class="k">assert</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="mi">65536</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="n">stuff</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">stuff</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">lend</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+            <span class="k">assert</span> <span class="n">lend</span> <span class="o">-</span> <span class="n">lstart</span> <span class="o">&lt;</span> <span class="mi">65536</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">lstart</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">stuff</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!H&quot;</span><span class="p">,</span> <span class="n">lend</span> <span class="o">-</span> <span class="n">lstart</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">stuff</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">after</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rollback</span><span class="p">(</span><span class="n">before</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">TooBig</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="n">ADDITIONAL</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="Renderer.add_tsig"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer.add_tsig">[docs]</a>    <span class="k">def</span> <span class="nf">add_tsig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keyname</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">fudge</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">tsig_error</span><span class="p">,</span> <span class="n">other_data</span><span class="p">,</span>
+                 <span class="n">request_mac</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="n">dns_tsig</span><span class="o">.</span><span class="n">default_algorithm</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a TSIG signature to the message.</span>
+
+<span class="sd">        @param keyname: the TSIG key name</span>
+<span class="sd">        @type keyname: dns_name.Name object</span>
+<span class="sd">        @param secret: the secret to use</span>
+<span class="sd">        @type secret: string</span>
+<span class="sd">        @param fudge: TSIG time fudge</span>
+<span class="sd">        @type fudge: int</span>
+<span class="sd">        @param id: the message id to encode in the tsig signature</span>
+<span class="sd">        @type id: int</span>
+<span class="sd">        @param tsig_error: TSIG error code; default is 0.</span>
+<span class="sd">        @type tsig_error: int</span>
+<span class="sd">        @param other_data: TSIG other data.</span>
+<span class="sd">        @type other_data: string</span>
+<span class="sd">        @param request_mac: This message is a response to the request which</span>
+<span class="sd">        had the specified MAC.</span>
+<span class="sd">        @param algorithm: the TSIG algorithm to use</span>
+<span class="sd">        @type request_mac: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_section</span><span class="p">(</span><span class="n">ADDITIONAL</span><span class="p">)</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+        <span class="p">(</span><span class="n">tsig_rdata</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span> <span class="o">=</span> <span class="n">dns_tsig</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">s</span><span class="p">,</span>
+                                                    <span class="n">keyname</span><span class="p">,</span>
+                                                    <span class="n">secret</span><span class="p">,</span>
+                                                    <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()),</span>
+                                                    <span class="n">fudge</span><span class="p">,</span>
+                                                    <span class="nb">id</span><span class="p">,</span>
+                                                    <span class="n">tsig_error</span><span class="p">,</span>
+                                                    <span class="n">other_data</span><span class="p">,</span>
+                                                    <span class="n">request_mac</span><span class="p">,</span>
+                                                    <span class="n">algorithm</span><span class="o">=</span><span class="n">algorithm</span><span class="p">)</span>
+        <span class="n">keyname</span><span class="o">.</span><span class="n">to_wire</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HHIH&#39;</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">TSIG</span><span class="p">,</span>
+                                      <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">rdata_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">tsig_rdata</span><span class="p">)</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">after</span> <span class="o">-</span> <span class="n">rdata_start</span> <span class="o">&lt;</span> <span class="mi">65536</span>
+        <span class="k">if</span> <span class="n">after</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rollback</span><span class="p">(</span><span class="n">before</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">TooBig</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">rdata_start</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="n">after</span> <span class="o">-</span> <span class="n">rdata_start</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="n">ADDITIONAL</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!H&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="n">ADDITIONAL</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Renderer.write_header"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer.write_header">[docs]</a>    <span class="k">def</span> <span class="nf">write_header</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write the DNS message header.</span>
+
+<span class="sd">        Writing the DNS message header is done asfter all sections</span>
+<span class="sd">        have been rendered, but before the optional TSIG signature</span>
+<span class="sd">        is added.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;!HHHHHH&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flags</span><span class="p">,</span>
+                                      <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                      <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Renderer.get_wire"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.renderer.Renderer.get_wire">[docs]</a>    <span class="k">def</span> <span class="nf">get_wire</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the wire format message.</span>
+
+<span class="sd">        @rtype: string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

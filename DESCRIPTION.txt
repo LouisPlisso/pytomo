@@ -1,0 +1,340 @@
+======
+PYTOMO
+======
+
+:Author: Louis Plissonneau, Parikshit Juluri, Mickaël Meulle
+:Version: $Revision: 0.4.0 $
+:Copyright: GPLv2
+
+.. contents:: Table of Contents
+.. section-numbering:: :depth: 3
+
+Description
+-----------
+
+Pytomo is a Python based tomographic tool to perform analysis of YouTube video
+download rates. We first select an initial list of videos that we would like to
+start the analysis with. For the videos in this list the Pytomo tool first finds
+the IP address of the cache servers on which these videos are located. The cache
+server is pinged to obtain the RTT times. Then we try to download the video for
+a limited amount of time to calculate the different statistics of the download.
+
+The more measures we get the better, so if you can advertise the use of this
+crawler on top of running it, it would help us improve *your* YouTube
+experience.
+
+Usage of the files
+------------------
+
+start_crawl.py
+~~~~~~~~~~~~~~
+    The global launcher to launch the Pytomo tool. You will need to run this in
+    order to start the data collection.
+
+DESCRIPTION.txt
+~~~~~~~~~~~~~~~
+    This file.
+
+setup.py
+~~~~~~~~
+    The setup file used to create the python package(To run this tool you do
+    not need to install it). This file is used only for development purposes.
+
+pytomo/
+~~~~~~~
+    This folder contains the pytomo package. The contents of it are listed
+    below. We have listed the contents of this package so that it could help
+    people to understand the tool and help us extend it.
+
+    The following contents are only *for the purpose of developers*.
+
+start_pytomo.py:
+^^^^^^^^^^^^^^^^^
+
+The top-most module that is used to run the Pytomo tool.
+
+**Usage**:
+    Terminal:
+        python start_pytomo.py
+    Interactive python:
+        import start_pytomo.main
+        import config_pytomo
+        start_pytomo.main()
+
+**Functions**.:
+
+    **compute_stats(url)**
+        Return a list of the statistics related to the url.The
+        contents of the list are : (url, cache_url, current_stats)
+        where current_stats is a list containing: [Ping_times,
+        download_statistics, DNS resolver used]
+
+    **format_stats(stats)**
+        Functions used to format the stats obtained from compute_stats function
+        so that they can be inserted into the sqlite3 database. The stats are
+        converted into a tuple. The arguments to this function is the list
+        returned by compute_stats().
+
+    **check_out_files(file_pattern, directory, timestamp):**
+       Returns a full path of the file used for the output. It checks if the
+       path exists, if not then the file is created in the path if possible
+       else it is created in the default user directory.
+
+    **do_crawl(result_stream=sys.stdout, timestamp=None):**
+       Crawls the urls given by the url_file.txt(present in the package), The
+       crawl is performed upto MAX_ROUNDS or MAX_VISITED_URLS
+
+    **main(argv=None)**
+        This is the program wrapper for the start_pytomo module. Is
+        is mainly used to setup and initialize the logging and
+        other startup parameters.
+
+config_pytomo.py
+^^^^^^^^^^^^^^^^
+
+File containing the various parameters and constants that are used for the
+analysis. The following parameters determine the nature of the crawl.
+
+* INPUT_URL_FILE = The file that has the initial list of urls.
+* MAX_ROUNDS =  Maximum number of crawl rounds to performed.
+* MAX_CRAWLED_URLS = Max number of urls to be visited.
+* MAX_PER_URL =  Max number of related videos to be selected  from each url.
+* MAX_PER_PAGE = Max number of related videos to be considered for selection
+  from each page
+* EXTRA_NAME_SERVERS = A list containing the name of the resolver and its IP
+                        address. This resolver will be used to get the IP
+                        address of the youtube cache
+* PING_PACKETS = Nb, of ping packets to be sent.
+* DOWNLOAD_TIME = The duration for which the video must be downloaded.
+* BUFFERING_VIDEO_DURATION = The duration for which the video is to be
+                             buffer.
+* MIN_PLAYOUT_BUFFER_SIZE = The size of the buffer for the video stream.
+* RESULT_DIR = The directory to store the text results.
+* RESULT_FILE = The file to store the text results.
+* DATABASE_DIR = The directory to store the result database.
+* DATABASE = The name of the result database
+* TABLE = The name of the result table.
+* LOG_DIR = The directory to store the log files.
+* LOG_FILE = The file to store the logs.
+* LOG_LEVEL = Parameter to set the log level(choose from DEBUG, INFO, WARNING,
+               ERROR and CRITICAL)
+* PROXIES = The HTTP Proxy to be used to access the internet(Set as command-line parameter when launched by the user).
+
+lib_youtube_download.py
+^^^^^^^^^^^^^^^^^^^^^^^
+Module to download youtube video for a limited amount of time and calculate the
+different statistics needed for the analysis.
+It has the FileDownloader class and the YouTube InfoExtractor class.
+The following functions defined in this module are used to get the statistics
+of the download.
+
+**Usage**
+    Terminal:
+        python lib_youtube_download.py url
+
+**Functions**
+    **get_youtube_cache_url(url):**
+        Return the cache url of the youtube video.
+
+    **get_download_stats(ip_address_uri, download_time=DOWNLOAD_TIME):**
+        Returns a tuple of stats for download from an url based on ip
+        address. The tuple contains stats containing: [download_time,
+        data duration, data_length, video encoding_rate, size of video in bytes,
+        Nb.of interruptions, accumulated_buffer size, accumulated_playback ,
+        current_remaining buffer, Maximum Instant Throughput achieved]
+
+lib_dns.py
+^^^^^^^^^^
+Module to retrieve the IP address of a URL out of a set of
+nameservers(default nameservers and the ones provided in the
+config_pytomo file as EXTRA_NAME_SERVERS)
+
+**Usage**
+    Not meant to be called directly. But provides the two functions
+    discussed below.
+
+**Functions**
+
+    **get_default_name_servers():**
+        Returns a list of IP addresses of default name servers.
+
+    **get_ip_addresses(url):**
+        Return a list of tuples with the IP address and the DNS resolver
+        used.
+
+lib_ping.py
+^^^^^^^^^^^
+Module to generate the RTT times of a ping.
+
+**Usage**
+    Not meant to be called directly. But provides the two functions
+    discussed below.
+
+**Functions**
+    **ping_ip(ip_address, [ping_packets=config_pytomo.PING_PACKETS]):**
+        Returns a list of the min, avg and max ping values. Currently
+        designed to work with Windows and Linux systems.
+
+lib_cache_url.py
+^^^^^^^^^^^^^^^^
+Module to retrieve the related videos from a file with a list of
+YouTube links and to store it for next round of the crawl.
+
+**Usage**
+    Terminal:
+        lib_cache_url.py [-w out_file] [-p 10] [-u 2] [-V] url_file_in
+
+    Interactive python:
+        | import lib_cache_url
+        | url_file_in = 'url_file.txt'
+        | lib_cache_url.get_next_round_urls(url_file_in, [max_per_page=20,
+        	max_per_url=5, out_file_name=None, pickle_output=False])
+
+**Arguments**
+    **url_file_in:**
+        File with a list of URLs to crawl (only YouTube is implemented).
+    **max_per_page:**
+        Number of links to consider per page(only the first MAX_PER_PAGE
+        related video links will be considered).
+    **max_per_url:**
+        Number of links to select per page (MAX_PER_URL links
+        will be randomly selected out of the MAX_PER_PAGE
+        considered).
+    **out_file_name:**
+        File name to store the list of related video urls.
+    **pickle_output:**
+        Boolean to tell if the file is a pickle file or a text
+        file
+
+**Functions**
+    **get_all_links(url):**
+        Returns a list of all links from the url.
+    **get_youtube_links(url, max_per_page):**
+        Returns a set of links that direct to YouTube. All the
+    **trunk_url(url):**
+        Returns the interesting part of a YouTube url(the url with
+        only the video ID).
+    **get_related_urls(url, max_per_page, max_per_url):**
+        Return a set of max_per_url links from max_per_page randomly
+        chosen related urls (other links are ignored).
+    **get_next_round_urls(input_links, max_per_page=20, max_per_url=5):**
+        Return a tuple of the set of input urls and a set of related url of
+        videos.
+
+lib_youtube_api.py
+^^^^^^^^^^^^^^^^^^
+Function to get the most popular YouTube videos according to the time frame.
+
+**Usage**
+    Not meant to be called directly. But provides one function as discussed
+    below.
+
+**Arguments**
+    time = 'today' or 'month' or 'week' or all_time'.
+    max_results = Total top videos needed (in  multiples of 25)
+**Function**
+    **get_popular_links(time='today', max_results=25):**
+        Returns the most popular youtube links(world-wide). The number of
+        videos needed is given as max_results. (The results returned are in
+        no particular order).
+
+lib_database.py
+^^^^^^^^^^^^^^^
+Module that creates and manages the database for th Pytomo results. It has
+a PytomoDatabase class.The columns of the database are listed in the docstring
+of the module.
+
+**Usage**
+    Not meant to be called directly but the PytomoDatabase class is to be
+    used.
+
+**Functions**
+The PytomoDatabase class has the following functions:
+
+    **create_pytomo_table(self, table=config_pytomo.TABLE_TIMESTAMP):**
+        Function to create a table.
+
+    **insert_record(self, row):**
+        Function to insert a record into the database.
+
+    **fetch_all(self):**
+        Function to print all the records of the table.
+
+    **close_handle(self):**
+        Closes the connection to the database.
+
+kaa_metadata
+~~~~~~~~~~~~
+This is a stripped down version of the `Kaa Metadata Python Package`_ (Version :
+'0.7.7').The package has been modified to be used with the
+lib_youtube_download.py module so that we can obtain the metadata of the video.
+The main modification was to make it independent of kaa_base.
+
+dns
+~~~
+This is the `DNS Python Package`_ (Version : 1.9.2) that is used to obtain the nameservers for
+the machine and also to send DNS queries to the nameservers to obtain the
+IP addresses of the YouTube cache servers.
+
+logs/
+~~~~~
+This folder contains the log files generated by the logger. These files contain the log details generated during the crawl run.
+
+databases/
+~~~~~~~~~~
+This folder contains the database files used to store the results.
+The columns of the database are as follows:
+
+* Timestamp -  A timestamp indicating the time of inserting the row.
+* Service 	- The website on which the analysis is performed.
+                    	  Example: YouTube, Megavideo.
+* Url 		- The url of the webpage.
+* CacheUrl 	- The Url of the cache server hosting the video.
+* IP 		- The IP address of the cache server from which the
+			  video is downloaded.
+* Resolver 	- The DNS resolver used to get obtain the IP address
+			  of the cache server.
+                    	  Example Google DNS, Local DNS
+* DownloadTime 	- The Time taken to download the video sample
+                     	  (We do not download the entire video but only for a
+                      	   limited download time.)
+* VideoType - The format of the video that was downloaded.
+* VideoDuration - The actual duration of the complete video.
+* VideoLength 	- The length(in bytes) of the complete video.
+* EncodingRate 	- The encoding rate of the video.
+* DownloadBytes - The length of the video sample(in bytes).
+* DownloadInterruptions -  Nb of interruptions experienced during the
+                        	 download.
+* BufferingDuration 	-  Accumulate time spend in buffering state
+* PlaybackDuration 	- Accumulate time spend in playing state.
+* BufferDurationAtEnd 	- The buffer length at the end of download.
+* PingMin 	- The minimum recorded ping time to the resolved IP
+			  address of the cache server.
+* PingAvg 	- The average recorded ping time to the resolved IP
+			  address of the cache server.
+* PingMax 	- The maximum recorded ping time to the resolved IP
+			  address of the cache server.
+* RedirectUrl - In case of HTTP redirect while downloading the video from the
+               cache server. The address of the URL to which the request has been
+               redirected is stored in this field.
+
+results/
+~~~~~~~~
+This folder contains the result files. The results in these file are listed in
+text format. It is a list containing [Video url, Cache url, IP address of cache
+server, Ping RTT times to the Cache server, Download stats, Name_IP_address of
+the DNS resolver] where Download stats = [download_time, data duration,
+data_length, video encoding_rate, size of video in bytes, Nb.of interruptions,
+accumulated_buffer size, accumulated_playback , current_remaining buffer]
+
+
+External Links
+--------------
+
+1. `YouTube Download`_.
+2. `Kaa Metadata Python Package`_.
+3. `DNS Python Package`_
+
+.. _YouTube Download: http://rg3.github.com/youtube-dl/
+.. _Kaa Metadata Python Package: http://packages.debian.org/sid/python-kaa-metadata
+.. _DNS Python Package: http://pypi.python.org/pypi/dnspython

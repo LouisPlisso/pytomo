@@ -1,0 +1,8 @@
+include README.txt
+include pytomo.man
+
+include templates/*_template.html
+include images/Orange_logo.jpg
+graft templates/doc
+
+include pytomo_web_interface_windows_x86.exe pytomo_windows_x86.exe

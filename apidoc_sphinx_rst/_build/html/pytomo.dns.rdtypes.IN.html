@@ -1,0 +1,717 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>IN Package &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="index.html" />
+    <link rel="up" title="rdtypes Package" href="pytomo.dns.rdtypes.html" />
+    <link rel="next" title="flvlib Package" href="pytomo.flvlib.html" />
+    <link rel="prev" title="ANY Package" href="pytomo.dns.rdtypes.ANY.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.flvlib.html" title="flvlib Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.dns.rdtypes.ANY.html" title="ANY Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li>
+          <li><a href="pytomo.dns.html" >dns Package</a> &raquo;</li>
+          <li><a href="pytomo.dns.rdtypes.html" accesskey="U">rdtypes Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="in-package">
+<h1>IN Package<a class="headerlink" href="#in-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">IN</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pytomo.dns.rdtypes.IN"></span><p>Class IN rdata type classes.</p>
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.A">
+<span id="a-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">A</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.A" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.A.A">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.A.</tt><tt class="descname">A</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>address</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/A.html#A"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.A.A" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>A record.</p>
+<p>&#64;ivar address: an IPv4 address
+&#64;type address: string (in the standard &#8220;dotted quad&#8221; format)</p>
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.A.A.address">
+<tt class="descname">address</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.A.A.address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.A.A.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/A.html#A.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.A.A.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.A.A.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/A.html#A.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.A.A.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.A.A.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/A.html#A.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.A.A.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.A.A.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/A.html#A.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.A.A.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.AAAA">
+<span id="aaaa-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">AAAA</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.AAAA" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.AAAA.AAAA">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.AAAA.</tt><tt class="descname">AAAA</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>address</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/AAAA.html#AAAA"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.AAAA.AAAA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>AAAA record.</p>
+<p>&#64;ivar address: an IPv6 address
+&#64;type address: string (in the standard IPv6 format)</p>
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.AAAA.AAAA.address">
+<tt class="descname">address</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.AAAA.AAAA.address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.AAAA.AAAA.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/AAAA.html#AAAA.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.AAAA.AAAA.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.AAAA.AAAA.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/AAAA.html#AAAA.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.AAAA.AAAA.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.AAAA.AAAA.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/AAAA.html#AAAA.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.AAAA.AAAA.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.AAAA.AAAA.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/AAAA.html#AAAA.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.AAAA.AAAA.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.APL">
+<span id="apl-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">APL</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.APL" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.APL.APL">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.APL.</tt><tt class="descname">APL</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>items</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/APL.html#APL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>APL record.</p>
+<p>&#64;ivar items: a list of APL items
+&#64;type items: list of APL_Item
+&#64;see: RFC 3123</p>
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.APL.APL.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/APL.html#APL.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APL.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.APL.APL.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/APL.html#APL.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APL.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.APL.APL.items">
+<tt class="descname">items</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APL.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.APL.APL.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/APL.html#APL.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APL.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.APL.APL.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/APL.html#APL.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APL.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.APL.APLItem">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.APL.</tt><tt class="descname">APLItem</tt><big>(</big><em>family</em>, <em>negation</em>, <em>address</em>, <em>prefix</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/APL.html#APLItem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APLItem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>An APL list item.</p>
+<p>&#64;ivar family: the address family (IANA address family registry)
+&#64;type family: int
+&#64;ivar negation: is this item negated?
+&#64;type negation: bool
+&#64;ivar address: the address
+&#64;type address: string
+&#64;ivar prefix: the prefix length
+&#64;type prefix: int</p>
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.APL.APLItem.address">
+<tt class="descname">address</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APLItem.address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.APL.APLItem.family">
+<tt class="descname">family</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APLItem.family" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.APL.APLItem.negation">
+<tt class="descname">negation</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APLItem.negation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.APL.APLItem.prefix">
+<tt class="descname">prefix</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APLItem.prefix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.APL.APLItem.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/APL.html#APLItem.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.APL.APLItem.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.DHCID">
+<span id="dhcid-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">DHCID</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.DHCID" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.DHCID.DHCID">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.DHCID.</tt><tt class="descname">DHCID</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>data</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/DHCID.html#DHCID"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.DHCID.DHCID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>DHCID record</p>
+<p>&#64;ivar data: the data (the content of the RR is opaque as far as the
+DNS is concerned)
+&#64;type data: string
+&#64;see: RFC 4701</p>
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.DHCID.DHCID.data">
+<tt class="descname">data</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.DHCID.DHCID.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.DHCID.DHCID.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/DHCID.html#DHCID.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.DHCID.DHCID.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.DHCID.DHCID.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/DHCID.html#DHCID.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.DHCID.DHCID.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.DHCID.DHCID.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/DHCID.html#DHCID.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.DHCID.DHCID.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.DHCID.DHCID.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/DHCID.html#DHCID.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.DHCID.DHCID.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.IPSECKEY">
+<span id="ipseckey-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">IPSECKEY</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.IPSECKEY" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.IPSECKEY.</tt><tt class="descname">IPSECKEY</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>precedence</em>, <em>gateway_type</em>, <em>algorithm</em>, <em>gateway</em>, <em>key</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/IPSECKEY.html#IPSECKEY"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>IPSECKEY record</p>
+<p>&#64;ivar precedence: the precedence for this key data
+&#64;type precedence: int
+&#64;ivar gateway_type: the gateway type
+&#64;type gateway_type: int
+&#64;ivar algorithm: the algorithm to use
+&#64;type algorithm: int
+&#64;ivar gateway: the public key
+&#64;type gateway: None, IPv4 address, IPV6 address, or domain name
+&#64;ivar key: the public key
+&#64;type key: string
+&#64;see: RFC 4025</p>
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.algorithm">
+<tt class="descname">algorithm</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.algorithm" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/IPSECKEY.html#IPSECKEY.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/IPSECKEY.html#IPSECKEY.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.gateway">
+<tt class="descname">gateway</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.gateway" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.gateway_type">
+<tt class="descname">gateway_type</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.gateway_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.key">
+<tt class="descname">key</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.precedence">
+<tt class="descname">precedence</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.precedence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/IPSECKEY.html#IPSECKEY.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/IPSECKEY.html#IPSECKEY.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.IPSECKEY.IPSECKEY.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.KX">
+<span id="kx-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">KX</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.KX" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.KX.KX">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.KX.</tt><tt class="descname">KX</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>preference</em>, <em>exchange</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/KX.html#KX"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.KX.KX" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.mxbase.UncompressedMX" title="pytomo.dns.rdtypes.mxbase.UncompressedMX"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdtypes.mxbase.UncompressedMX</span></tt></a></p>
+<p>KX record</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.NAPTR">
+<span id="naptr-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">NAPTR</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.NAPTR" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.NAPTR.</tt><tt class="descname">NAPTR</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>order</em>, <em>preference</em>, <em>flags</em>, <em>service</em>, <em>regexp</em>, <em>replacement</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NAPTR.html#NAPTR"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>NAPTR record</p>
+<p>&#64;ivar order: order
+&#64;type order: int
+&#64;ivar preference: preference
+&#64;type preference: int
+&#64;ivar flags: flags
+&#64;type flags: string
+&#64;ivar service: service
+&#64;type service: string
+&#64;ivar regexp: regular expression
+&#64;type regexp: string
+&#64;ivar replacement: replacement name
+&#64;type replacement: dns_name.Name object
+&#64;see: RFC 3403</p>
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.choose_relativity">
+<tt class="descname">choose_relativity</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NAPTR.html#NAPTR.choose_relativity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.choose_relativity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.flags">
+<tt class="descname">flags</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.flags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NAPTR.html#NAPTR.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NAPTR.html#NAPTR.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.order">
+<tt class="descname">order</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.order" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.preference">
+<tt class="descname">preference</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.preference" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.regexp">
+<tt class="descname">regexp</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.regexp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.replacement">
+<tt class="descname">replacement</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.replacement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.service">
+<tt class="descname">service</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.service" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NAPTR.html#NAPTR.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.NAPTR.NAPTR.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NAPTR.html#NAPTR.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NAPTR.NAPTR.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.NSAP">
+<span id="nsap-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">NSAP</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.NSAP" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.NSAP.NSAP">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.NSAP.</tt><tt class="descname">NSAP</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>address</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NSAP.html#NSAP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NSAP.NSAP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>NSAP record.</p>
+<p>&#64;ivar address: a NASP
+&#64;type address: string
+&#64;see: RFC 1706</p>
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.NSAP.NSAP.address">
+<tt class="descname">address</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NSAP.NSAP.address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.NSAP.NSAP.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NSAP.html#NSAP.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NSAP.NSAP.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.NSAP.NSAP.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NSAP.html#NSAP.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NSAP.NSAP.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.NSAP.NSAP.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NSAP.html#NSAP.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NSAP.NSAP.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.NSAP.NSAP.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NSAP.html#NSAP.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NSAP.NSAP.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.NSAP_PTR">
+<span id="nsap-ptr-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">NSAP_PTR</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.NSAP_PTR" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.NSAP_PTR.NSAP_PTR">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.NSAP_PTR.</tt><tt class="descname">NSAP_PTR</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>target</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/NSAP_PTR.html#NSAP_PTR"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.NSAP_PTR.NSAP_PTR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.rdtypes.html#pytomo.dns.rdtypes.nsbase.UncompressedNS" title="pytomo.dns.rdtypes.nsbase.UncompressedNS"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdtypes.nsbase.UncompressedNS</span></tt></a></p>
+<p>NSAP-PTR record</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.PX">
+<span id="px-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">PX</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.PX" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.PX.</tt><tt class="descname">PX</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>preference</em>, <em>map822</em>, <em>mapx400</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/PX.html#PX"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>PX record.</p>
+<p>&#64;ivar preference: the preference value
+&#64;type preference: int
+&#64;ivar map822: the map822 name
+&#64;type map822: dns_name.Name object
+&#64;ivar mapx400: the mapx400 name
+&#64;type mapx400: dns_name.Name object
+&#64;see: RFC 2163</p>
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.choose_relativity">
+<tt class="descname">choose_relativity</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/PX.html#PX.choose_relativity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.choose_relativity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/PX.html#PX.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/PX.html#PX.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.map822">
+<tt class="descname">map822</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.map822" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.mapx400">
+<tt class="descname">mapx400</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.mapx400" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.preference">
+<tt class="descname">preference</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.preference" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/PX.html#PX.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.PX.PX.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/PX.html#PX.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.PX.PX.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.SRV">
+<span id="srv-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">SRV</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.SRV" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.SRV.</tt><tt class="descname">SRV</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>priority</em>, <em>weight</em>, <em>port</em>, <em>target</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/SRV.html#SRV"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>SRV record</p>
+<p>&#64;ivar priority: the priority
+&#64;type priority: int
+&#64;ivar weight: the weight
+&#64;type weight: int
+&#64;ivar port: the port of the service
+&#64;type port: int
+&#64;ivar target: the target host
+&#64;type target: dns_name.Name object
+&#64;see: RFC 2782</p>
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.choose_relativity">
+<tt class="descname">choose_relativity</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/SRV.html#SRV.choose_relativity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.choose_relativity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/SRV.html#SRV.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/SRV.html#SRV.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.port">
+<tt class="descname">port</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.port" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.priority">
+<tt class="descname">priority</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.priority" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.target">
+<tt class="descname">target</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.target" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/SRV.html#SRV.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/SRV.html#SRV.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.SRV.SRV.weight">
+<tt class="descname">weight</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.SRV.SRV.weight" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.dns.rdtypes.IN.WKS">
+<span id="wks-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">WKS</span></tt> Module<a class="headerlink" href="#module-pytomo.dns.rdtypes.IN.WKS" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS">
+<em class="property">class </em><tt class="descclassname">pytomo.dns.rdtypes.IN.WKS.</tt><tt class="descname">WKS</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>address</em>, <em>protocol</em>, <em>bitmap</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/WKS.html#WKS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.dns.html#pytomo.dns.rdata.Rdata" title="pytomo.dns.rdata.Rdata"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.dns.rdata.Rdata</span></tt></a></p>
+<p>WKS record</p>
+<p>&#64;ivar address: the address
+&#64;type address: string
+&#64;ivar protocol: the protocol
+&#64;type protocol: int
+&#64;ivar bitmap: the bitmap
+&#64;type bitmap: string
+&#64;see: RFC 1035</p>
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS.address">
+<tt class="descname">address</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS.address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS.bitmap">
+<tt class="descname">bitmap</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS.bitmap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS.from_text">
+<em class="property">classmethod </em><tt class="descname">from_text</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>tok</em>, <em>origin=None</em>, <em>relativize=True</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/WKS.html#WKS.from_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS.from_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS.from_wire">
+<em class="property">classmethod </em><tt class="descname">from_wire</tt><big>(</big><em>rdclass</em>, <em>rdtype</em>, <em>wire</em>, <em>current</em>, <em>rdlen</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/WKS.html#WKS.from_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS.from_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS.protocol">
+<tt class="descname">protocol</tt><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS.protocol" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS.to_text">
+<tt class="descname">to_text</tt><big>(</big><em>origin=None</em>, <em>relativize=True</em>, <em>**kw</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/WKS.html#WKS.to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS.to_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pytomo.dns.rdtypes.IN.WKS.WKS.to_wire">
+<tt class="descname">to_wire</tt><big>(</big><em>file</em>, <em>compress=None</em>, <em>origin=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/dns/rdtypes/IN/WKS.html#WKS.to_wire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.dns.rdtypes.IN.WKS.WKS.to_wire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">IN Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">IN</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.A"><tt class="docutils literal"><span class="pre">A</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.AAAA"><tt class="docutils literal"><span class="pre">AAAA</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.APL"><tt class="docutils literal"><span class="pre">APL</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.DHCID"><tt class="docutils literal"><span class="pre">DHCID</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.IPSECKEY"><tt class="docutils literal"><span class="pre">IPSECKEY</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.KX"><tt class="docutils literal"><span class="pre">KX</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.NAPTR"><tt class="docutils literal"><span class="pre">NAPTR</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.NSAP"><tt class="docutils literal"><span class="pre">NSAP</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.NSAP_PTR"><tt class="docutils literal"><span class="pre">NSAP_PTR</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.PX"><tt class="docutils literal"><span class="pre">PX</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.SRV"><tt class="docutils literal"><span class="pre">SRV</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.dns.rdtypes.IN.WKS"><tt class="docutils literal"><span class="pre">WKS</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pytomo.dns.rdtypes.ANY.html"
+                        title="previous chapter">ANY Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pytomo.flvlib.html"
+                        title="next chapter">flvlib Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/pytomo.dns.rdtypes.IN.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.flvlib.html" title="flvlib Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.dns.rdtypes.ANY.html" title="ANY Package"
+             >previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li>
+          <li><a href="pytomo.dns.html" >dns Package</a> &raquo;</li>
+          <li><a href="pytomo.dns.rdtypes.html" >rdtypes Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,275 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>video Package &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="index.html" />
+    <link rel="up" title="kaa_metadata Package" href="pytomo.kaa_metadata.html" />
+    <link rel="next" title="rrdtool_win_x86_DLLs Package" href="pytomo.rrdtool_win_x86_DLLs.html" />
+    <link rel="prev" title="misc Package" href="pytomo.kaa_metadata.misc.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.rrdtool_win_x86_DLLs.html" title="rrdtool_win_x86_DLLs Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.misc.html" title="misc Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li>
+          <li><a href="pytomo.kaa_metadata.html" accesskey="U">kaa_metadata Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="video-package">
+<h1>video Package<a class="headerlink" href="#video-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-pytomo.kaa_metadata.video.asf">
+<span id="asf-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">asf</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.asf" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pytomo.kaa_metadata.video.asf.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.asf.</tt><tt class="descname">Parser</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/video/asf.html#Parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.video.asf.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper around audio and av content.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.core">
+<span id="core-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">core</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.core" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pytomo.kaa_metadata.video.core.AVContainer">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.video.core.</tt><tt class="descname">AVContainer</tt><a class="reference internal" href="_modules/pytomo/kaa_metadata/video/core.html#AVContainer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.video.core.AVContainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.kaa_metadata.html#pytomo.kaa_metadata.core.Media" title="pytomo.kaa_metadata.core.Media"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.kaa_metadata.core.Media</span></tt></a></p>
+<p>Container for Audio and Video streams. This is the Container Type for
+all media, that contain more than one stream.</p>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.core.AVContainer.media">
+<tt class="descname">media</tt><em class="property"> = 'MEDIA_AV'</em><a class="headerlink" href="#pytomo.kaa_metadata.video.core.AVContainer.media" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.kaa_metadata.video.core.Chapter">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.video.core.</tt><tt class="descname">Chapter</tt><big>(</big><em>name=None</em>, <em>pos=0</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/video/core.html#Chapter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.video.core.Chapter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.kaa_metadata.html#pytomo.kaa_metadata.core.Media" title="pytomo.kaa_metadata.core.Media"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.kaa_metadata.core.Media</span></tt></a></p>
+<p>Chapter in a Multiplexed Container.</p>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.core.Chapter.media">
+<tt class="descname">media</tt><em class="property"> = 'MEDIA_CHAPTER'</em><a class="headerlink" href="#pytomo.kaa_metadata.video.core.Chapter.media" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.kaa_metadata.video.core.Subtitle">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.video.core.</tt><tt class="descname">Subtitle</tt><big>(</big><em>language=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/video/core.html#Subtitle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.video.core.Subtitle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.kaa_metadata.html#pytomo.kaa_metadata.core.Media" title="pytomo.kaa_metadata.core.Media"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.kaa_metadata.core.Media</span></tt></a></p>
+<p>Subtitle Tracks in a Multiplexed Container.</p>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.core.Subtitle.media">
+<tt class="descname">media</tt><em class="property"> = 'MEDIA_SUBTITLE'</em><a class="headerlink" href="#pytomo.kaa_metadata.video.core.Subtitle.media" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pytomo.kaa_metadata.video.core.VideoStream">
+<em class="property">class </em><tt class="descclassname">pytomo.kaa_metadata.video.core.</tt><tt class="descname">VideoStream</tt><big>(</big><em>hash=None</em><big>)</big><a class="reference internal" href="_modules/pytomo/kaa_metadata/video/core.html#VideoStream"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pytomo.kaa_metadata.video.core.VideoStream" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="pytomo.kaa_metadata.html#pytomo.kaa_metadata.core.Media" title="pytomo.kaa_metadata.core.Media"><tt class="xref py py-class docutils literal"><span class="pre">pytomo.kaa_metadata.core.Media</span></tt></a></p>
+<p>Video Tracks in a Multiplexed Container.</p>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.core.VideoStream.media">
+<tt class="descname">media</tt><em class="property"> = 'MEDIA_VIDEO'</em><a class="headerlink" href="#pytomo.kaa_metadata.video.core.VideoStream.media" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.flv">
+<span id="flv-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">flv</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.flv" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.flv.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.flv.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.flv.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">FlashVideo</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.mkv">
+<span id="mkv-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">mkv</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.mkv" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.mkv.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.mkv.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.mkv.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">Matroska</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.mp4">
+<span id="mp4-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">mp4</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.mp4" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.mp4.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.mp4.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.mp4.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">MPEG4</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.mpeg">
+<span id="mpeg-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">mpeg</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.mpeg" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.mpeg.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.mpeg.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.mpeg.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">MPEG</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.ogm">
+<span id="ogm-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">ogm</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.ogm" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.ogm.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.ogm.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.ogm.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">Ogm</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.real">
+<span id="real-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">real</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.real" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.real.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.real.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.real.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">RealVideo</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.riff">
+<span id="riff-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">riff</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.riff" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.riff.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.riff.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.riff.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">Riff</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pytomo.kaa_metadata.video.vcd">
+<span id="vcd-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">vcd</span></tt> Module<a class="headerlink" href="#module-pytomo.kaa_metadata.video.vcd" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="pytomo.kaa_metadata.video.vcd.Parser">
+<tt class="descclassname">pytomo.kaa_metadata.video.vcd.</tt><tt class="descname">Parser</tt><a class="headerlink" href="#pytomo.kaa_metadata.video.vcd.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">VCDFile</span></tt></p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">video Package</a><ul>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.asf"><tt class="docutils literal"><span class="pre">asf</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.flv"><tt class="docutils literal"><span class="pre">flv</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.mkv"><tt class="docutils literal"><span class="pre">mkv</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.mp4"><tt class="docutils literal"><span class="pre">mp4</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.mpeg"><tt class="docutils literal"><span class="pre">mpeg</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.ogm"><tt class="docutils literal"><span class="pre">ogm</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.real"><tt class="docutils literal"><span class="pre">real</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.riff"><tt class="docutils literal"><span class="pre">riff</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-pytomo.kaa_metadata.video.vcd"><tt class="docutils literal"><span class="pre">vcd</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pytomo.kaa_metadata.misc.html"
+                        title="previous chapter">misc Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pytomo.rrdtool_win_x86_DLLs.html"
+                        title="next chapter">rrdtool_win_x86_DLLs Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/pytomo.kaa_metadata.video.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pytomo.rrdtool_win_x86_DLLs.html" title="rrdtool_win_x86_DLLs Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pytomo.kaa_metadata.misc.html" title="misc Package"
+             >previous</a> |</li>
+        <li><a href="index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >Pytomo-1.9.8</a> &raquo;</li>
+          <li><a href="pytomo.html" >pytomo Package</a> &raquo;</li>
+          <li><a href="pytomo.kaa_metadata.html" >kaa_metadata Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

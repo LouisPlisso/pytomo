@@ -1,0 +1,256 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.lib_youtube_api &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.lib_youtube_api</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="sd">&#39;&#39;&#39; Function to get the most popular Youtube videos according to the time frame.</span>
+<span class="sd">    Arguments:</span>
+<span class="sd">        time = &#39;today&#39; or &#39;month&#39; or &#39;week&#39; or all_time&#39;</span>
+<span class="sd">        max_results : In multiples of 25</span>
+<span class="sd">    Returns: A list containing the list of videos.</span>
+
+<span class="sd">   Usage: To use the functions provided in this module independently,</span>
+<span class="sd">        first place yourself just above pytomo folder.Then:</span>
+
+<span class="sd">        import pytomo.start_pytomo</span>
+<span class="sd">        TIMESTAMP = &#39;test_timestamp&#39;</span>
+<span class="sd">        start_pytomo.configure_log_file(TIMESTAMP)</span>
+
+<span class="sd">        import pytomo.lib_youtube_api as lib_youtube_api</span>
+<span class="sd">        time = &#39;today&#39; # choose from &#39;today&#39; or &#39;month&#39; or &#39;week&#39; or all_time&#39;</span>
+<span class="sd">        max_results = 25</span>
+<span class="sd">        time_frame = lib_youtube_api.get_time_frame(time)</span>
+<span class="sd">        lib_youtube_api.get_popular_links(time_frame, max_results)</span>
+<span class="sd">        url = &#39;http://www.youtube.com/watch?v=cv5bF2FJQBc&#39;</span>
+<span class="sd">        max_per_page = 25</span>
+<span class="sd">        max_per_url = 10</span>
+<span class="sd">        lib_youtube_api.get_youtube_links(url)</span>
+<span class="sd">        lib_youtube_api.get_related_urls(url, max_per_page, max_per_url)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">with_statement</span><span class="p">,</span> <span class="n">absolute_import</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">lib_links_extractor</span>
+<span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">ImportError</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">lib_links_extractor</span>
+<span class="c"># global config</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">config_pytomo</span>
+<span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">ImportError</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">config_pytomo</span>
+
+<span class="c"># Youtube webpage limitation</span>
+<span class="n">MAX_VIDEO_PER_PAGE</span> <span class="o">=</span> <span class="mi">25</span>
+
+<span class="c"># Youtube default country for worldwide requests</span>
+<span class="n">GLOBAL_COUNTRY</span> <span class="o">=</span> <span class="s">&#39;US&#39;</span>
+
+<div class="viewcode-block" id="get_time_frame"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_api.get_time_frame">[docs]</a><span class="k">def</span> <span class="nf">get_time_frame</span><span class="p">(</span><span class="n">input_time</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TIME_FRAME</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Returns the time frame in the form accepted by youtube_api</span>
+<span class="sd">    &gt;&gt;&gt; from . import start_pytomo</span>
+<span class="sd">    &gt;&gt;&gt; start_pytomo.configure_log_file(&#39;doc_test&#39;) #doctest: +ELLIPSIS</span>
+<span class="sd">    Configuring log file</span>
+<span class="sd">    Logs are there: ...</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;today&#39;)</span>
+<span class="sd">    &#39;t&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;week&#39;)</span>
+<span class="sd">    &#39;w&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;month&#39;)</span>
+<span class="sd">    &#39;m&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;all_time&#39;)</span>
+<span class="sd">    &#39;a&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_time_frame(&#39;other&#39;)</span>
+<span class="sd">    &#39;a&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">if</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;today&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;t&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;week&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;w&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;month&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;m&#39;</span>
+    <span class="k">elif</span> <span class="n">input_time</span> <span class="o">==</span> <span class="s">&#39;all_time&#39;</span><span class="p">:</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;a&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Time frame not recognised. &#39;</span>
+                               <span class="s">&#39;Assuming All time Popular videos.&#39;</span><span class="p">)</span>
+        <span class="n">time_frame</span> <span class="o">=</span> <span class="s">&#39;a&#39;</span>
+    <span class="k">return</span> <span class="n">time_frame</span>
+</div>
+<div class="viewcode-block" id="get_popular_links"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_api.get_popular_links">[docs]</a><span class="k">def</span> <span class="nf">get_popular_links</span><span class="p">(</span><span class="n">input_time</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TIME_FRAME</span><span class="p">,</span>
+                      <span class="n">max_results</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">MAX_PER_PAGE</span><span class="p">,</span>
+                      <span class="n">country</span><span class="o">=</span><span class="n">GLOBAL_COUNTRY</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Returns the most popular youtube links (world-wide).</span>
+<span class="sd">    The number of videos returned is given as Total_pages.</span>
+<span class="sd">    (The results returned are in no particular order).</span>
+<span class="sd">    A set of only Youtube links from url</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Getting popular links&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">country</span><span class="p">:</span>
+        <span class="n">country</span> <span class="o">=</span> <span class="n">GLOBAL_COUNTRY</span>
+    <span class="n">time_frame</span> <span class="o">=</span> <span class="n">get_time_frame</span><span class="p">(</span><span class="n">input_time</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">max_results</span> <span class="o">&gt;</span> <span class="n">MAX_VIDEO_PER_PAGE</span><span class="p">:</span>
+        <span class="n">pages</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_results</span><span class="p">)</span> <span class="o">/</span> <span class="n">MAX_VIDEO_PER_PAGE</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pages</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">pages</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+           <span class="p">(</span><span class="s">&#39;http://www.youtube.com/charts/videos_views?p=2&amp;gl=</span><span class="si">%s</span><span class="s">&amp;t=&#39;</span> <span class="o">%</span> <span class="n">country</span><span class="p">,</span>
+             <span class="n">time_frame</span><span class="p">,</span> <span class="s">&#39;&amp;p=&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">page</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+                     <span class="p">)</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="n">lib_links_extractor</span><span class="o">.</span><span class="n">get_all_links</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">links</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;No popular link was found&#39;</span><span class="p">)</span>
+        <span class="n">popular_links</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">r&#39;/watch?v=&#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+                    <span class="n">link</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;http://www.youtube.com&quot;</span><span class="p">,</span> <span class="n">link</span><span class="p">))</span>
+                <span class="n">popular_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">popular_links</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">max_results</span><span class="p">:</span>
+                    <span class="k">break</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;popular links are: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">popular_links</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">popular_links</span>
+</div>
+<div class="viewcode-block" id="get_youtube_links"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_api.get_youtube_links">[docs]</a><span class="k">def</span> <span class="nf">get_youtube_links</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">):</span>
+    <span class="s">&quot;Return a set of only Youtube links from url&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="s">&#39;youtube&#39;</span> <span class="ow">in</span> <span class="n">url</span> <span class="ow">or</span> <span class="s">&#39;youtu.be&#39;</span> <span class="ow">in</span> <span class="n">url</span><span class="p">):</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Only youtube is implemented, got url: </span><span class="si">%s</span><span class="s">&quot;</span>
+                                <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">links</span> <span class="o">=</span> <span class="n">lib_links_extractor</span><span class="o">.</span><span class="n">get_all_links</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">youtube_links</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Found </span><span class="si">%d</span><span class="s"> links for url </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">links</span><span class="p">),</span> <span class="n">url</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&quot;/watch&quot;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+                <span class="n">link</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;http://www.youtube.com&quot;</span><span class="p">,</span> <span class="n">link</span><span class="p">))</span>
+            <span class="n">youtube_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">youtube_links</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">max_per_page</span><span class="p">:</span>
+                <span class="k">break</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Found </span><span class="si">%d</span><span class="s"> related video links for url </span><span class="si">%s</span><span class="s">&quot;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">youtube_links</span><span class="p">),</span> <span class="n">url</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">youtube_links</span>
+</div>
+<div class="viewcode-block" id="trunk_url"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_api.trunk_url">[docs]</a><span class="k">def</span> <span class="nf">trunk_url</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the interesting part of a Youtube url</span>
+<span class="sd">    &gt;&gt;&gt; url= &#39;http://www.youtube.com/watch?v=hE0207sxaPg&amp;feature=hp_SLN&amp;list=SL&#39;</span>
+<span class="sd">    &gt;&gt;&gt; trunk_url(url)  #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    &#39;http://www.youtube.com/watch?v=hE0207sxaPg&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://www.youtube.com/watch?v=y2kEx5BLoC4&amp; \</span>
+<span class="sd">    ... feature=list_related&amp;playnext=1&amp;list=MLGxdCwVVULXfxx-61LMYHbwpcwAvZd-rI&#39;</span>
+<span class="sd">    &gt;&gt;&gt; trunk_url(url)  #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">     &#39;http://www.youtube.com/watch?v=y2kEx5BLoC4&#39;</span>
+<span class="sd">    &gt;&gt;&gt; url = &#39;http://www.youtube.com/watch?v=UC-RFFIMXlA&#39;</span>
+<span class="sd">    &gt;&gt;&gt; trunk_url(url)  #doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    &#39;http://www.youtube.com/watch?v=UC-RFFIMXlA&#39;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">url</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;&amp;&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="get_related_urls"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_youtube_api.get_related_urls">[docs]</a><span class="k">def</span> <span class="nf">get_related_urls</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">,</span> <span class="n">max_per_url</span><span class="p">):</span>
+    <span class="s">&quot;Return a set of max_links randomly chosen related urls&quot;</span>
+    <span class="n">youtube_links</span> <span class="o">=</span> <span class="n">get_youtube_links</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">max_per_page</span><span class="p">)</span>
+    <span class="n">selected_links</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">trunk_url</span><span class="p">,</span>
+                         <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">youtube_links</span><span class="p">,</span>
+                                       <span class="nb">min</span><span class="p">(</span><span class="n">max_per_url</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">youtube_links</span><span class="p">))))</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Selected </span><span class="si">%d</span><span class="s"> links for url </span><span class="si">%s</span><span class="s">&quot;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">selected_links</span><span class="p">),</span> <span class="n">url</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">selected_links</span>
+
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">doctest</span>
+    <span class="n">doctest</span><span class="o">.</span><span class="n">testmod</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

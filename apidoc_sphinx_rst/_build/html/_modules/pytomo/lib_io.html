@@ -1,0 +1,977 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.lib_io &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.lib_io</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="sd">&#39;&#39;&#39;Module for I/O operations on filesystem.</span>
+<span class="sd">Used to write the index.html to display the graphical interface.</span>
+<span class="sd">Version: 0.1</span>
+<span class="sd">Author: Ana Oprea</span>
+<span class="sd">Date: 20.07.2012</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">with_statement</span><span class="p">,</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">optparse</span> <span class="kn">import</span> <span class="n">OptionParser</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="c"># only for logging</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">chain</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">itemgetter</span>
+<span class="c"># config file</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">config_pytomo</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">config_pytomo</span>
+<span class="c"># database data</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">lib_database</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">lib_database</span>
+<span class="kn">from</span> <span class="nn">sqlite3</span> <span class="kn">import</span> <span class="n">Error</span>
+<span class="c"># parameters to extract from db and plot</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.lib_plot</span> <span class="kn">import</span> <span class="n">UNITS</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">lib_plot</span> <span class="kn">import</span> <span class="n">UNITS</span>
+<span class="c"># to check if files/dirs exist and set name</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.start_pytomo</span> <span class="kn">import</span> <span class="n">check_out_files</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">start_pytomo</span> <span class="kn">import</span> <span class="n">check_out_files</span>
+<span class="kn">from</span> <span class="nn">.fpdf</span> <span class="kn">import</span> <span class="n">FPDF</span><span class="p">,</span> <span class="n">HTMLMixin</span>
+
+<span class="c"># FPDF can buffer output or write to file</span>
+<span class="n">WRITE_TO_FILE</span> <span class="o">=</span> <span class="s">&#39;F&#39;</span>
+<span class="c"># html related</span>
+<span class="c"># TODO: relative path?</span>
+<span class="c"># template that contains style and header</span>
+<span class="n">START_TEMPLATE_NAME</span> <span class="o">=</span> <span class="s">&#39;start_template.html&#39;</span>
+<span class="c"># template that contains footer</span>
+<span class="n">END_TEMPLATE_NAME</span> <span class="o">=</span> <span class="s">&#39;end_template.html&#39;</span>
+<span class="c"># names and headers</span>
+<span class="n">MIDDLE_COL_TABLE_HEADER</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Time&#39;</span><span class="p">,</span> <span class="s">&#39;Video&#39;</span><span class="p">,</span> <span class="s">&#39;Cache server&#39;</span><span class="p">]</span>
+<span class="n">MID_COL_NAME</span> <span class="o">=</span> <span class="s">&#39;col1&#39;</span>
+<span class="n">MID_COL_HEADER</span> <span class="o">=</span> <span class="s">&#39;Graphs&#39;</span>
+<span class="n">LEFT_COL_NAME</span> <span class="o">=</span> <span class="s">&#39;col2&#39;</span>
+<span class="n">LEFT_COL_HEADER</span> <span class="o">=</span> <span class="s">&#39;Links to graphs&#39;</span>
+<span class="n">RIGHT_COL_NAME</span> <span class="o">=</span> <span class="s">&#39;col3&#39;</span>
+<span class="n">RIGHT_COL_HEADER</span> <span class="o">=</span> <span class="s">&#39;Average parameters&#39;</span>
+<span class="n">RIGHT_COL_TABLE_HEADER</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Parameter&#39;</span><span class="p">,</span> <span class="s">&#39;Value&#39;</span><span class="p">]</span>
+<span class="c"># html tags</span>
+<span class="n">BR_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;BR&gt;&#39;</span>
+<span class="n">IMG_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;IMG src=&quot;</span><span class="si">%s</span><span class="s">&quot; alt=</span><span class="si">%s</span><span class="s">&gt;&#39;</span>
+<span class="n">LI_START_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;li&gt;&#39;</span>
+<span class="n">LI_END_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;/li&gt;&#39;</span>
+<span class="n">UL_START_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;ul&gt;&#39;</span>
+<span class="n">UL_NOSTYLE_START_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;ul style=&quot;list-style: none;&quot;&gt;&#39;</span>
+<span class="n">UL_END_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;/ul&gt;&#39;</span>
+<span class="n">DIV_START_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;div class=</span><span class="si">%s</span><span class="s">&gt;&#39;</span>
+<span class="n">DIV_END_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;/div&gt;&#39;</span>
+<span class="n">HEADER_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;h2&gt;</span><span class="si">%s</span><span class="s">&lt;/h2&gt;&#39;</span>
+<span class="n">TABLE_START_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;table border=&quot;1&quot;; align=&quot;center&quot;&gt;&#39;</span>
+<span class="n">TABLE_END_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;/table&gt;&#39;</span>
+<span class="n">TR_START_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;tr&gt;&#39;</span>
+<span class="n">TR_END_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;/tr&gt;&#39;</span>
+<span class="n">TH_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;th&gt;</span><span class="si">%s</span><span class="s">&lt;/th&gt;&#39;</span>
+<span class="n">TH_TAG_WIDTH</span> <span class="o">=</span> <span class="s">&#39;&lt;th width=&quot;50%&quot;&gt;</span><span class="si">%s</span><span class="s">&lt;/th&gt;&#39;</span>
+<span class="n">TH_TAG_ALIGNED</span> <span class="o">=</span> <span class="s">&#39;&lt;th align=&quot;left&quot;&gt;</span><span class="si">%s</span><span class="s">&lt;/th&gt;&#39;</span>
+<span class="n">TD_START_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;td&gt;&#39;</span>
+<span class="n">TD_START_TAG_ALIGNED</span> <span class="o">=</span> <span class="s">&#39;&lt;td align=&quot;left&quot;&gt;&#39;</span>
+<span class="n">TD_END_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;/td&gt;&#39;</span>
+<span class="n">A_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;a href=&quot;</span><span class="si">%s</span><span class="s">&quot;&gt;</span><span class="si">%s</span><span class="s">&lt;/a&gt;&#39;</span>
+<span class="n">P_TAG</span> <span class="o">=</span> <span class="s">&#39;&lt;p&gt;</span><span class="si">%s</span><span class="s">&lt;/p&gt;  &#39;</span>
+<span class="c"># nr. of spaces before the DIV tags in the main page</span>
+<span class="n">NR_DIV_SPACES</span> <span class="o">=</span> <span class="mi">13</span>
+<span class="c"># nr. of spaces before the h2/IMG tags in the main page</span>
+<span class="n">NR_INNER_SPACES</span> <span class="o">=</span> <span class="mi">17</span>
+<span class="c"># end of line</span>
+<span class="n">END_LINE</span> <span class="o">=</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+<span class="c"># separator for directories when accessing through http</span>
+<span class="c"># for example, you for an image, it will always be ..\images\xx.png</span>
+<span class="n">PATH_SEPARATOR</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span>
+<span class="c"># text to display for Service link</span>
+<span class="n">TEXT_YT</span> <span class="o">=</span> <span class="s">&#39; video&#39;</span>
+<span class="c"># text to display for cache server</span>
+<span class="n">TEXT_CACHE</span> <span class="o">=</span> <span class="s">&#39;cache server&#39;</span>
+<span class="c"># names will have parameter and timestamp connected by &#39;_&#39;</span>
+<span class="n">NAME_CONNECTOR</span> <span class="o">=</span> <span class="s">&#39;_&#39;</span>
+<span class="c"># dictionaries/lists with parameters to plot</span>
+<span class="c"># key that contains all the parameters to plot</span>
+<span class="n">ALL_KEY</span> <span class="o">=</span> <span class="s">&#39;All_Parameters&#39;</span>
+<span class="c"># key that contains all the main parameters to plot</span>
+<span class="n">MAIN_KEY</span> <span class="o">=</span> <span class="s">&#39; Main_Parameters&#39;</span>
+<span class="c"># key that is used to display &#39;Service&#39; videos downloaded instead of plots</span>
+<span class="n">LINKS_KEY</span> <span class="o">=</span> <span class="s">&#39;Links_to_played_videos&#39;</span>
+<span class="c"># key that is used to display the existent databases in the database directory</span>
+<span class="n">DB_KEY</span> <span class="o">=</span> <span class="s">&#39;Database_archive&#39;</span>
+<span class="c"># key that is used to link to the description</span>
+<span class="n">DOC_KEY</span> <span class="o">=</span> <span class="s">&#39;Project_documentation&#39;</span>
+<span class="c"># database extension</span>
+<span class="n">DB_EXTENSION</span> <span class="o">=</span> <span class="s">&#39;(pytomo_database\.db)$&#39;</span>
+<span class="c"># database input parameter</span>
+<span class="n">DB_INPUT</span> <span class="o">=</span> <span class="s">&#39;?db=&#39;</span>
+<span class="c"># units for graphs that do not have records in the database</span>
+<span class="n">NO_DB_RECORDS_UNITS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;AvgThroughput&#39;</span><span class="p">:</span> <span class="s">&#39;kbps&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ReceptionRatio&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span><span class="p">,</span>
+    <span class="s">&#39;VideosWithInterruptions&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span>
+<span class="p">}</span>
+<span class="c"># dictionary with mappings for what to plot</span>
+<span class="n">ALL_PLOTS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">ALL_KEY</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">UNITS</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">+</span> <span class="n">NO_DB_RECORDS_UNITS</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+        <span class="n">MAIN_KEY</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;VideosWithInterruptions&#39;</span><span class="p">,</span> <span class="s">&#39;AvgThroughput&#39;</span><span class="p">,</span>
+                   <span class="s">&#39;BufferingDuration&#39;</span><span class="p">,</span> <span class="s">&#39;PingAvg&#39;</span><span class="p">],</span>
+        <span class="s">&#39;QoE&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;VideosWithInterruptions&#39;</span><span class="p">,</span><span class="s">&#39;DownloadInterruptions&#39;</span><span class="p">,</span>
+                <span class="s">&#39;ReceptionRatio&#39;</span><span class="p">,</span> <span class="s">&#39;BufferingDuration&#39;</span><span class="p">,</span> <span class="s">&#39;BufferDurationAtEnd&#39;</span><span class="p">],</span>
+        <span class="s">&#39;QoS&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;AvgThroughput&#39;</span><span class="p">,</span> <span class="s">&#39;MaxInstantThp&#39;</span><span class="p">,</span> <span class="s">&#39;InitialRate&#39;</span><span class="p">,</span>
+                <span class="s">&#39;InitialData&#39;</span><span class="p">,</span> <span class="s">&#39;DownloadBytes&#39;</span><span class="p">,</span> <span class="s">&#39;DownloadTime&#39;</span><span class="p">,</span>
+                <span class="s">&#39;PlaybackDuration&#39;</span><span class="p">,</span> <span class="s">&#39;PingMin&#39;</span><span class="p">,</span> <span class="s">&#39;PingAvg&#39;</span><span class="p">,</span> <span class="s">&#39;PingMax&#39;</span><span class="p">],</span>
+        <span class="s">&#39;Video_characteristics&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;VideoLength&#39;</span><span class="p">,</span> <span class="s">&#39;VideoDuration&#39;</span><span class="p">,</span>
+                                  <span class="s">&#39;EncodingRate&#39;</span><span class="p">],</span>
+        <span class="p">}</span>
+<span class="c"># dictionary with explanations for what is plotted</span>
+<span class="n">MAN_PLOTS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;PingMin&#39;</span><span class="p">:</span> <span class="s">&#39;The minimum recorded ping time to the resolved IP address&#39;</span>
+                    <span class="s">&#39; of the cache server&#39;</span><span class="p">,</span>
+        <span class="s">&#39;PingAvg&#39;</span><span class="p">:</span> <span class="s">&#39;The average recorded ping time to the resolved IP address&#39;</span>
+                    <span class="s">&#39; of the cache server&#39;</span><span class="p">,</span>
+        <span class="s">&#39;PingMax&#39;</span><span class="p">:</span> <span class="s">&#39;The maximum recorded ping time to the resolved IP address&#39;</span>
+                    <span class="s">&#39; of the cache server&#39;</span><span class="p">,</span>
+        <span class="s">&#39;DownloadTime&#39;</span><span class="p">:</span> <span class="s">&#39;The time taken to download the video sample (we do not&#39;</span>
+                        <span class="s">&#39; download the entire video, but only its beginning)&#39;</span><span class="p">,</span>
+        <span class="s">&#39;VideoDuration&#39;</span><span class="p">:</span> <span class="s">&#39;The actual duration of the complete video&#39;</span><span class="p">,</span>
+        <span class="s">&#39;VideoLength&#39;</span><span class="p">:</span> <span class="s">&#39;The length of the complete video&#39;</span><span class="p">,</span>
+        <span class="s">&#39;EncodingRate&#39;</span><span class="p">:</span> <span class="s">&#39;The encoding rate of the video:&#39;</span>
+                        <span class="s">&#39; VideoLength / VideoDuration&#39;</span><span class="p">,</span>
+        <span class="s">&#39;DownloadBytes&#39;</span><span class="p">:</span> <span class="s">&#39;The length of the video sample&#39;</span><span class="p">,</span>
+        <span class="s">&#39;DownloadInterruptions&#39;</span><span class="p">:</span> <span class="s">&#39;Number of interruptions experienced during&#39;</span>
+                                 <span class="s">&#39; the download&#39;</span><span class="p">,</span>
+        <span class="s">&#39;InitialData&#39;</span><span class="p">:</span> <span class="s">&#39;Data downloaded in the initial buffering period&#39;</span><span class="p">,</span>
+        <span class="s">&#39;InitialRate&#39;</span><span class="p">:</span> <span class="s">&#39;The mean data rate during the initial&#39;</span>
+                       <span class="s">&#39; buffering period&#39;</span><span class="p">,</span>
+        <span class="s">&#39;BufferingDuration&#39;</span><span class="p">:</span> <span class="s">&#39;Accumulated time spent in buffering state&#39;</span><span class="p">,</span>
+        <span class="s">&#39;PlaybackDuration&#39;</span><span class="p">:</span> <span class="s">&#39;Accumulated time spent in playing state&#39;</span><span class="p">,</span>
+        <span class="s">&#39;BufferDurationAtEnd&#39;</span><span class="p">:</span> <span class="s">&#39;The buffer length at the end of the download&#39;</span><span class="p">,</span>
+        <span class="s">&#39;MaxInstantThp&#39;</span><span class="p">:</span> <span class="s">&#39;The maximum instantaneous throughput of the &#39;</span>
+                         <span class="s">&#39;download&#39;</span><span class="p">,</span>
+        <span class="s">&#39;AvgThroughput&#39;</span><span class="p">:</span> <span class="s">&#39;The average throughput: DownloadBytes / DownloadTime&#39;</span><span class="p">,</span>
+        <span class="s">&#39;ReceptionRatio&#39;</span><span class="p">:</span> <span class="s">&#39;Quality of Experience parameter: &#39;</span>
+                     <span class="s">&#39;AvgThroughput / EncodingRate&#39;</span><span class="p">,</span>
+        <span class="s">&#39;VideosWithInterruptions&#39;</span><span class="p">:</span> <span class="s">&#39;Quality of Experience parameter: signals&#39;</span>
+                            <span class="s">&#39; interruptions during video download &lt;BR&gt;&#39;</span>
+                            <span class="s">&#39;(1 - there are interuptions, 0 - no interuptions)&#39;</span>
+        <span class="p">}</span>
+<span class="c"># average parameters</span>
+<span class="n">AVERAGE_PARAM_DESCRIPTION</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Service crawled&#39;</span><span class="p">,</span> <span class="s">&#39;Total crawl time&#39;</span><span class="p">,</span>
+                <span class="s">&#39;Start crawl time&#39;</span><span class="p">,</span> <span class="s">&#39;End crawl time&#39;</span><span class="p">,</span> <span class="s">&#39;Number of videos played&#39;</span><span class="p">,</span>
+                <span class="s">&#39;Download Time average (sec)&#39;</span><span class="p">,</span> <span class="s">&#39;Download Interruptions average&#39;</span><span class="p">,</span>
+                <span class="s">&#39;Ping average (msec)&#39;</span><span class="p">]</span>
+<span class="n">AVERAGE_PARAM</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;DownloadTime&#39;</span><span class="p">,</span> <span class="s">&#39;DownloadInterruptions&#39;</span><span class="p">,</span> <span class="s">&#39;PingAvg&#39;</span><span class="p">]</span>
+<span class="c"># parameters regarding urls - must change Service position when needed!!!</span>
+<span class="n">URL_PARAM</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Url&#39;</span><span class="p">,</span> <span class="s">&#39;CacheUrl&#39;</span><span class="p">,</span> <span class="s">&#39;Service&#39;</span><span class="p">]</span>
+<span class="n">SERVICE_POS_IN_URL</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="c"># indexes of parameters (for example {&#39;Url&#39;: 0})</span>
+<span class="c">#INDEX_DICT = dict((v,k) for (k,v) in enumerate(DATA_PARAM))</span>
+<span class="c"># timestamp position in the data extracted from the database</span>
+<span class="n">TIMESTAMP_POSITION</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+<span class="c"># max timestamp length (not to display fractions)</span>
+<span class="n">MAX_TIMESTAMP_LENGTH</span> <span class="o">=</span> <span class="mi">19</span>
+<span class="c"># precision of average parameters</span>
+<span class="n">AVERAGE_PRECISION</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="c"># message to display in case there are not enough records in db to create plots</span>
+<span class="n">DB_NO_RECORDS_MSG</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;There are not enough records in the selected database to&#39;</span>
+                    <span class="s">&#39; create the graphs. Please wait for the database to be &#39;</span>
+                    <span class="s">&#39;populated or select another database.&#39;</span><span class="p">)</span>
+<span class="c"># only make page autorefresh if database has changed recently</span>
+<span class="n">REFRESH_TIMEOUT</span> <span class="o">=</span> <span class="mi">120000</span> <span class="c"># 120s</span>
+<span class="c"># http://ckon.wordpress.com/2008/07/25/stop-using-windowonload-in-javascript/</span>
+<span class="n">ONLOAD_REFRESH_SCRIPT</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;&lt;script type=&quot;text/JavaScript&quot;&gt;&#39;</span>
+                         <span class="s">&#39;window.addEventListener ?</span><span class="se">\n</span><span class="s">&#39;</span>
+                         <span class="s">&#39;window.addEventListener(&quot;load&quot;,&#39;</span>
+                                                     <span class="s">&#39;AutoRefresh(</span><span class="si">%i</span><span class="s">),false):</span><span class="se">\n</span><span class="s">&#39;</span>
+                         <span class="s">&#39;window.attachEvent &amp;&amp; window.attachEvent(&quot;onload&quot;,&#39;</span>
+                                                    <span class="s">&#39;AutoRefresh(</span><span class="si">%i</span><span class="s">));</span><span class="se">\n</span><span class="s">&#39;</span>
+                         <span class="s">&#39;&lt;/script&gt;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">%</span> <span class="p">(</span><span class="n">REFRESH_TIMEOUT</span><span class="p">,</span> <span class="n">REFRESH_TIMEOUT</span><span class="p">))</span>
+<span class="c"># Service being crawled taken from the database info, default config_pytomo</span>
+<span class="n">SERVICE</span> <span class="o">=</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">CRAWL_SERVICE</span>
+<span class="c"># message to display PDF path</span>
+<span class="n">PDF_MSG</span> <span class="o">=</span> <span class="s">&#39;The PDF report of this page is can be found at:&lt;BR&gt;&#39;</span>
+<span class="n">PDF_HEADER</span> <span class="o">=</span> <span class="s">&#39;&lt;H1 align=&quot;center&quot;&gt;Pytomo Statistics Report&lt;/H1&gt;&#39;</span>
+<span class="c"># how many BR to insert in order to not write man under image</span>
+<span class="n">PDF_SPACE_FOR_IMG</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="c"># how many BR to insert between images</span>
+<span class="n">PDF_SPACE_BETWEEN</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="c"># connector for http links (needed for rel path of pdf on win)</span>
+<span class="n">HTTP_CONNECTOR</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span>
+
+<div class="viewcode-block" id="PytomoFPDF"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.PytomoFPDF">[docs]</a><span class="k">class</span> <span class="nc">PytomoFPDF</span><span class="p">(</span><span class="n">FPDF</span><span class="p">,</span> <span class="n">HTMLMixin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Class to create pdf from html</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pdf_name</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Set the pdf name</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pdf_name</span> <span class="o">=</span> <span class="n">pdf_name</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PytomoFPDF</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="PytomoFPDF.close_pdf"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.PytomoFPDF.close_pdf">[docs]</a>    <span class="k">def</span> <span class="nf">close_pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pdf_name</span><span class="p">,</span> <span class="n">WRITE_TO_FILE</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="create_pdf"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.create_pdf">[docs]</a><span class="k">def</span> <span class="nf">create_pdf</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">average_values</span><span class="p">,</span> <span class="o">*</span><span class="n">parameters</span><span class="p">):</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;pdf_name = </span><span class="si">%s</span><span class="s">; timestamp = </span><span class="si">%s</span><span class="s">; parameters = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                           <span class="p">(</span><span class="n">pdf_name</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="p">)))</span>
+    <span class="n">pdf</span> <span class="o">=</span> <span class="n">PytomoFPDF</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">)</span>
+    <span class="n">pdf</span><span class="o">.</span><span class="n">add_page</span><span class="p">()</span>
+    <span class="c">#config_pytomo.LOG.debug(&#39;Added 1 page&#39;)</span>
+    <span class="n">html_text</span> <span class="o">=</span> <span class="n">html_graphs_for_pdf</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">average_values</span><span class="p">,</span> <span class="o">*</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="n">pdf</span><span class="o">.</span><span class="n">write_html</span><span class="p">(</span><span class="n">html_text</span><span class="p">)</span>
+    <span class="c">#config_pytomo.LOG.debug(&#39;Wrote html&#39;)</span>
+    <span class="n">pdf</span><span class="o">.</span><span class="n">close_pdf</span><span class="p">()</span>
+    <span class="c">#config_pytomo.LOG.debug(&#39;Closed pdf&#39;)</span>
+
+<span class="c"># code adapted from write_middle/right_column, done in a hurry</span></div>
+<div class="viewcode-block" id="html_graphs_for_pdf"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.html_graphs_for_pdf">[docs]</a><span class="k">def</span> <span class="nf">html_graphs_for_pdf</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">average_values</span><span class="p">,</span> <span class="o">*</span><span class="n">parameters</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to return the html containing graphs and their explanation</span>
+<span class="sd">    for the *parameters</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">html_text</span> <span class="o">=</span> <span class="n">PDF_HEADER</span>
+    <span class="c"># average values</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">average_values</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;No data has been received to create the list&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">html_text</span>
+    <span class="c"># start list of average values</span>
+    <span class="n">html_text</span> <span class="o">+=</span> <span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">UL_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">AVERAGE_PARAM_DESCRIPTION</span><span class="p">,</span> <span class="n">average_values</span><span class="p">):</span>
+        <span class="n">html_text</span> <span class="o">+=</span> <span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">LI_START_TAG</span> <span class="o">+</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">+</span>
+                    <span class="n">LI_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+    <span class="c"># end list of average values</span>
+    <span class="n">html_text</span> <span class="o">+=</span> <span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">UL_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="n">html_text</span> <span class="o">+=</span> <span class="p">(</span><span class="n">BR_TAG</span><span class="p">)</span>
+    <span class="c"># graphs</span>
+    <span class="c"># if there are not enough records in the db to display plots</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">timestamp</span> <span class="ow">and</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB_KEY</span><span class="p">:</span>
+        <span class="n">html_text</span> <span class="o">+=</span> <span class="p">((</span><span class="n">P_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="n">DB_NO_RECORDS_MSG</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="c"># check which graphs to display</span>
+    <span class="k">if</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">LINKS_KEY</span><span class="p">,</span> <span class="n">DB_KEY</span><span class="p">]:</span>
+        <span class="n">param_to_display</span> <span class="o">=</span> <span class="n">parameters</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">param_to_display</span> <span class="o">=</span> <span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">MAIN_KEY</span><span class="p">]</span>
+    <span class="c"># the middle column consists of plots for the parameters</span>
+    <span class="c"># the graphs</span>
+    <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">param_to_display</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">PDF_SPACE_BETWEEN</span><span class="p">):</span>
+            <span class="n">html_text</span> <span class="o">+=</span> <span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># function is called from pytomo directory, the image dir is</span>
+        <span class="c"># a subfolder of parent directory</span>
+        <span class="n">html_text</span> <span class="o">+=</span> <span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">IMG_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                 <span class="p">(</span><span class="n">plot_path_to_write_in_pdf</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">),</span> <span class="n">parameter</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">PDF_SPACE_FOR_IMG</span><span class="p">):</span>
+            <span class="n">html_text</span> <span class="o">+=</span> <span class="p">(</span><span class="n">BR_TAG</span><span class="p">)</span>
+        <span class="n">html_text</span> <span class="o">+=</span> <span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">P_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                    <span class="n">MAN_PLOTS</span><span class="p">[</span><span class="n">parameter</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">html_text</span>
+
+
+<span class="c"># TODO: check on windows</span></div>
+<div class="viewcode-block" id="plot_path_to_write_in_pdf"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.plot_path_to_write_in_pdf">[docs]</a><span class="k">def</span> <span class="nf">plot_path_to_write_in_pdf</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the path to the plot relative to the TEMPLATES_DIR</span>
+<span class="sd">    Will have the pattern:</span>
+<span class="sd">        &lt;RRD_PLOT_DIR&gt;/&lt;plot_name&gt;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">PATH_SEPARATOR</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">RRD_PLOT_DIR</span><span class="p">,</span>
+                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">plot_filename</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">))))</span>
+</div>
+<div class="viewcode-block" id="pdf_filename"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.pdf_filename">[docs]</a><span class="k">def</span> <span class="nf">pdf_filename</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the file name of the pdf (try to create it if it does not</span>
+<span class="sd">    exist).  Will have the pattern:</span>
+<span class="sd">                &lt;PDF_DIR&gt;/&lt;hostname&gt;.&lt;timestamp&gt;.&lt;param_PDF_FILE&gt;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">check_out_files</span><span class="p">(</span><span class="n">NAME_CONNECTOR</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">param</span><span class="p">,</span>
+                                    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">PDF_FILE</span><span class="p">)),</span>
+                                    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">PDF_DIR</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">timestamp</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="rrd_filename"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.rrd_filename">[docs]</a><span class="k">def</span> <span class="nf">rrd_filename</span><span class="p">(</span><span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the file name of the rrd (try to create it if it does not</span>
+<span class="sd">    exist). Will have the pattern:</span>
+<span class="sd">                &lt;RRD_DIR&gt;/&lt;hostname&gt;.&lt;timestamp&gt;.&lt;RRD_FILE&gt;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">check_out_files</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">RRD_FILE</span><span class="p">,</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">RRD_DIR</span><span class="p">,</span>
+                           <span class="nb">str</span><span class="p">(</span><span class="n">timestamp</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="plot_filename"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.plot_filename">[docs]</a><span class="k">def</span> <span class="nf">plot_filename</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the file name of the plot (try to create it if it does not</span>
+<span class="sd">    exist).  Will have the pattern:</span>
+<span class="sd">                &lt;RRD_PLOT_DIR&gt;/&lt;hostname&gt;.&lt;timestamp&gt;.&lt;param_IMAGE_FILE&gt;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">check_out_files</span><span class="p">(</span><span class="n">NAME_CONNECTOR</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">param</span><span class="p">,</span>
+                                    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">IMAGE_FILE</span><span class="p">)),</span>
+                                    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">RRD_PLOT_DIR</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">timestamp</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="index_filename"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.index_filename">[docs]</a><span class="k">def</span> <span class="nf">index_filename</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the file name of the index (try to create it if it does not</span>
+<span class="sd">    exist). Will have the pattern:</span>
+<span class="sd">                &lt;TEMPLATES_DIR&gt;/&lt;hostname&gt;.&lt;timestamp&gt;.&lt;param_TEMPLATE_FILE&gt;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">check_out_files</span><span class="p">(</span><span class="n">NAME_CONNECTOR</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">param</span><span class="p">,</span>
+                                    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATE_FILE</span><span class="p">)),</span>
+                                    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATES_DIR</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">timestamp</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="plot_path_to_write_in_html"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.plot_path_to_write_in_html">[docs]</a><span class="k">def</span> <span class="nf">plot_path_to_write_in_html</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the path to the plot relative to the TEMPLATES_DIR</span>
+<span class="sd">    Will have the pattern:</span>
+<span class="sd">        ../&lt;RRD_PLOT_DIR&gt;/&lt;plot_name&gt;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">PATH_SEPARATOR</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">os</span><span class="o">.</span><span class="n">pardir</span><span class="p">,</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">RRD_PLOT_DIR</span><span class="p">,</span>
+                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">plot_filename</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">))))</span>
+</div>
+<div class="viewcode-block" id="check_templates_exist"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.check_templates_exist">[docs]</a><span class="k">def</span> <span class="nf">check_templates_exist</span><span class="p">(</span><span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Verify that all html templates and their plots have been created.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">ALL_KEY</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">index_filename</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)))</span>
+                <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">plot_filename</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)))):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">chain</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="p">[</span><span class="n">LINKS_KEY</span><span class="p">,</span> <span class="n">DB_KEY</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">index_filename</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="get_latest_file"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.get_latest_file">[docs]</a><span class="k">def</span> <span class="nf">get_latest_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to return the newest file in a path</span>
+<span class="sd">    &gt;&gt;&gt; import os.path</span>
+<span class="sd">    &gt;&gt;&gt; from tempfile import NamedTemporaryFile</span>
+<span class="sd">    &gt;&gt;&gt; f = NamedTemporaryFile(delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; f.name == get_latest_file(os.path.dirname(f.name))</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; f.close()</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f.name)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">max</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">files</span><span class="p">],</span>
+                                                <span class="n">key</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;There is no file in </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">path</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="get_latest_specific_file"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.get_latest_specific_file">[docs]</a><span class="k">def</span> <span class="nf">get_latest_specific_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">include</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to return the newest file in a path</span>
+<span class="sd">    &gt;&gt;&gt; import os.path</span>
+<span class="sd">    &gt;&gt;&gt; from tempfile import NamedTemporaryFile</span>
+<span class="sd">    &gt;&gt;&gt; INCLUDE = &#39;test&#39;</span>
+<span class="sd">    &gt;&gt;&gt; f = NamedTemporaryFile(suffix=INCLUDE, delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; f.name == get_latest_specific_file(os.path.dirname(f.name), INCLUDE)</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; f.close()</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f.name)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">get_specific_files</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">include</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="c">#config_pytomo.LOG.warning(&#39;There is no file in %s that includes %s!&#39; %</span>
+        <span class="c">#                          (path, include))</span>
+        <span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="get_specific_files"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.get_specific_files">[docs]</a><span class="k">def</span> <span class="nf">get_specific_files</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">include</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to return all the files in path that contain include string in</span>
+<span class="sd">    their name</span>
+<span class="sd">    &gt;&gt;&gt; import os.path</span>
+<span class="sd">    &gt;&gt;&gt; from tempfile import NamedTemporaryFile</span>
+<span class="sd">    &gt;&gt;&gt; INCLUDE = &#39;test&#39;</span>
+<span class="sd">    &gt;&gt;&gt; f1 = NamedTemporaryFile(suffix=INCLUDE, delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; f2 = NamedTemporaryFile(suffix=INCLUDE, delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; f3 = NamedTemporaryFile(delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; set([f1.name, f2.name]) == set(</span>
+<span class="sd">    ... get_specific_files(os.path.dirname(f1.name), INCLUDE))</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; set([f1.name, f2.name, f3.name]) == set(</span>
+<span class="sd">    ... get_specific_files(os.path.dirname(f1.name), INCLUDE))</span>
+<span class="sd">    False</span>
+<span class="sd">    &gt;&gt;&gt; f1.close()</span>
+<span class="sd">    &gt;&gt;&gt; f2.close()</span>
+<span class="sd">    &gt;&gt;&gt; f3.close()</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f1.name)</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f2.name)</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f3.name)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">include</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="c"># both Linux&amp;Win must have / as separator (http acces)</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">([(</span><span class="n">path</span> <span class="o">+</span> <span class="n">PATH_SEPARATOR</span> <span class="o">+</span> <span class="n">name</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">name</span><span class="p">)],</span> <span class="n">key</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">,</span>
+                                                               <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c"># AO 20121015 not used anymore</span></div>
+<div class="viewcode-block" id="get_file_by_param_timestamp"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.get_file_by_param_timestamp">[docs]</a><span class="k">def</span> <span class="nf">get_file_by_param_timestamp</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to return from the path directory the files for a specific</span>
+<span class="sd">     parameter timestamped or None.</span>
+<span class="sd">     The filenames are relative to the parent directory.</span>
+<span class="sd">    &gt;&gt;&gt; import os.path</span>
+<span class="sd">    &gt;&gt;&gt; from tempfile import NamedTemporaryFile</span>
+<span class="sd">    &gt;&gt;&gt; from time import time</span>
+<span class="sd">    &gt;&gt;&gt; PARAM = &#39;DownloadTime&#39;</span>
+<span class="sd">    &gt;&gt;&gt; TIMESTAMP = str(int(time()))</span>
+<span class="sd">    &gt;&gt;&gt; RRD_PLOT_DIR = &#39;images&#39;</span>
+<span class="sd">    &gt;&gt;&gt; f1 = NamedTemporaryFile(suffix=PARAM, dir=RRD_PLOT_DIR, delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; f2 = NamedTemporaryFile(suffix=TIMESTAMP, dir=RRD_PLOT_DIR,</span>
+<span class="sd">    ... delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; f3 = NamedTemporaryFile(suffix=(PARAM + &#39;_&#39; + TIMESTAMP),</span>
+<span class="sd">    ... dir=RRD_PLOT_DIR, delete=False)</span>
+<span class="sd">    &gt;&gt;&gt; os.path.basename(f3.name) == os.path.basename(</span>
+<span class="sd">    ... get_file_by_param_timestamp(RRD_PLOT_DIR, PARAM, TIMESTAMP))</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; os.path.basename(f2.name) == os.path.basename(</span>
+<span class="sd">    ... get_file_by_param_timestamp(RRD_PLOT_DIR, PARAM, TIMESTAMP))</span>
+<span class="sd">    False</span>
+<span class="sd">    &gt;&gt;&gt; os.path.basename(f1.name) == os.path.basename(</span>
+<span class="sd">    ... get_file_by_param_timestamp(RRD_PLOT_DIR, PARAM, TIMESTAMP))</span>
+<span class="sd">    False</span>
+<span class="sd">    &gt;&gt;&gt; f1.close()</span>
+<span class="sd">    &gt;&gt;&gt; f2.close()</span>
+<span class="sd">    &gt;&gt;&gt; f3.close()</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f1.name)</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f2.name)</span>
+<span class="sd">    &gt;&gt;&gt; os.unlink(f3.name)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">pardir</span> <span class="o">+</span> <span class="n">PATH_SEPARATOR</span> <span class="o">+</span>
+                <span class="n">get_specific_files</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parameter</span> <span class="o">+</span> <span class="n">NAME_CONNECTOR</span> <span class="o">+</span>
+                                                            <span class="nb">str</span><span class="p">(</span><span class="n">timestamp</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">file_name</span>
+
+<span class="c"># AO 20121015 not used anymore</span></div>
+<div class="viewcode-block" id="check_templates_exist_obsolete"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.check_templates_exist_obsolete">[docs]</a><span class="k">def</span> <span class="nf">check_templates_exist_obsolete</span><span class="p">(</span><span class="n">timestamp</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Verify that all html templates and their plots have been created.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">ALL_KEY</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">get_file_by_param_timestamp</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATES_DIR</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span>
+                                        <span class="n">timestamp</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="p">(</span><span class="n">get_file_by_param_timestamp</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">RRD_PLOT_DIR</span><span class="p">,</span>
+                                        <span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">chain</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="p">[</span><span class="n">LINKS_KEY</span><span class="p">,</span> <span class="n">DB_KEY</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">get_file_by_param_timestamp</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATES_DIR</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span>
+                                        <span class="n">timestamp</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="write_database_archive"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.write_database_archive">[docs]</a><span class="k">def</span> <span class="nf">write_database_archive</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">db_dir</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Write the list of databases from db_dir in the html template.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># if a history of plots needs to be kept, the existent databases are</span>
+    <span class="c"># displayed with links that represent parameters;</span>
+    <span class="c"># in web.py the parameters can be retrieved as mentioned in:</span>
+    <span class="c"># http://webpy.org/cookbook/input</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the column header</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">HEADER_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="n">DB_KEY</span><span class="p">)</span>
+    <span class="c"># the list of databases</span>
+    <span class="c"># the start of the list of links</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">UL_NOSTYLE_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the links</span>
+    <span class="k">for</span> <span class="n">database</span> <span class="ow">in</span> <span class="n">get_specific_files</span><span class="p">(</span><span class="n">db_dir</span><span class="p">,</span> <span class="n">DB_EXTENSION</span><span class="p">):</span>
+        <span class="c"># function is called from pytomo directory, the image dir is</span>
+        <span class="c"># subfolder of parent directory</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">LI_START_TAG</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span>
+                       <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">DB_INPUT</span> <span class="o">+</span> <span class="n">database</span><span class="p">,</span>
+                                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">database</span><span class="p">)))</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">LI_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the end of the list of databases</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">UL_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="write_middle_column"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.write_middle_column">[docs]</a><span class="k">def</span> <span class="nf">write_middle_column</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">links</span><span class="p">,</span> <span class="n">db_dir</span><span class="p">,</span> <span class="o">*</span><span class="n">parameters</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to write the header and contents of the middle column - plots</span>
+<span class="sd">    for the *parameters or the table with the links to the videos downloaded</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># TODO: temporary, write the column div outside to also put the pdf path</span>
+    <span class="c"># the column div</span>
+    <span class="c">#f_index.write((&#39; &#39; * NR_DIV_SPACES + DIV_START_TAG + END_LINE) %</span>
+    <span class="c">#                                                        MID_COL_NAME)</span>
+    <span class="c"># if only the database archive is displayed</span>
+    <span class="k">if</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB_KEY</span><span class="p">:</span>
+        <span class="n">write_database_archive</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">db_dir</span><span class="p">)</span>
+        <span class="c"># the column div</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="c"># if there are not enough records in the db to display plots</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">timestamp</span> <span class="ow">and</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB_KEY</span><span class="p">:</span>
+        <span class="c"># the column header</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">HEADER_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                            <span class="n">MID_COL_HEADER</span><span class="p">)</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">P_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                            <span class="n">DB_NO_RECORDS_MSG</span><span class="p">)</span>
+        <span class="c"># the column div</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="c"># the column header</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">HEADER_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                            <span class="n">MID_COL_HEADER</span><span class="p">)</span>
+    <span class="c"># check which graphs to display</span>
+    <span class="k">if</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">LINKS_KEY</span><span class="p">,</span> <span class="n">DB_KEY</span><span class="p">]:</span>
+        <span class="n">param_to_display</span> <span class="o">=</span> <span class="n">parameters</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">param_to_display</span> <span class="o">=</span> <span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">MAIN_KEY</span><span class="p">]</span>
+    <span class="c"># the middle column consists of plots for the parameters</span>
+    <span class="c"># the graphs</span>
+    <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">param_to_display</span><span class="p">:</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># function is called from pytomo directory, the image dir is</span>
+        <span class="c"># a subfolder of parent directory</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">IMG_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                 <span class="p">(</span><span class="n">plot_path_to_write_in_html</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">),</span> <span class="n">parameter</span><span class="p">))</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">P_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                    <span class="n">MAN_PLOTS</span><span class="p">[</span><span class="n">parameter</span><span class="p">])</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">LINKS_KEY</span><span class="p">:</span>
+        <span class="c"># the middle column consists of the main plots and a table with links to</span>
+        <span class="c"># the crawled videos</span>
+        <span class="c"># table div</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TABLE_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># tr</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># table header</span>
+        <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">MIDDLE_COL_TABLE_HEADER</span><span class="p">:</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TH_TAG_ALIGNED</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                                <span class="n">parameter</span><span class="p">)</span>
+        <span class="c"># tr</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># table contents</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">url_cache</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+            <span class="c"># tr</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+            <span class="c"># td for each column in a row</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TD_START_TAG_ALIGNED</span> <span class="o">+</span>
+                    <span class="n">timestamp</span><span class="p">[:</span><span class="n">MAX_TIMESTAMP_LENGTH</span><span class="p">]</span> <span class="o">+</span> <span class="n">TD_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TD_START_TAG_ALIGNED</span> <span class="o">+</span> <span class="n">A_TAG</span>
+                           <span class="o">+</span> <span class="n">TD_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">url</span><span class="p">))</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TD_START_TAG_ALIGNED</span> <span class="o">+</span> <span class="n">A_TAG</span>
+                           <span class="o">+</span> <span class="n">TD_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">url_cache</span><span class="p">,</span> <span class="n">url_cache</span><span class="p">))</span>
+            <span class="c"># tr</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># table div</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TABLE_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the column div</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="write_left_column"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.write_left_column">[docs]</a><span class="k">def</span> <span class="nf">write_left_column</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">database</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to write the header and contents of the left column - links</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># the column div</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                            <span class="n">LEFT_COL_NAME</span><span class="p">)</span>
+    <span class="c"># the column header</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">HEADER_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                            <span class="n">LEFT_COL_HEADER</span><span class="p">)</span>
+    <span class="c"># the start of the list of links</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">UL_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the links</span>
+    <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+        <span class="c"># function is called from pytomo directory, the image dir is subfolder</span>
+        <span class="c"># of parent directory</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">LI_START_TAG</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span>
+                        <span class="n">UL_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">parameter</span> <span class="o">+</span> <span class="n">DB_INPUT</span> <span class="o">+</span>
+                                                    <span class="n">database</span><span class="p">,</span> <span class="n">parameter</span><span class="p">))</span>
+        <span class="c"># all the parameters are already present in the other keys</span>
+        <span class="k">if</span> <span class="n">parameter</span> <span class="o">!=</span> <span class="n">ALL_KEY</span> <span class="ow">and</span> <span class="n">parameter</span> <span class="o">!=</span> <span class="n">MAIN_KEY</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">parameter</span><span class="p">]:</span>
+                <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">LI_START_TAG</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span>
+                    <span class="n">LI_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">mapping</span> <span class="o">+</span> <span class="n">DB_INPUT</span> <span class="o">+</span> <span class="n">database</span><span class="p">,</span>
+                                              <span class="n">mapping</span><span class="p">))</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">UL_END_TAG</span> <span class="o">+</span> <span class="n">LI_END_TAG</span> <span class="o">+</span>
+                      <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the link to the table that displays the links to the crawled videos</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                  <span class="p">(</span><span class="n">LINKS_KEY</span> <span class="o">+</span> <span class="n">DB_INPUT</span> <span class="o">+</span> <span class="n">database</span><span class="p">,</span> <span class="n">LINKS_KEY</span><span class="p">))</span>
+    <span class="c"># the link to the list that displays the existent database archive</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span>  <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                  <span class="p">(</span><span class="n">DB_KEY</span> <span class="o">+</span> <span class="n">DB_INPUT</span> <span class="o">+</span> <span class="n">database</span><span class="p">,</span> <span class="n">DB_KEY</span><span class="p">))</span>
+    <span class="c"># the link to the project documentation index</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">DOC_DIR</span> <span class="o">+</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATE_FILE</span><span class="p">,</span> <span class="n">DOC_KEY</span><span class="p">))</span>
+    <span class="c"># the link to the pdf gen</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">BR_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the end of the list of links</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">UL_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the column div</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="write_right_column"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.write_right_column">[docs]</a><span class="k">def</span> <span class="nf">write_right_column</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">average_values</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to write the header and contents of the right column - tables</span>
+<span class="sd">    containing the average values determined by the crawl and the list of</span>
+<span class="sd">    existent databases.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">average_values</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;No data has been received to create the table&#39;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="c"># the column div</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                            <span class="n">RIGHT_COL_NAME</span><span class="p">)</span>
+    <span class="c"># the column header</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">HEADER_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                            <span class="n">RIGHT_COL_HEADER</span><span class="p">)</span>
+    <span class="c"># the table including the average parameters</span>
+    <span class="c"># table div</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TABLE_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># tr</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># table header</span>
+    <span class="k">for</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">RIGHT_COL_TABLE_HEADER</span><span class="p">:</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TH_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span> <span class="n">header</span><span class="p">)</span>
+    <span class="c"># tr</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># table contents</span>
+    <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">AVERAGE_PARAM_DESCRIPTION</span><span class="p">,</span> <span class="n">average_values</span><span class="p">):</span>
+        <span class="c"># tr</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># td</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TD_START_TAG</span> <span class="o">+</span> <span class="n">parameter</span> <span class="o">+</span>
+                    <span class="n">TD_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TD_START_TAG</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">+</span>
+                    <span class="n">TD_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+        <span class="c"># tr</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TR_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># table div</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">TABLE_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the column div</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="write_end_div_refresh"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.write_end_div_refresh">[docs]</a><span class="k">def</span> <span class="nf">write_end_div_refresh</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">database</span><span class="p">):</span>
+    <span class="c"># the column div colleft</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the column div colmid</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># the column div colmask threecol</span>
+    <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_END_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span>
+    <span class="c"># if the database was modified recently, should refresh page</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">database</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">REFRESH_TIMEOUT</span><span class="p">:</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">ONLOAD_REFRESH_SCRIPT</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="write_index"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.write_index">[docs]</a><span class="k">def</span> <span class="nf">write_index</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">db_dir</span><span class="o">=</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">DATABASE_DIR</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Function to create the parameter_timestamp_index.html from template</span>
+<span class="sd">    files and include the images that also contain a specific timestamp.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># if database is not empty</span>
+    <span class="k">if</span> <span class="n">timestamp</span><span class="p">:</span>
+        <span class="c"># get the data from the database</span>
+        <span class="c"># retrieve data on which average parameters and video links depend on</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">avg_data</span> <span class="o">=</span> <span class="n">lib_database</span><span class="o">.</span><span class="n">PytomoDatabase</span><span class="p">(</span><span class="n">database</span><span class="p">)</span><span class="o">.</span>\
+                                        <span class="n">fetch_all_parameters</span><span class="p">(</span><span class="n">AVERAGE_PARAM</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">Error</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Unable to extract data </span><span class="si">%s</span><span class="s"> with error:&#39;</span>
+                                    <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">AVERAGE_PARAM</span><span class="p">),</span> <span class="n">mes</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">links_data</span> <span class="o">=</span> <span class="n">lib_database</span><span class="o">.</span><span class="n">PytomoDatabase</span><span class="p">(</span><span class="n">database</span><span class="p">)</span><span class="o">.</span>\
+                                        <span class="n">fetch_all_parameters</span><span class="p">(</span><span class="n">URL_PARAM</span><span class="p">)</span>
+            <span class="c"># assumes all crawled links are from the same service (hardcoded)</span>
+            <span class="n">SERVICE</span> <span class="o">=</span> <span class="n">links_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">SERVICE_POS_IN_URL</span><span class="p">]</span>
+        <span class="k">except</span> <span class="n">Error</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Unable to extract data </span><span class="si">%s</span><span class="s"> with error:&#39;</span>
+                                    <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">URL_PARAM</span><span class="p">),</span> <span class="n">mes</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">links_data</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">avg_data</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c"># open all the file descriptors</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">f_s_template</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATES_DIR</span><span class="p">,</span>
+                                         <span class="n">START_TEMPLATE_NAME</span><span class="p">),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Problem opening file </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATES_DIR</span><span class="p">,</span>
+                                         <span class="n">START_TEMPLATE_NAME</span><span class="p">))</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">f_e_template</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATES_DIR</span><span class="p">,</span>
+                                         <span class="n">END_TEMPLATE_NAME</span><span class="p">),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Problem opening file </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">TEMPLATES_DIR</span><span class="p">,</span>
+                                             <span class="n">END_TEMPLATE_NAME</span><span class="p">))</span>
+        <span class="k">return</span>
+    <span class="c"># create a different index.html for each parameter, with specific timestamp</span>
+    <span class="c"># first the elements in ALL_PLOTS.keys()</span>
+    <span class="c"># then the elements in UNITS.keys()</span>
+    <span class="c"># then LINKS_KEY, DB_KEY</span>
+    <span class="n">f_param</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">chain</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">ALL_KEY</span><span class="p">],</span>
+                       <span class="p">[</span><span class="n">LINKS_KEY</span><span class="p">,</span> <span class="n">DB_KEY</span><span class="p">]):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">f_name</span> <span class="o">=</span> <span class="n">index_filename</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Problem opening index file for parameter&#39;</span>
+                                    <span class="s">&#39; </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">param</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">f_index</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">f_name</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">f_param</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f_index</span><span class="p">)</span>
+    <span class="c"># retrieve the header lines</span>
+    <span class="n">header_lines</span> <span class="o">=</span> <span class="n">f_s_template</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="c"># retrieve the footer lines</span>
+    <span class="n">footer_lines</span> <span class="o">=</span> <span class="n">f_e_template</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="c"># add the style and header of the page to each index</span>
+    <span class="k">for</span> <span class="n">f_index</span> <span class="ow">in</span> <span class="n">f_param</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">header_lines</span><span class="p">:</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timestamp</span><span class="p">:</span>
+        <span class="n">avg_values</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="p">((</span><span class="n">SERVICE</span><span class="p">,),</span>
+                                   <span class="n">compute_average_values</span><span class="p">(</span><span class="n">avg_data</span><span class="p">))))</span>
+    <span class="c"># add the body of the page</span>
+    <span class="c"># middle column - plots or table with the links to crawled videos or</span>
+    <span class="c"># database archive</span>
+    <span class="c"># parameter represents either a list (a key in the dictionary ALL_PLOTS),</span>
+    <span class="c"># a single parameter that can be plotted or the LINKS_KEY / DB_KEY</span>
+    <span class="c"># if anything else is given, the main graphs are plotted</span>
+    <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">f_index</span> <span class="ow">in</span> \
+                        <span class="nb">zip</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">f_param</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="o">.</span><span class="n">keys</span><span class="p">())]):</span>
+        <span class="c"># TODO: must be moved back to middle column</span>
+        <span class="c"># the middle column div</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                                <span class="n">MID_COL_NAME</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">timestamp</span><span class="p">:</span>
+            <span class="c"># TODO: function is not properly checked, this must be removed</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pdf_name</span> <span class="o">=</span> <span class="n">pdf_filename</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
+                <span class="n">rel_pdf_name</span> <span class="o">=</span> <span class="n">HTTP_CONNECTOR</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">PDF_DIR</span><span class="p">,</span>
+                                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">)))</span>
+                <span class="n">create_pdf</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">avg_values</span><span class="p">,</span>
+                           <span class="o">*</span><span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">parameter</span><span class="p">])</span>
+                <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">P_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                              <span class="n">PDF_MSG</span><span class="p">)</span>
+                <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                              <span class="p">(</span><span class="n">rel_pdf_name</span><span class="p">,</span> <span class="n">rel_pdf_name</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+                <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Could not create PDF, error: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">mes</span><span class="p">)</span>
+        <span class="n">write_middle_column</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">links_data</span><span class="p">,</span> <span class="n">db_dir</span><span class="p">,</span>
+                            <span class="o">*</span><span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">parameter</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">f_index</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">chain</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="p">[</span><span class="n">ALL_KEY</span><span class="p">],</span>
+                        <span class="p">[</span><span class="n">LINKS_KEY</span><span class="p">,</span> <span class="n">DB_KEY</span><span class="p">]),</span> <span class="n">f_param</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">ALL_PLOTS</span><span class="o">.</span><span class="n">keys</span><span class="p">()):]):</span>
+        <span class="c"># TODO: must be moved back to middle column</span>
+        <span class="c"># the middle column div</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_DIV_SPACES</span> <span class="o">+</span> <span class="n">DIV_START_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                                                                <span class="n">MID_COL_NAME</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">timestamp</span><span class="p">:</span>
+            <span class="c"># TODO: function is not properly checked, this must be removed</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pdf_name</span> <span class="o">=</span> <span class="n">pdf_filename</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
+                <span class="n">rel_pdf_name</span> <span class="o">=</span> <span class="n">HTTP_CONNECTOR</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">PDF_DIR</span><span class="p">,</span>
+                                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">)))</span>
+                <span class="n">create_pdf</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">avg_values</span><span class="p">,</span> <span class="n">parameter</span><span class="p">)</span>
+                <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">P_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                              <span class="n">PDF_MSG</span><span class="p">)</span>
+                <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="n">NR_INNER_SPACES</span> <span class="o">+</span> <span class="n">A_TAG</span> <span class="o">+</span> <span class="n">END_LINE</span><span class="p">)</span> <span class="o">%</span>
+                              <span class="p">(</span><span class="n">rel_pdf_name</span><span class="p">,</span> <span class="n">rel_pdf_name</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">mes</span><span class="p">:</span>
+                <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;Could not create PDF, error: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">mes</span><span class="p">)</span>
+        <span class="n">write_middle_column</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">links_data</span><span class="p">,</span> <span class="n">db_dir</span><span class="p">,</span> <span class="n">parameter</span><span class="p">)</span>
+    <span class="c"># add the left, right columns and the footer to each index</span>
+    <span class="k">for</span> <span class="n">f_index</span> <span class="ow">in</span> <span class="n">f_param</span><span class="p">:</span>
+        <span class="c"># left column - links to plots</span>
+        <span class="n">write_left_column</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+        <span class="c"># right column - average values</span>
+        <span class="k">if</span> <span class="n">timestamp</span><span class="p">:</span>
+            <span class="n">write_right_column</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">avg_values</span><span class="p">)</span>
+        <span class="c"># check if page should be automatically refreshed</span>
+        <span class="n">write_end_div_refresh</span><span class="p">(</span><span class="n">f_index</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+        <span class="c"># add the footer of the page</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">footer_lines</span><span class="p">:</span>
+            <span class="n">f_index</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="c"># close the file object</span>
+        <span class="n">f_index</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">f_s_template</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">f_e_template</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="compute_average_values"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.compute_average_values">[docs]</a><span class="k">def</span> <span class="nf">compute_average_values</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Function to return a tuple (start_crawl_time, end_crawl_time,</span>
+<span class="sd">    nr_videos, average_ping, average_download_time,</span>
+<span class="sd">    average_download_interruptions)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># data is retrieved sorted from the database</span>
+    <span class="n">start_crawl_time</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">TIMESTAMP_POSITION</span><span class="p">]</span>\
+                        <span class="p">[:</span><span class="n">MAX_TIMESTAMP_LENGTH</span><span class="p">]</span>
+    <span class="n">end_crawl_time</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">TIMESTAMP_POSITION</span><span class="p">]</span>\
+                        <span class="p">[:</span><span class="n">MAX_TIMESTAMP_LENGTH</span><span class="p">]</span>
+    <span class="c"># total crawl time (sync time is added at the beginning and end for</span>
+    <span class="c"># the plots)</span>
+    <span class="n">total_time</span> <span class="o">=</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">lib_database</span><span class="o">.</span><span class="n">time_to_epoch</span><span class="p">(</span>
+                                    <span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">TIMESTAMP_POSITION</span><span class="p">]))</span> <span class="o">-</span>
+                  <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">lib_database</span><span class="o">.</span><span class="n">time_to_epoch</span><span class="p">(</span>
+                                    <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">TIMESTAMP_POSITION</span><span class="p">])))</span>
+    <span class="c"># each row in the dataset represents a video</span>
+    <span class="n">nr_videos</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="c"># filter values that are not None (can be zero)</span>
+    <span class="n">not_none</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+    <span class="c"># for some videos data cannot be retrieved</span>
+    <span class="c"># average download time represents the average of DownloadTime</span>
+    <span class="n">average_list</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">not_none</span><span class="p">,</span>
+                    <span class="nb">map</span><span class="p">(</span><span class="n">itemgetter</span><span class="p">(</span><span class="n">AVERAGE_PARAM</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s">&#39;DownloadTime&#39;</span><span class="p">)),</span> <span class="n">data</span><span class="p">))</span>
+    <span class="n">average_download_time</span> <span class="o">=</span> <span class="n">average</span><span class="p">(</span><span class="n">average_list</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">average_list</span><span class="p">))</span>
+    <span class="c"># average download interruptions represents the average of</span>
+    <span class="c"># DownloadInterruptions</span>
+    <span class="n">average_list</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">not_none</span><span class="p">,</span> <span class="nb">map</span><span class="p">(</span><span class="n">itemgetter</span><span class="p">(</span>
+                        <span class="n">AVERAGE_PARAM</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s">&#39;DownloadInterruptions&#39;</span><span class="p">)),</span> <span class="n">data</span><span class="p">))</span>
+    <span class="n">average_download_interruptions</span> <span class="o">=</span> <span class="n">average</span><span class="p">(</span><span class="n">average_list</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">average_list</span><span class="p">))</span>
+    <span class="c"># average ping represents the average of PingAvg</span>
+    <span class="n">average_list</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">not_none</span><span class="p">,</span> <span class="nb">map</span><span class="p">(</span><span class="n">itemgetter</span><span class="p">(</span>
+                            <span class="n">AVERAGE_PARAM</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s">&#39;PingAvg&#39;</span><span class="p">)),</span> <span class="n">data</span><span class="p">))</span>
+    <span class="n">average_ping</span> <span class="o">=</span> <span class="n">average</span><span class="p">(</span><span class="n">average_list</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">average_list</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">total_time</span><span class="p">,</span> <span class="n">start_crawl_time</span><span class="p">,</span>
+            <span class="n">end_crawl_time</span><span class="p">,</span> <span class="n">nr_videos</span><span class="p">,</span> <span class="n">average_download_time</span><span class="p">,</span>
+            <span class="n">average_download_interruptions</span><span class="p">,</span> <span class="n">average_ping</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="average"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.average">[docs]</a><span class="k">def</span> <span class="nf">average</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">known_values</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Computes the arithmetic mean of a list of numbers.</span>
+<span class="sd">    &gt;&gt;&gt; average([20, 30, 70], 3)</span>
+<span class="sd">    40.0</span>
+<span class="sd">    &gt;&gt;&gt; average([], 0)</span>
+<span class="sd">    nan</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="nb">round</span><span class="p">((</span><span class="nb">float</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">values</span><span class="p">))</span> <span class="o">/</span> <span class="n">known_values</span>
+                <span class="k">if</span> <span class="n">known_values</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s">&#39;nan&#39;</span><span class="p">)),</span> <span class="n">AVERAGE_PRECISION</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="logger_io"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.logger_io">[docs]</a><span class="k">def</span> <span class="nf">logger_io</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;Initialze the logger&#39;&#39;&#39;</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;pytomo_io&#39;</span><span class="p">)</span>
+    <span class="c"># to not have console output</span>
+    <span class="c">#config_pytomo.LOG.propagate = False</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_LEVEL</span><span class="p">)</span>
+    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s">.%H_%M_%S&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_FILE</span> <span class="o">==</span> <span class="s">&#39;-&#39;</span><span class="p">:</span>
+        <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">config_pytomo</span><span class="o">.</span> <span class="n">LOG_DIR</span><span class="p">,</span>
+                                <span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_FILE</span><span class="p">))))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="s">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">log_file</span><span class="p">)</span>
+    <span class="n">log_formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s"> - &quot;</span>
+                                  <span class="s">&quot;</span><span class="si">%(levelname)s</span><span class="s"> - </span><span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">)</span>
+    <span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">log_formatter</span><span class="p">)</span>
+    <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../pytomo.html#pytomo.lib_io.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="s">&quot;Program wrapper&quot;</span>
+    <span class="k">if</span> <span class="n">argv</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">argv</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;%prog [-v] database&quot;</span><span class="p">)</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">OptionParser</span><span class="p">(</span><span class="n">usage</span><span class="o">=</span><span class="n">usage</span><span class="p">)</span>
+    <span class="c"># to run the doctest</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&#39;-v&#39;</span><span class="p">,</span> <span class="s">&#39;--verbose&#39;</span><span class="p">,</span> <span class="n">dest</span> <span class="o">=</span> <span class="s">&#39;verbose&#39;</span><span class="p">,</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="s">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">help</span> <span class="o">=</span> <span class="s">&#39;verbose&#39;</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">options</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+    <span class="c"># Intialize the logger for standalone testing Logging</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="p">:</span>
+        <span class="n">logger_io</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="n">config_pytomo</span><span class="o">.</span><span class="n">LOG_FILE</span> <span class="o">=</span> <span class="s">&#39;-&#39;</span>
+    <span class="k">return</span> <span class="mi">0</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">doctest</span>
+    <span class="n">doctest</span><span class="o">.</span><span class="n">testmod</span><span class="p">()</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

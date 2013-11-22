@@ -1,0 +1,951 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pytomo.dns.zone &mdash; Pytomo 2.8.6 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '2.8.6',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pytomo 2.8.6 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pytomo.dns.zone</h1><div class="highlight"><pre>
+<span class="c"># Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Permission to use, copy, modify, and distribute this software and its</span>
+<span class="c"># documentation for any purpose with or without fee is hereby granted,</span>
+<span class="c"># provided that the above copyright notice and this permission notice</span>
+<span class="c"># appear in all copies.</span>
+<span class="c">#</span>
+<span class="c"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND NOMINUM DISCLAIMS ALL WARRANTIES</span>
+<span class="c"># WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</span>
+<span class="c"># MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NOMINUM BE LIABLE FOR</span>
+<span class="c"># ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</span>
+<span class="c"># WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</span>
+<span class="c"># ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</span>
+<span class="c"># OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+
+<span class="sd">&quot;&quot;&quot;DNS Zones.&quot;&quot;&quot;</span>
+
+
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">generators</span><span class="p">,</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">exception</span> <span class="k">as</span> <span class="n">dns_exception</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">name</span> <span class="k">as</span> <span class="n">dns_name</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">node</span> <span class="k">as</span> <span class="n">dns_node</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdataclass</span> <span class="k">as</span> <span class="n">dns_rdataclass</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdatatype</span> <span class="k">as</span> <span class="n">dns_rdatatype</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rdata</span> <span class="k">as</span> <span class="n">dns_rdata</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rrset</span> <span class="k">as</span> <span class="n">dns_rrset</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">tokenizer</span> <span class="k">as</span> <span class="n">dns_tokenizer</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">ttl</span> <span class="k">as</span> <span class="n">dns_ttl</span>
+
+<div class="viewcode-block" id="BadZone"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.BadZone">[docs]</a><span class="k">class</span> <span class="nc">BadZone</span><span class="p">(</span><span class="n">dns_exception</span><span class="o">.</span><span class="n">DNSException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The zone is malformed.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NoSOA"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.NoSOA">[docs]</a><span class="k">class</span> <span class="nc">NoSOA</span><span class="p">(</span><span class="n">BadZone</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The zone has no SOA RR at its origin.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="NoNS"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.NoNS">[docs]</a><span class="k">class</span> <span class="nc">NoNS</span><span class="p">(</span><span class="n">BadZone</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The zone has no NS RRset at its origin.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="UnknownOrigin"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.UnknownOrigin">[docs]</a><span class="k">class</span> <span class="nc">UnknownOrigin</span><span class="p">(</span><span class="n">BadZone</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The zone&#39;s origin is unknown.&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="Zone"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone">[docs]</a><span class="k">class</span> <span class="nc">Zone</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A DNS zone.</span>
+
+<span class="sd">    A Zone is a mapping from names to nodes.  The zone object may be</span>
+<span class="sd">    treated like a Python dictionary, e.g. zone[name] will retrieve</span>
+<span class="sd">    the node associated with that name.  The I{name} may be a</span>
+<span class="sd">    dns_name.Name object, or it may be a string.  In the either case,</span>
+<span class="sd">    if the name is relative it is treated as relative to the origin of</span>
+<span class="sd">    the zone.</span>
+
+<span class="sd">    @ivar rdclass: The zone&#39;s rdata class; the default is class IN.</span>
+<span class="sd">    @type rdclass: int</span>
+<span class="sd">    @ivar origin: The origin of the zone.</span>
+<span class="sd">    @type origin: dns_name.Name object</span>
+<span class="sd">    @ivar nodes: A dictionary mapping the names of nodes in the zone to the</span>
+<span class="sd">    nodes themselves.</span>
+<span class="sd">    @type nodes: dict</span>
+<span class="sd">    @ivar relativize: should names in the zone be relativized?</span>
+<span class="sd">    @type relativize: bool</span>
+<span class="sd">    @cvar node_factory: the factory used to create a new node</span>
+<span class="sd">    @type node_factory: class or callable</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">node_factory</span> <span class="o">=</span> <span class="n">dns_node</span><span class="o">.</span><span class="n">Node</span>
+
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;rdclass&#39;</span><span class="p">,</span> <span class="s">&#39;origin&#39;</span><span class="p">,</span> <span class="s">&#39;nodes&#39;</span><span class="p">,</span> <span class="s">&#39;relativize&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">rdclass</span><span class="o">=</span><span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a zone object.</span>
+
+<span class="sd">        @param origin: The origin of the zone.</span>
+<span class="sd">        @type origin: dns_name.Name object</span>
+<span class="sd">        @param rdclass: The zone&#39;s rdata class; the default is class IN.</span>
+<span class="sd">        @type rdclass: int&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">=</span> <span class="n">rdclass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">origin</span> <span class="o">=</span> <span class="n">origin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span> <span class="o">=</span> <span class="n">relativize</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Two zones are equal if they have the same origin, class, and</span>
+<span class="sd">        nodes.</span>
+<span class="sd">        @rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Zone</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">rdclass</span> <span class="ow">or</span> \
+           <span class="bp">self</span><span class="o">.</span><span class="n">origin</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">origin</span> <span class="ow">or</span> \
+           <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Are two zones not equal?</span>
+<span class="sd">        @rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_validate_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">Name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&quot;name parameter must be convertable to a DNS name&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">is_subdomain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&quot;name parameter must be a subdomain of the zone origin&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">relativize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Zone.iterkeys"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.iterkeys">[docs]</a>    <span class="k">def</span> <span class="nf">iterkeys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Zone.keys"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.keys">[docs]</a>    <span class="k">def</span> <span class="nf">keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Zone.itervalues"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.itervalues">[docs]</a>    <span class="k">def</span> <span class="nf">itervalues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">itervalues</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Zone.values"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.values">[docs]</a>    <span class="k">def</span> <span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Zone.iteritems"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.iteritems">[docs]</a>    <span class="k">def</span> <span class="nf">iteritems</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Zone.items"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.items">[docs]</a>    <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Zone.get"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">other</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span>
+
+<div class="viewcode-block" id="Zone.find_node"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.find_node">[docs]</a>    <span class="k">def</span> <span class="nf">find_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find a node in the zone, possibly creating it.</span>
+
+<span class="sd">        @param name: the name of the node to find</span>
+<span class="sd">        @type name: dns_name.Name object or string</span>
+<span class="sd">        @param create: should the node be created if it doesn&#39;t exist?</span>
+<span class="sd">        @type create: bool</span>
+<span class="sd">        @raises KeyError: the name is not known and create was not specified.</span>
+<span class="sd">        @rtype: dns_node.Node object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">node</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">create</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_factory</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span>
+        <span class="k">return</span> <span class="n">node</span>
+</div>
+<div class="viewcode-block" id="Zone.get_node"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.get_node">[docs]</a>    <span class="k">def</span> <span class="nf">get_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a node in the zone, possibly creating it.</span>
+
+<span class="sd">        This method is like L{find_node}, except it returns None instead</span>
+<span class="sd">        of raising an exception if the node does not exist and creation</span>
+<span class="sd">        has not been requested.</span>
+
+<span class="sd">        @param name: the name of the node to find</span>
+<span class="sd">        @type name: dns_name.Name object or string</span>
+<span class="sd">        @param create: should the node be created if it doesn&#39;t exist?</span>
+<span class="sd">        @type create: bool</span>
+<span class="sd">        @rtype: dns_node.Node object or None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_node</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">create</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">node</span>
+</div>
+<div class="viewcode-block" id="Zone.delete_node"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete the specified node if it exists.</span>
+
+<span class="sd">        It is not an error if the node does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Zone.find_rdataset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.find_rdataset">[docs]</a>    <span class="k">def</span> <span class="nf">find_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span>
+                      <span class="n">create</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Look for rdata with the specified name and type in the zone,</span>
+<span class="sd">        and return an rdataset encapsulating it.</span>
+
+<span class="sd">        The I{name}, I{rdtype}, and I{covers} parameters may be</span>
+<span class="sd">        strings, in which case they will be converted to their proper</span>
+<span class="sd">        type.</span>
+
+<span class="sd">        The rdataset returned is not a copy; changes to it will change</span>
+<span class="sd">        the zone.</span>
+
+<span class="sd">        KeyError is raised if the name or type are not found.</span>
+<span class="sd">        Use L{get_rdataset} if you want to have None returned instead.</span>
+
+<span class="sd">        @param name: the owner name to look for</span>
+<span class="sd">        @type name: DNS.name.Name object or string</span>
+<span class="sd">        @param rdtype: the rdata type desired</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param covers: the covered type (defaults to None)</span>
+<span class="sd">        @type covers: int or string</span>
+<span class="sd">        @param create: should the node and rdataset be created if they do not</span>
+<span class="sd">        exist?</span>
+<span class="sd">        @type create: bool</span>
+<span class="sd">        @raises KeyError: the node or rdata could not be found</span>
+<span class="sd">        @rtype: dns_rrset.RRset object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">covers</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">covers</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">covers</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_node</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">create</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">find_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">,</span> <span class="n">create</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Zone.get_rdataset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.get_rdataset">[docs]</a>    <span class="k">def</span> <span class="nf">get_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">,</span>
+                     <span class="n">create</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Look for rdata with the specified name and type in the zone,</span>
+<span class="sd">        and return an rdataset encapsulating it.</span>
+
+<span class="sd">        The I{name}, I{rdtype}, and I{covers} parameters may be</span>
+<span class="sd">        strings, in which case they will be converted to their proper</span>
+<span class="sd">        type.</span>
+
+<span class="sd">        The rdataset returned is not a copy; changes to it will change</span>
+<span class="sd">        the zone.</span>
+
+<span class="sd">        None is returned if the name or type are not found.</span>
+<span class="sd">        Use L{find_rdataset} if you want to have KeyError raised instead.</span>
+
+<span class="sd">        @param name: the owner name to look for</span>
+<span class="sd">        @type name: DNS.name.Name object or string</span>
+<span class="sd">        @param rdtype: the rdata type desired</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param covers: the covered type (defaults to None)</span>
+<span class="sd">        @type covers: int or string</span>
+<span class="sd">        @param create: should the node and rdataset be created if they do not</span>
+<span class="sd">        exist?</span>
+<span class="sd">        @type create: bool</span>
+<span class="sd">        @rtype: dns_rrset.RRset object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">rdataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rdataset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">,</span> <span class="n">create</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">rdataset</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">rdataset</span>
+</div>
+<div class="viewcode-block" id="Zone.delete_rdataset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.delete_rdataset">[docs]</a>    <span class="k">def</span> <span class="nf">delete_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete the rdataset matching I{rdtype} and I{covers}, if it</span>
+<span class="sd">        exists at the node specified by I{name}.</span>
+
+<span class="sd">        The I{name}, I{rdtype}, and I{covers} parameters may be</span>
+<span class="sd">        strings, in which case they will be converted to their proper</span>
+<span class="sd">        type.</span>
+
+<span class="sd">        It is not an error if the node does not exist, or if there is no</span>
+<span class="sd">        matching rdataset at the node.</span>
+
+<span class="sd">        If the node has no rdatasets after the deletion, it will itself</span>
+<span class="sd">        be deleted.</span>
+
+<span class="sd">        @param name: the owner name to look for</span>
+<span class="sd">        @type name: DNS.name.Name object or string</span>
+<span class="sd">        @param rdtype: the rdata type desired</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param covers: the covered type (defaults to None)</span>
+<span class="sd">        @type covers: int or string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">covers</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">covers</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">covers</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">delete_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Zone.replace_rdataset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.replace_rdataset">[docs]</a>    <span class="k">def</span> <span class="nf">replace_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">replacement</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Replace an rdataset at name.</span>
+
+<span class="sd">        It is not an error if there is no rdataset matching I{replacement}.</span>
+
+<span class="sd">        Ownership of the I{replacement} object is transferred to the zone;</span>
+<span class="sd">        in other words, this method does not store a copy of I{replacement}</span>
+<span class="sd">        at the node, it stores I{replacement} itself.</span>
+
+<span class="sd">        If the I{name} node does not exist, it is created.</span>
+
+<span class="sd">        @param name: the owner name</span>
+<span class="sd">        @type name: DNS.name.Name object or string</span>
+<span class="sd">        @param replacement: the replacement rdataset</span>
+<span class="sd">        @type replacement: dns_rdataset.Rdataset</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">replacement</span><span class="o">.</span><span class="n">rdclass</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;replacement.rdclass != zone.rdclass&#39;</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_node</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">replace_rdataset</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Zone.find_rrset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.find_rrset">[docs]</a>    <span class="k">def</span> <span class="nf">find_rrset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Look for rdata with the specified name and type in the zone,</span>
+<span class="sd">        and return an RRset encapsulating it.</span>
+
+<span class="sd">        The I{name}, I{rdtype}, and I{covers} parameters may be</span>
+<span class="sd">        strings, in which case they will be converted to their proper</span>
+<span class="sd">        type.</span>
+
+<span class="sd">        This method is less efficient than the similar</span>
+<span class="sd">        L{find_rdataset} because it creates an RRset instead of</span>
+<span class="sd">        returning the matching rdataset.  It may be more convenient</span>
+<span class="sd">        for some uses since it returns an object which binds the owner</span>
+<span class="sd">        name to the rdata.</span>
+
+<span class="sd">        This method may not be used to create new nodes or rdatasets;</span>
+<span class="sd">        use L{find_rdataset} instead.</span>
+
+<span class="sd">        KeyError is raised if the name or type are not found.</span>
+<span class="sd">        Use L{get_rrset} if you want to have None returned instead.</span>
+
+<span class="sd">        @param name: the owner name to look for</span>
+<span class="sd">        @type name: DNS.name.Name object or string</span>
+<span class="sd">        @param rdtype: the rdata type desired</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param covers: the covered type (defaults to None)</span>
+<span class="sd">        @type covers: int or string</span>
+<span class="sd">        @raises KeyError: the node or rdata could not be found</span>
+<span class="sd">        @rtype: dns_rrset.RRset object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">covers</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">covers</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">covers</span><span class="p">)</span>
+        <span class="n">rdataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">find_rdataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">)</span>
+        <span class="n">rrset</span> <span class="o">=</span> <span class="n">dns_rrset</span><span class="o">.</span><span class="n">RRset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">)</span>
+        <span class="n">rrset</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rdataset</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rrset</span>
+</div>
+<div class="viewcode-block" id="Zone.get_rrset"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.get_rrset">[docs]</a>    <span class="k">def</span> <span class="nf">get_rrset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Look for rdata with the specified name and type in the zone,</span>
+<span class="sd">        and return an RRset encapsulating it.</span>
+
+<span class="sd">        The I{name}, I{rdtype}, and I{covers} parameters may be</span>
+<span class="sd">        strings, in which case they will be converted to their proper</span>
+<span class="sd">        type.</span>
+
+<span class="sd">        This method is less efficient than the similar L{get_rdataset}</span>
+<span class="sd">        because it creates an RRset instead of returning the matching</span>
+<span class="sd">        rdataset.  It may be more convenient for some uses since it</span>
+<span class="sd">        returns an object which binds the owner name to the rdata.</span>
+
+<span class="sd">        This method may not be used to create new nodes or rdatasets;</span>
+<span class="sd">        use L{find_rdataset} instead.</span>
+
+<span class="sd">        None is returned if the name or type are not found.</span>
+<span class="sd">        Use L{find_rrset} if you want to have KeyError raised instead.</span>
+
+<span class="sd">        @param name: the owner name to look for</span>
+<span class="sd">        @type name: DNS.name.Name object or string</span>
+<span class="sd">        @param rdtype: the rdata type desired</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param covers: the covered type (defaults to None)</span>
+<span class="sd">        @type covers: int or string</span>
+<span class="sd">        @rtype: dns_rrset.RRset object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_rrset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">rrset</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">rrset</span>
+</div>
+<div class="viewcode-block" id="Zone.iterate_rdatasets"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.iterate_rdatasets">[docs]</a>    <span class="k">def</span> <span class="nf">iterate_rdatasets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdtype</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span>
+                          <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a generator which yields (name, rdataset) tuples for</span>
+<span class="sd">        all rdatasets in the zone which have the specified I{rdtype}</span>
+<span class="sd">        and I{covers}.  If I{rdtype} is dns_rdatatype.ANY, the default,</span>
+<span class="sd">        then all rdatasets will be matched.</span>
+
+<span class="sd">        @param rdtype: int or string</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param covers: the covered type (defaults to None)</span>
+<span class="sd">        @type covers: int or string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">covers</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">covers</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">covers</span><span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">rds</span> <span class="ow">in</span> <span class="n">node</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rdtype</span> <span class="o">==</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span> <span class="ow">or</span> \
+                   <span class="p">(</span><span class="n">rds</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">==</span> <span class="n">rdtype</span> <span class="ow">and</span> <span class="n">rds</span><span class="o">.</span><span class="n">covers</span> <span class="o">==</span> <span class="n">covers</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rds</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Zone.iterate_rdatas"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.iterate_rdatas">[docs]</a>    <span class="k">def</span> <span class="nf">iterate_rdatas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdtype</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span><span class="p">,</span>
+                       <span class="n">covers</span><span class="o">=</span><span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NONE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a generator which yields (name, ttl, rdata) tuples for</span>
+<span class="sd">        all rdatas in the zone which have the specified I{rdtype}</span>
+<span class="sd">        and I{covers}.  If I{rdtype} is dns_rdatatype.ANY, the default,</span>
+<span class="sd">        then all rdatas will be matched.</span>
+
+<span class="sd">        @param rdtype: int or string</span>
+<span class="sd">        @type rdtype: int or string</span>
+<span class="sd">        @param covers: the covered type (defaults to None)</span>
+<span class="sd">        @type covers: int or string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdtype</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">covers</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">covers</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">covers</span><span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">rds</span> <span class="ow">in</span> <span class="n">node</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rdtype</span> <span class="o">==</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">ANY</span> <span class="ow">or</span> \
+                   <span class="p">(</span><span class="n">rds</span><span class="o">.</span><span class="n">rdtype</span> <span class="o">==</span> <span class="n">rdtype</span> <span class="ow">and</span> <span class="n">rds</span><span class="o">.</span><span class="n">covers</span> <span class="o">==</span> <span class="n">covers</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">rdata</span> <span class="ow">in</span> <span class="n">rds</span><span class="p">:</span>
+                        <span class="k">yield</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rds</span><span class="o">.</span><span class="n">ttl</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Zone.to_file"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.to_file">[docs]</a>    <span class="k">def</span> <span class="nf">to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="nb">sorted</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">nl</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write a zone to a file.</span>
+
+<span class="sd">        @param f: file or string.  If I{f} is a string, it is treated</span>
+<span class="sd">        as the name of a file to open.</span>
+<span class="sd">        @param sorted: if True, the file will be written with the</span>
+<span class="sd">        names sorted in DNSSEC order from least to greatest.  Otherwise</span>
+<span class="sd">        the names will be written in whatever order they happen to have</span>
+<span class="sd">        in the zone&#39;s dictionary.</span>
+<span class="sd">        @param relativize: if True, domain names in the output will be</span>
+<span class="sd">        relativized to the zone&#39;s origin (if possible).</span>
+<span class="sd">        @type relativize: bool</span>
+<span class="sd">        @param nl: The end of line string.  If not specified, the</span>
+<span class="sd">        output will use the platform&#39;s native end-of-line marker (i.e.</span>
+<span class="sd">        LF on POSIX, CRLF on Windows, CR on Macintosh).</span>
+<span class="sd">        @type nl: string or None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">hexversion</span> <span class="o">&gt;=</span> <span class="mh">0x02030000</span><span class="p">:</span>
+            <span class="c"># allow Unicode filenames</span>
+            <span class="n">str_type</span> <span class="o">=</span> <span class="nb">basestring</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">str_type</span> <span class="o">=</span> <span class="nb">str</span>
+        <span class="k">if</span> <span class="n">nl</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">opts</span> <span class="o">=</span> <span class="s">&#39;w&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">opts</span> <span class="o">=</span> <span class="s">&#39;wb&#39;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">str_type</span><span class="p">):</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+            <span class="n">want_close</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">want_close</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">sorted</span><span class="p">:</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                <span class="n">names</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">to_text</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span>
+                                    <span class="n">relativize</span><span class="o">=</span><span class="n">relativize</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">nl</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="o">&gt;&gt;</span> <span class="n">f</span><span class="p">,</span> <span class="n">l</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">nl</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">want_close</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Zone.check_origin"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.Zone.check_origin">[docs]</a>    <span class="k">def</span> <span class="nf">check_origin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Do some simple checking of the zone&#39;s origin.</span>
+
+<span class="sd">        @raises dns_zone.NoSOA: there is no SOA RR</span>
+<span class="sd">        @raises dns_zone.NoNS: there is no NS RRset</span>
+<span class="sd">        @raises KeyError: there is no origin node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">empty</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_rdataset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">SOA</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoSOA</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_rdataset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">NS</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoNS</span>
+
+</div></div>
+<span class="k">class</span> <span class="nc">_MasterReader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read a DNS master file</span>
+
+<span class="sd">    @ivar tok: The tokenizer</span>
+<span class="sd">    @type tok: dns_tokenizer.Tokenizer object</span>
+<span class="sd">    @ivar ttl: The default TTL</span>
+<span class="sd">    @type ttl: int</span>
+<span class="sd">    @ivar last_name: The last name read</span>
+<span class="sd">    @type last_name: dns_name.Name object</span>
+<span class="sd">    @ivar current_origin: The current origin</span>
+<span class="sd">    @type current_origin: dns_name.Name object</span>
+<span class="sd">    @ivar relativize: should names in the zone be relativized?</span>
+<span class="sd">    @type relativize: bool</span>
+<span class="sd">    @ivar zone: the zone</span>
+<span class="sd">    @type zone: dns_zone.Zone object</span>
+<span class="sd">    @ivar saved_state: saved reader state (used when processing $INCLUDE)</span>
+<span class="sd">    @type saved_state: list of (tokenizer, current_origin, last_name, file)</span>
+<span class="sd">    tuples.</span>
+<span class="sd">    @ivar current_file: the file object of the $INCLUDed file being parsed</span>
+<span class="sd">    (None if no $INCLUDE is active).</span>
+<span class="sd">    @ivar allow_include: is $INCLUDE allowed?</span>
+<span class="sd">    @type allow_include: bool</span>
+<span class="sd">    @ivar check_origin: should sanity checks of the origin node be done?</span>
+<span class="sd">    The default is True.</span>
+<span class="sd">    @type check_origin: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">relativize</span><span class="p">,</span> <span class="n">zone_factory</span><span class="o">=</span><span class="n">Zone</span><span class="p">,</span>
+                 <span class="n">allow_include</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">check_origin</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)):</span>
+            <span class="n">origin</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tok</span> <span class="o">=</span> <span class="n">tok</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span> <span class="o">=</span> <span class="n">origin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span> <span class="o">=</span> <span class="n">relativize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ttl</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_name</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zone</span> <span class="o">=</span> <span class="n">zone_factory</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="n">relativize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">saved_state</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_file</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allow_include</span> <span class="o">=</span> <span class="n">allow_include</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_origin</span> <span class="o">=</span> <span class="n">check_origin</span>
+
+    <span class="k">def</span> <span class="nf">_eat_line</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eol_or_eof</span><span class="p">():</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span> <span class="nf">_rr_line</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Process one line from a DNS master file.&quot;&quot;&quot;</span>
+        <span class="c"># Name</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnknownOrigin</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">want_leading</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_whitespace</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_name</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eol_or_eof</span><span class="p">():</span>
+                <span class="c"># treat leading WS followed by EOL/EOF as if they were EOL/EOF.</span>
+                <span class="k">return</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">unget</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_name</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">is_subdomain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">origin</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_eat_line</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">relativize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+        <span class="c"># TTL</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ttl</span> <span class="o">=</span> <span class="n">dns_ttl</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+        <span class="k">except</span> <span class="n">dns_ttl</span><span class="o">.</span><span class="n">BadTTL</span><span class="p">:</span>
+            <span class="n">ttl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttl</span>
+        <span class="c"># Class</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">rdclass</span> <span class="o">=</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+        <span class="k">except</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">rdclass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">rdclass</span>
+        <span class="k">if</span> <span class="n">rdclass</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">rdclass</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;RR class is not zone&#39;s class&quot;</span><span class="p">)</span>
+        <span class="c"># Type</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">rdtype</span> <span class="o">=</span> <span class="n">dns_rdatatype</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;unknown rdatatype &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">node_factory</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">rd</span> <span class="o">=</span> <span class="n">dns_rdata</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="p">,</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">:</span>
+            <span class="c"># Catch and reraise.</span>
+            <span class="p">(</span><span class="n">ty</span><span class="p">,</span> <span class="n">va</span><span class="p">)</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">raise</span> <span class="n">va</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># All exceptions that occur in the processing of rdata</span>
+            <span class="c"># are treated as syntax errors.  This is not strictly</span>
+            <span class="c"># correct, but it is correct almost all of the time.</span>
+            <span class="c"># We convert them to syntax errors so that we can emit</span>
+            <span class="c"># helpful filename:line info.</span>
+            <span class="p">(</span><span class="n">ty</span><span class="p">,</span> <span class="n">va</span><span class="p">)</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;caught exception </span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ty</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">va</span><span class="p">)))</span>
+
+        <span class="n">rd</span><span class="o">.</span><span class="n">choose_relativity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">relativize</span><span class="p">)</span>
+        <span class="n">covers</span> <span class="o">=</span> <span class="n">rd</span><span class="o">.</span><span class="n">covers</span><span class="p">()</span>
+        <span class="n">rds</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">find_rdataset</span><span class="p">(</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rdtype</span><span class="p">,</span> <span class="n">covers</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="n">rds</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rd</span><span class="p">,</span> <span class="n">ttl</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read a DNS master file and build a zone object.</span>
+
+<span class="sd">        @raises dns_zone.NoSOA: No SOA RR was found at the zone origin</span>
+<span class="sd">        @raises dns_zone.NoNS: No NS RRset was found at the zone origin</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span><span class="o">.</span><span class="n">unescape</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eof</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_file</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">saved_state</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">last_name</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">current_file</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">ttl</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">saved_state</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                    <span class="k">break</span>
+                <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eol</span><span class="p">():</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">is_comment</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get_eol</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;$&#39;</span><span class="p">:</span>
+                    <span class="n">u</span> <span class="o">=</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">u</span> <span class="o">==</span> <span class="s">&#39;$TTL&#39;</span><span class="p">:</span>
+                        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+                            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;bad $TTL&quot;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">ttl</span> <span class="o">=</span> <span class="n">dns_ttl</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get_eol</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">u</span> <span class="o">==</span> <span class="s">&#39;$ORIGIN&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get_eol</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">origin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">origin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span>
+                    <span class="k">elif</span> <span class="n">u</span> <span class="o">==</span> <span class="s">&#39;$INCLUDE&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_include</span><span class="p">:</span>
+                        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_quoted_string</span><span class="p">():</span>
+                            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;bad filename in $INCLUDE&quot;</span><span class="p">)</span>
+                        <span class="n">filename</span> <span class="o">=</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span>
+                        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_identifier</span><span class="p">():</span>
+                            <span class="n">new_origin</span> <span class="o">=</span> <span class="n">dns_name</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> \
+                                                            <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">get_eol</span><span class="p">()</span>
+                        <span class="k">elif</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_eol_or_eof</span><span class="p">():</span>
+                            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;bad origin in $INCLUDE&quot;</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">new_origin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">saved_state</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">last_name</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">current_file</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">ttl</span><span class="p">))</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_file</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">tok</span> <span class="o">=</span> <span class="n">dns_tokenizer</span><span class="o">.</span><span class="n">Tokenizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_file</span><span class="p">,</span>
+                                                           <span class="n">filename</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_origin</span> <span class="o">=</span> <span class="n">new_origin</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;Unknown master file directive &#39;&quot;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s">&quot;&#39;&quot;</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">unget</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_rr_line</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">,</span> <span class="n">detail</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">line_number</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tok</span><span class="o">.</span><span class="n">where</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">detail</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">detail</span> <span class="o">=</span> <span class="s">&quot;syntax error&quot;</span>
+            <span class="k">raise</span> <span class="n">dns_exception</span><span class="o">.</span><span class="n">SyntaxError</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">line_number</span><span class="p">,</span> <span class="n">detail</span><span class="p">))</span>
+
+        <span class="c"># Now that we&#39;re done reading, do some basic checking of the zone.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_origin</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="o">.</span><span class="n">check_origin</span><span class="p">()</span>
+
+<div class="viewcode-block" id="from_text"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.from_text">[docs]</a><span class="k">def</span> <span class="nf">from_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">rdclass</span> <span class="o">=</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span>
+              <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">zone_factory</span><span class="o">=</span><span class="n">Zone</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+              <span class="n">allow_include</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">check_origin</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a zone object from a master file format string.</span>
+
+<span class="sd">    @param text: the master file format input</span>
+<span class="sd">    @type text: string.</span>
+<span class="sd">    @param origin: The origin of the zone; if not specified, the first</span>
+<span class="sd">    $ORIGIN statement in the master file will determine the origin of the</span>
+<span class="sd">    zone.</span>
+<span class="sd">    @type origin: dns_name.Name object or string</span>
+<span class="sd">    @param rdclass: The zone&#39;s rdata class; the default is class IN.</span>
+<span class="sd">    @type rdclass: int</span>
+<span class="sd">    @param relativize: should names be relativized?  The default is True</span>
+<span class="sd">    @type relativize: bool</span>
+<span class="sd">    @param zone_factory: The zone factory to use</span>
+<span class="sd">    @type zone_factory: function returning a Zone</span>
+<span class="sd">    @param filename: The filename to emit when describing where an error</span>
+<span class="sd">    occurred; the default is &#39;&lt;string&gt;&#39;.</span>
+<span class="sd">    @type filename: string</span>
+<span class="sd">    @param allow_include: is $INCLUDE allowed?</span>
+<span class="sd">    @type allow_include: bool</span>
+<span class="sd">    @param check_origin: should sanity checks of the origin node be done?</span>
+<span class="sd">    The default is True.</span>
+<span class="sd">    @type check_origin: bool</span>
+<span class="sd">    @raises dns_zone.NoSOA: No SOA RR was found at the zone origin</span>
+<span class="sd">    @raises dns_zone.NoNS: No NS RRset was found at the zone origin</span>
+<span class="sd">    @rtype: dns_zone.Zone object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># &#39;text&#39; can also be a file, but we don&#39;t publish that fact</span>
+    <span class="c"># since it&#39;s an implementation detail.  The official file</span>
+    <span class="c"># interface is from_file().</span>
+
+    <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;&lt;string&gt;&#39;</span>
+    <span class="n">tok</span> <span class="o">=</span> <span class="n">dns_tokenizer</span><span class="o">.</span><span class="n">Tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">_MasterReader</span><span class="p">(</span><span class="n">tok</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">relativize</span><span class="p">,</span> <span class="n">zone_factory</span><span class="p">,</span>
+                           <span class="n">allow_include</span><span class="o">=</span><span class="n">allow_include</span><span class="p">,</span>
+                           <span class="n">check_origin</span><span class="o">=</span><span class="n">check_origin</span><span class="p">)</span>
+    <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">zone</span>
+</div>
+<div class="viewcode-block" id="from_file"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.from_file">[docs]</a><span class="k">def</span> <span class="nf">from_file</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">rdclass</span> <span class="o">=</span> <span class="n">dns_rdataclass</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span>
+              <span class="n">relativize</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">zone_factory</span><span class="o">=</span><span class="n">Zone</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+              <span class="n">allow_include</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">check_origin</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read a master file and build a zone object.</span>
+
+<span class="sd">    @param f: file or string.  If I{f} is a string, it is treated</span>
+<span class="sd">    as the name of a file to open.</span>
+<span class="sd">    @param origin: The origin of the zone; if not specified, the first</span>
+<span class="sd">    $ORIGIN statement in the master file will determine the origin of the</span>
+<span class="sd">    zone.</span>
+<span class="sd">    @type origin: dns_name.Name object or string</span>
+<span class="sd">    @param rdclass: The zone&#39;s rdata class; the default is class IN.</span>
+<span class="sd">    @type rdclass: int</span>
+<span class="sd">    @param relativize: should names be relativized?  The default is True</span>
+<span class="sd">    @type relativize: bool</span>
+<span class="sd">    @param zone_factory: The zone factory to use</span>
+<span class="sd">    @type zone_factory: function returning a Zone</span>
+<span class="sd">    @param filename: The filename to emit when describing where an error</span>
+<span class="sd">    occurred; the default is &#39;&lt;file&gt;&#39;, or the value of I{f} if I{f} is a</span>
+<span class="sd">    string.</span>
+<span class="sd">    @type filename: string</span>
+<span class="sd">    @param allow_include: is $INCLUDE allowed?</span>
+<span class="sd">    @type allow_include: bool</span>
+<span class="sd">    @param check_origin: should sanity checks of the origin node be done?</span>
+<span class="sd">    The default is True.</span>
+<span class="sd">    @type check_origin: bool</span>
+<span class="sd">    @raises dns_zone.NoSOA: No SOA RR was found at the zone origin</span>
+<span class="sd">    @raises dns_zone.NoNS: No NS RRset was found at the zone origin</span>
+<span class="sd">    @rtype: dns_zone.Zone object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">hexversion</span> <span class="o">&gt;=</span> <span class="mh">0x02030000</span><span class="p">:</span>
+        <span class="c"># allow Unicode filenames; turn on universal newline support</span>
+        <span class="n">str_type</span> <span class="o">=</span> <span class="nb">basestring</span>
+        <span class="n">opts</span> <span class="o">=</span> <span class="s">&#39;rU&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">str_type</span> <span class="o">=</span> <span class="nb">str</span>
+        <span class="n">opts</span> <span class="o">=</span> <span class="s">&#39;r&#39;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">str_type</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">f</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+        <span class="n">want_close</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;&lt;file&gt;&#39;</span>
+        <span class="n">want_close</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">from_text</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">relativize</span><span class="p">,</span> <span class="n">zone_factory</span><span class="p">,</span>
+                      <span class="n">filename</span><span class="p">,</span> <span class="n">allow_include</span><span class="p">,</span> <span class="n">check_origin</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">want_close</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">z</span>
+</div>
+<div class="viewcode-block" id="from_xfr"><a class="viewcode-back" href="../../../pytomo.dns.html#pytomo.dns.zone.from_xfr">[docs]</a><span class="k">def</span> <span class="nf">from_xfr</span><span class="p">(</span><span class="n">xfr</span><span class="p">,</span> <span class="n">zone_factory</span><span class="o">=</span><span class="n">Zone</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert the output of a zone transfer generator into a zone object.</span>
+
+<span class="sd">    @param xfr: The xfr generator</span>
+<span class="sd">    @type xfr: generator of dns_message.Message objects</span>
+<span class="sd">    @param relativize: should names be relativized?  The default is True.</span>
+<span class="sd">    It is essential that the relativize setting matches the one specified</span>
+<span class="sd">    to dns_query.xfr().</span>
+<span class="sd">    @type relativize: bool</span>
+<span class="sd">    @raises dns_zone.NoSOA: No SOA RR was found at the zone origin</span>
+<span class="sd">    @raises dns_zone.NoNS: No NS RRset was found at the zone origin</span>
+<span class="sd">    @rtype: dns_zone.Zone object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">z</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">xfr</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">z</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">relativize</span><span class="p">:</span>
+                <span class="n">origin</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">origin</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">origin</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">answer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">rdclass</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">answer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rdclass</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">zone_factory</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">rdclass</span><span class="p">,</span> <span class="n">relativize</span><span class="o">=</span><span class="n">relativize</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">rrset</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">answer</span><span class="p">:</span>
+            <span class="n">znode</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rrset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">znode</span><span class="p">:</span>
+                <span class="n">znode</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">node_factory</span><span class="p">()</span>
+                <span class="n">z</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">rrset</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">znode</span>
+            <span class="n">zrds</span> <span class="o">=</span> <span class="n">znode</span><span class="o">.</span><span class="n">find_rdataset</span><span class="p">(</span><span class="n">rrset</span><span class="o">.</span><span class="n">rdclass</span><span class="p">,</span> <span class="n">rrset</span><span class="o">.</span><span class="n">rdtype</span><span class="p">,</span>
+                                       <span class="n">rrset</span><span class="o">.</span><span class="n">covers</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+            <span class="n">zrds</span><span class="o">.</span><span class="n">update_ttl</span><span class="p">(</span><span class="n">rrset</span><span class="o">.</span><span class="n">ttl</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">rd</span> <span class="ow">in</span> <span class="n">rrset</span><span class="p">:</span>
+                <span class="n">rd</span><span class="o">.</span><span class="n">choose_relativity</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span> <span class="n">relativize</span><span class="p">)</span>
+                <span class="n">zrds</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rd</span><span class="p">)</span>
+    <span class="n">z</span><span class="o">.</span><span class="n">check_origin</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">z</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pytomo 2.8.6 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Louis Plissoneau.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
