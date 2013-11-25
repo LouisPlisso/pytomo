@@ -196,7 +196,7 @@ def get_cache_url(url, redirect=False, hd_first=False):
     '''
     if redirect:
         return url
-    dailymotion_ie = get_dailymotion_info_extractor()
+    dailymotion_ie = get_dailymotion_info_extractor(config_pytomo.DOWNLOAD_TIME)
     # AO 03122012
     # in the database, the url is saved with its complete title (lots of
     # unescaped characters), should only use ID to retrieve cache

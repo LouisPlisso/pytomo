@@ -46,6 +46,7 @@ except ValueError:
 MAX_VIDEO_PER_PAGE = 20
 # dailymotion links
 DM_LINK = 'http://www.dailymotion.com'
+CHARTS_URL = 'http://www.dailymotion.com/{country}/{time_frame}/%{page}'
 COUNTRY = 'fr'
 DM_API_LINK = 'https://api.dailymotion.com/video/%s/related?fields=id,title&limit=%i'
 DM_VIDEO_LINK = 'http://www.dailymotion.com/video/'
@@ -178,8 +179,8 @@ def get_popular_links(input_time=config_pytomo.TIME_FRAME,
     else:
         pages = 1
     for page in xrange(pages):
-        url = ''.join(
-            (DM_LINK, '/', COUNTRY, '/', time_frame, '/', str(page + 1)))
+        url = CHARTS_URL.format(country=COUNTRY, time_frame=time_frame,
+                                page=(page + 1))
         links = lib_links_extractor.get_all_links(url)
         if not links:
             config_pytomo.LOG.warning('No popular link was found')

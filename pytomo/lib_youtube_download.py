@@ -297,7 +297,7 @@ def get_cache_url(url, redirect=False, hd_first=False):
     "Return the cache url of the video (Wrote mock test)"
     if redirect:
         return url
-    youtube_ie = get_youtube_info_extractor()
+    youtube_ie = get_youtube_info_extractor(config_pytomo.DOWNLOAD_TIME)
     youtube_ie._hd_first = hd_first
     mobj = re.match(youtube_ie._VALID_URL, url)
 #    if not mobj and 'channel' in url:

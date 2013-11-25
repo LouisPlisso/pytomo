@@ -177,13 +177,15 @@ class FileDownloader(object):
             self.download_time = int(download_time)
         except ValueError:
             config_pytomo.LOG.exception(
-                "Please provide a number as max download time. Got : %s"
-                % download_time)
+                "Please provide a number as max download time. Got : %s",
+                download_time)
             self.download_time = config_pytomo.DOWNLOAD_TIME
-            config_pytomo.LOG.info('Set max download_time as: %d'
-                                   % self.download_time)
+            config_pytomo.LOG.info('Set max download_time as: %d',
+                                   self.download_time)
         if self.download_time <= 0:
             self.download_time = config_pytomo.MAX_DOWNLOAD_TIME
+        config_pytomo.LOG.debug('Max download_time is: %d',
+                                 self.download_time)
         #self.quiet = quiet
         #self.params = params'
 

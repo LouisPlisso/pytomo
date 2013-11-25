@@ -41,6 +41,9 @@ except (ValueError, ImportError):
 
 LINK_REG_EXP = r'/watch_videos?(.*&)?video_ids='
 
+CHARTS_URL = ('http://www.youtube.com/charts/videos_views?p=2'
+              '&gl={country}&t={time_frame}&p={page}')
+
 # Youtube webpage limitation
 MAX_VIDEO_PER_PAGE = 25
 
@@ -114,10 +117,8 @@ def get_popular_links(input_time=config_pytomo.TIME_FRAME,
     else:
         pages = 1
     for page in xrange(pages):
-        url = ''.join(
-           ('http://www.youtube.com/charts/videos_views?p=2&gl=%s&t=' % country,
-             time_frame, '&p=', str(page + 1))
-                     )
+        url = CHARTS_URL.format(country=country, time_frame=time_frame,
+                                page=(page + 1))
         links = lib_links_extractor.get_all_links(url)
         if not links:
             config_pytomo.LOG.warning('No popular link was found')

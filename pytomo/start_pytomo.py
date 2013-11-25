@@ -1021,10 +1021,12 @@ def create_options(parser):
                       default=config_pytomo.MAX_ROUNDS)
     parser.add_option('-l', '--loop', dest='LOOP', action='store_true',
                       default=config_pytomo.LOOP,
-                      help='Loop after completing the max nb of rounds')
+                      help=('Loop after completing the max nb of rounds '
+                      '(default %s)' % config_pytomo.LOOP))
     parser.add_option('--no-loop', dest='LOOP', action='store_false',
-                      default=config_pytomo.LOOP,
-                      help='Loop after completing the max nb of rounds')
+                      default=(not config_pytomo.LOOP),
+                      help=('Do not loop after completing the max nb of rounds '
+                      '(default %s)' % (not config_pytomo.LOOP)))
     parser.add_option('-R', '--related', dest='RELATED',
                       action='store_true', default=config_pytomo.RELATED,
                       help=('Crawl related videos'))
