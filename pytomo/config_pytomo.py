@@ -100,7 +100,8 @@ MAX_PER_PAGE = 10
 
 # timeframe for the most popular videos fetch at start of crawl
 # put 'today', 'week', 'month' or 'all_time' (default case)
-TIME_FRAME = 'week'
+# new API: only today and all_time are allowed
+TIME_FRAME = 'today'
 
 #Time delay between consecutive url crawls and download requests (in seconds)
 DELAY_BETWEEN_REQUESTS = 10

@@ -1053,8 +1053,8 @@ def create_options(parser):
                       help='SNMP mode')
     parser.add_option('-t', dest='TIME_FRAME', type='string',
                       help=('Timeframe for the most popular videos to fetch '
-                            "at start of crawl put 'today', 'week', 'month' "
-                            "or 'all_time' (default '%s') [only for YouTube]"
+                            "at start of crawl put 'today', or 'all_time' "
+                            "(default '%s') [only for YouTube]"
                             % config_pytomo.TIME_FRAME),
                       default=config_pytomo.TIME_FRAME)
     parser.add_option('-n', dest='PING_PACKETS', type='int',
