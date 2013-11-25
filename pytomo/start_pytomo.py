@@ -409,6 +409,7 @@ def set_up_snmp():
         config_pytomo.LOG.info('Try installing it and ctypes')
         config_pytomo.SNMP = False
     else:
+        config_pytomo.hebexsnmptools = hebexsnmptools
         config_pytomo.dataset = hebexsnmptools.SnmpData(
                                                     root=config_pytomo.ROOT_OID)
         ax = hebexsnmptools.AgentX(name='PytomoAgent',
@@ -429,128 +430,129 @@ def set_up_snmp():
                                         config_pytomo.snmp_pytomoContact_str)
         config_pytomo.dataset.registerVar(
                             config_pytomo.snmp_pytomoDownloadDuration + '.0',
-                            hebexsnmptools.ASN_OCTET_STR,
-                            config_pytomo.DOWNLOAD_TIME)
+                            hebexsnmptools.ASN_GAUGE,
+                            int(config_pytomo.DOWNLOAD_TIME))
         config_pytomo.dataset.registerVar(
                                     config_pytomo.snmp_pytomoSleepTime + '.0',
-                                    hebexsnmptools.ASN_OCTET_STR,
-                                    config_pytomo.DELAY_BETWEEN_REQUESTS)
+                                    hebexsnmptools.ASN_GAUGE,
+                                    int(config_pytomo.DELAY_BETWEEN_REQUESTS))
         # initiate tables for Url stats
+        config_pytomo.snmp_tables = []
         config_pytomo.snmp_types = []
         config_pytomo.urlIndexTable = config_pytomo.dataset.addTable(
                 config_pytomo.snmp_pytomoUrlIndex, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlIndexTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_OCTET_STR)
         config_pytomo.urlTimeStampTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_TimeStamp, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoTimeStamp, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlTimeStampTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_OCTET_STR)
         config_pytomo.urlServiceTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_Service, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoService, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlServiceTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_OCTET_STR)
         config_pytomo.urlCacheUrlTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_CacheUrl, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoCacheUrl, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlCacheUrlTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_OCTET_STR)
         config_pytomo.urlCacheServerDelayTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_CacheServerDelay, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoCacheServerDelay, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlCacheServerDelayTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlAddressIpTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_AddressIp, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoAddressIp, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlAddressIpTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_OCTET_STR)
         config_pytomo.urlResolverTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_Resolver, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoResolver, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlResolverTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_OCTET_STR)
         config_pytomo.urlResolveTimeTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_ResolveTime, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoResolveTime, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlResolveTimeTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlAsNumberTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_AsNumber, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoAsNumber, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlAsNumberTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_INTEGER)
         config_pytomo.urlPingMinTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_PingMin, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoPingMin, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlPingMinTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlPingAvgTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_PingAvg, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoPingAvg, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlPingAvgTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlPingMaxTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_PingMax, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoPingMax, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlPingMaxTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlDownloadTimeTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_DownloadTime, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoDownloadTime, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlDownloadTimeTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlVideoTypeTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_VideoType, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoVideoType, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlVideoTypeTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlVideoDurationTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_VideoDuration, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoVideoDuration, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlVideoDurationTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlVideoLengthTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_VideoLength, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoVideoLength, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlVideoLengthTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlEncodingRateTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_EncodingRate, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoEncodingRate, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlEncodingRateTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlDownloadBytesTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_DownloadBytes, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoDownloadBytes, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlDownloadBytesTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_INTEGER)
         config_pytomo.urlDownloadInterruptionsTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_DownloadInterruptions, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoDownloadInterruptions, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlDownloadInterruptionsTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_INTEGER)
         config_pytomo.urlInitialDataTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_InitialData, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoInitialData, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlInitialDataTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlInitialRateTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_InitialRate, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoInitialRate, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlInitialRateTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlInitialPlaybackBufferTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_InitialPlaybackBuffer, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoInitialPlaybackBuffer, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlInitialPlaybackBufferTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlBufferingDurationTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_BufferingDuration, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoBufferingDuration, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlBufferingDurationTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlPlaybackDurationTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_PlaybackDuration, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoPlaybackDuration, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlPlaybackDurationTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlBufferDurationAtEndTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_BufferDurationAtEnd, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoBufferDurationAtEnd, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlBufferDurationAtEndTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlTimeTogetFirstByteTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_TimeTogetFirstByte, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoTimeTogetFirstByte, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlTimeTogetFirstByteTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlMaxInstantThpTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_MaxInstantThp, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoMaxInstantThp, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlMaxInstantThpTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_GAUGE)
         config_pytomo.urlRedirectUrlTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_RedirectUrl, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoRedirectUrl, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlRedirectUrlTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_OCTET_STR)
         config_pytomo.urlStatusCodeTable = config_pytomo.dataset.addTable(
-            config_pytomo.snmp_StatusCode, hebexsnmptools.TABLE_INDEX_STRING)
+            config_pytomo.snmp_pytomoStatusCode, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.snmp_tables.append(config_pytomo.urlStatusCodeTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_INTEGER)
 
@@ -650,14 +652,27 @@ def add_stats(stats, cache_server_delay, url, result_stream=None, data_base=None
         for row in format_stats(stats, cache_server_delay, service=service):
             data_base.insert_record(row)
     if config_pytomo.SNMP:
+        format_gauge = lambda x: int(x * 1000 if x else 0)
+        format_datetime = lambda x: x.strftime('%Y%m%d %H:%M:%S')
+        format_int = lambda x: x if x else 0
+        identity = lambda x: x if x else ''
         formatted_stats = format_stats(stats, cache_server_delay,
                                        service=service)
-        formatted_stats[0] = formatted_stats[0].strftime('%Y%m%d %H:%M:%S')
-        video_url = format_stats[config_pytomo.URL_IDX]
-        for table, snmp_type, idx in zip(config_pytomo.snmp_tables,
-                                           config_pytomo.snmp_types,
-                                           config_pytomo.STATS_IDX):
-            table.registerValue(video_url, snmp_type, formatted_stats[idx])
+        for stats_line in formatted_stats:
+            video_url = stats_line[config_pytomo.URL_IDX]
+            for table, snmp_type, idx in zip(config_pytomo.snmp_tables,
+                                             config_pytomo.snmp_types,
+                                             config_pytomo.STATS_IDX):
+                if snmp_type == config_pytomo.hebexsnmptools.ASN_GAUGE:
+                    formatter = format_gauge
+                elif snmp_type == config_pytomo.hebexsnmptools.ASN_INTEGER:
+                    formatter = format_int
+                elif idx == config_pytomo.TS_IDX:
+                    formatter = format_datetime
+                else:
+                    formatter = identity
+                table.registerValue(video_url, snmp_type,
+                        formatter(stats_line[idx]))
 
 def retrieve_cache_urls(url, lib_download, hd_first=False):
     ''' Return the list of cache url servers for a given video.

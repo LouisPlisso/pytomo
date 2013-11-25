@@ -216,7 +216,7 @@ snmp_pytomoDownloadDuration = '.'.join((snmp_pytomoGblStats, '4'))
 snmp_pytomoSleepTime = '.'.join((snmp_pytomoGblStats, '5'))
 
 # Table of Url stats
-snmp_pytomoUrlStats = '.'.join((ROOT_OID, '2'))
+snmp_pytomoUrlStats = '.'.join((ROOT_OID, '2', '1', '1'))
 
 # UrlIndex is the first value in the tables but not in the stats!
 snmp_pytomoUrlIndex = '.'.join((snmp_pytomoUrlStats, '1'))
@@ -250,6 +250,7 @@ snmp_pytomoRedirectUrl = '.'.join((snmp_pytomoUrlStats, '28'))
 snmp_pytomoStatusCode = '.'.join((snmp_pytomoUrlStats, '29'))
 
 URL_IDX = 2
+TS_IDX = 0
 STATS_IDX = (
     2, #Url
     0, #TIMESTAMP
