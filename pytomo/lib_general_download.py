@@ -474,7 +474,7 @@ template')
             headers = config_pytomo.STD_HEADERS
         #cookie_jar = cookielib.MozillaCookieJar()
         #cookie_jar.load(config_pytomo.cookie_file)
-        basic_request = urllib2.Request(uri, None, headers)
+        basic_request = urllib2.Request(uri, None, config_pytomo.STD_HEADERS)
         #cookie_jar.add_cookie_header(basic_request)
         request = urllib2.Request(uri, None, headers)
         #cookie_jar.add_cookie_header(request)

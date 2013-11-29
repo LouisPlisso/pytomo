@@ -33,7 +33,7 @@ PACKAGE_NAME = 'pytomo'
 PACKAGE_DIR = abspath(path[0])
 
 if PACKAGE_DIR not in path:
-    path.append(PACKAGE_DIR)
+    path[0:0] = [PACKAGE_DIR]
 
 import pytomo
 

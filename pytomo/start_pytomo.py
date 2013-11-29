@@ -220,11 +220,11 @@ def compute_stats(url, cache_uri, do_download_stats, redirect_url=None,
                                                                    redirect_url)
     redirect_list = []
     for (ip_address, resolver, req_time) in ip_addresses:
-        config_pytomo.LOG.debug('Compute stats for IP: %s' % ip_address)
+        config_pytomo.LOG.debug('Compute stats for IP: %s', ip_address)
         timestamp = datetime.datetime.now()
         if ip_address in current_stats and config_pytomo.SKIP_COMPUTED:
-            config_pytomo.LOG.debug('Skip IP already crawled: %s'
-                                        % ip_address)
+            config_pytomo.LOG.debug('Skip IP already crawled: %s',
+                                    ip_address)
             continue
         ping_times = lib_ping.ping_ip(ip_address)
         if do_download_stats and ('default' in resolver
@@ -249,15 +249,15 @@ def compute_stats(url, cache_uri, do_download_stats, redirect_url=None,
                     AS_REQUEST_URL + ip_address,
                 timeout=config_pytomo.URL_TIMEOUT))['data']['last_seen']['origin'])
                 CACHED_PREFIXES[prefix] = as_nb
-                config_pytomo.LOG.debug('IP %s resolved as AS: %d'
-                                        % (ip_address, as_nb))
+                config_pytomo.LOG.debug('IP %s resolved as AS: %d',
+                                        ip_address, as_nb)
             except Exception, mes:
                 config_pytomo.LOG.exception(mes)
                 prefix = '0.0.0'
         if not status_code and redirect_url:
             # should not happen, but guess a 302 in this case
             config_pytomo.LOG.debug('no status code found with this '
-                                    'redirect_url: %s' % redirect_url)
+                                    'redirect_url: %s', redirect_url)
             status_code = config_pytomo.HTTP_REDIRECT_FOUND
         current_stats[ip_address] = [timestamp, ping_times, download_stats,
                                      redirect_url, resolver, req_time,
@@ -265,7 +265,7 @@ def compute_stats(url, cache_uri, do_download_stats, redirect_url=None,
     # check if cache_url is the same independently of DNS: YES only depend on
     # video id
     #assert reduce(eq, redirect_list)
-    config_pytomo.LOG.info('new redirect urls: %s' % redirect_list)
+    config_pytomo.LOG.info('new redirect urls: %s', redirect_list)
     return (url, cache_url, current_stats), redirect_list
 
 def compute_download_stats(resolver, ip_address, cache_uri, current_stats,
@@ -297,7 +297,7 @@ def compute_download_stats(resolver, ip_address, cache_uri, current_stats,
         config_pytomo.LOG.exception(mes)
         return None, None, None
     except Exception, mes:
-        config_pytomo.LOG.exception('Uncaught exception: %s' % mes)
+        config_pytomo.LOG.exception('Uncaught exception: %s', mes)
         #import pdb; pdb.set_trace()
         return None, None, None
 #    else:
@@ -586,18 +586,18 @@ def check_out_files(file_pattern, directory, timestamp):
                 os.makedirs(out_dir)
             except OSError, mes:
                 config_pytomo.LOG.warn(
-                    'Out dir %s does not exist and cannot be created\n%s'
-                    % (out_dir, mes))
+                    'Out dir %s does not exist and cannot be created\n%s',
+                    out_dir, mes)
                 if HOME_DIR:
-                    config_pytomo.LOG.warn('Will use home base dir: %s'
-                                           % HOME_DIR)
+                    config_pytomo.LOG.warn('Will use home base dir: %s',
+                                           HOME_DIR)
                     out_dir = sep.join((HOME_DIR, directory))
                     if not os.path.exists(out_dir):
                         # do not catch OSError as it's our second attempt
                         os.makedirs(out_dir)
                 else:
                     config_pytomo.LOG.error(
-                        'Impossible to create output file: %s' % file_pattern)
+                        'Impossible to create output file: %s', file_pattern)
                     raise IOError
     else:
         out_dir = os.getcwd()
@@ -621,8 +621,8 @@ def md5sum(input_file):
     try:
         input_stream = open(input_file, 'rb')
     except (TypeError, IOError), mes:
-        config_pytomo.LOG.exception('Unable to compute the md5 of file: %s'
-                                    % mes)
+        config_pytomo.LOG.exception('Unable to compute the md5 of file: %s',
+                                    mes)
         return None
     bufsize = 8096
     hash_value = hashlib.md5()
@@ -690,7 +690,7 @@ def retrieve_cache_urls(url, lib_download, hd_first=False):
     response = lib_links_extractor.retrieve_header(cache_uri,
                                                    follow_redirect=False)
     while (response and nb_redirects <= config_pytomo.MAX_NB_REDIRECT):
-        config_pytomo.LOG.debug('response_code: %s' % response.code)
+        config_pytomo.LOG.debug('response_code: %s', response.code)
         # no redirect
         if response.code == config_pytomo.HTTP_OK:
             break
@@ -722,14 +722,14 @@ def crawl_link(url, next_urls, result_stream, data_base, related, loop,
                        data_base.fetch_single_parameter_with_stats(PARAM_URL))
     except Error, mes:
         config_pytomo.LOG.error('Unable to extract data %s with error:'
-                                '%s' % (PARAM_URL, mes))
+                                '%s', PARAM_URL, mes)
         return next_urls
     if not loop and len(crawled_urls) >= config_pytomo.MAX_CRAWLED_URLS:
         config_pytomo.LOG.debug('Reached max crawls')
         raise MaxUrlException()
-    config_pytomo.LOG.debug("Crawl of url# %d: %s" % (len(crawled_urls), url))
+    config_pytomo.LOG.debug('Crawl of url# %d: %s', len(crawled_urls), url)
     if not loop and url in crawled_urls:
-        config_pytomo.LOG.debug("Skipped url already crawled: %s" % url)
+        config_pytomo.LOG.debug('Skipped url already crawled: %s', url)
         return next_urls
     # print completed urls so that user knows that the crawl is running
     if (crawled_urls
@@ -750,16 +750,16 @@ def crawl_link(url, next_urls, result_stream, data_base, related, loop,
         (lib_download, lib_api) = download_libs
     else:
         config_pytomo.LOG.error('Could not select libraries to compute'
-                                ' statistics for %s' % url)
+                                ' statistics for %s', url)
         return next_urls
     start_cache_server_time = time.time()
     cache_servers = retrieve_cache_urls(url, lib_download, hd_first=hd_first)
     end_cache_server_time = time.time()
     cache_server_delay = end_cache_server_time - start_cache_server_time
-    config_pytomo.LOG.debug('For url=%s the cache urls are %s' %
-                            (url, cache_servers))
+    config_pytomo.LOG.debug('For url=%s the cache urls are %s',
+                            url, cache_servers)
     if not cache_servers:
-        config_pytomo.LOG.error('Error retrieving cache for: %s' % url)
+        config_pytomo.LOG.error('Error retrieving cache for: %s', url)
         return next_urls
     # redirect servers (all except last) just ping statistics are stored
     for index, cache_server in enumerate(cache_servers[:-1]):
@@ -767,15 +767,15 @@ def crawl_link(url, next_urls, result_stream, data_base, related, loop,
             stats, redirect_list = compute_stats(url, cache_server, False,
                                     redirect_url=cache_servers[index + 1])
         except TypeError:
-            config_pytomo.LOG.error('Error retrieving stats for: %s' %
+            config_pytomo.LOG.error('Error retrieving stats for: %s',
                                     cache_server)
         if stats:
             add_stats(stats, cache_server_delay, url, result_stream, data_base)
         else:
-            config_pytomo.LOG.info('no stats for url: %s' % cache_server)
+            config_pytomo.LOG.info('no stats for url: %s', cache_server)
         if redirect_list:
-            config_pytomo.LOG.info('redirect_list for redirect servers: %s'
-                                   % redirect_list)
+            config_pytomo.LOG.info('redirect_list for redirect servers: %s',
+                                   redirect_list)
             config_pytomo.LOG.info('these addresses are NOT taken into account')
     do_full_crawl = check_full_download(len(crawled_urls))
     # final redirect, download server for the video
@@ -784,18 +784,18 @@ def crawl_link(url, next_urls, result_stream, data_base, related, loop,
         stats, redirect_list = compute_stats(url, cache_server, True,
                               do_full_crawl=do_full_crawl)
     except TypeError:
-        config_pytomo.LOG.error('Error retrieving stats for: %s' % cache_server)
+        config_pytomo.LOG.error('Error retrieving stats for: %s', cache_server)
     if stats:
         add_stats(stats, cache_server_delay, url, result_stream, data_base)
         # wait only if there were stats retrieved
         time.sleep(config_pytomo.DELAY_BETWEEN_REQUESTS)
     else:
-        config_pytomo.LOG.info('no stats for url: %s' % cache_server)
+        config_pytomo.LOG.info('no stats for url: %s', cache_server)
     if redirect_list and redirect_list != [None]:
         #assert reduce(eq, redirect_list)
         if not reduce(eq, redirect_list):
-            config_pytomo.LOG.error('redirect list urls are not the same: %s'
-                                    % redirect_list)
+            config_pytomo.LOG.error('redirect list urls are not the same: %s',
+                                    redirect_list)
         cache_server = redirect_list[0]
         stats, redirect_list = compute_stats(url, cache_server, True,
                                              do_full_crawl=do_full_crawl)
@@ -804,9 +804,9 @@ def crawl_link(url, next_urls, result_stream, data_base, related, loop,
             # wait only if there were stats retrieved
             time.sleep(config_pytomo.DELAY_BETWEEN_REQUESTS)
         else:
-            config_pytomo.LOG.info('no stats for url: %s' % cache_server)
+            config_pytomo.LOG.info('no stats for url: %s', cache_server)
         if redirect_list:
-            config_pytomo.LOG.error('new redirect list: %s' % redirect_list)
+            config_pytomo.LOG.error('new redirect list: %s', redirect_list)
             config_pytomo.LOG.error('these addresses are NOT taken into account')
     if (related and len(next_urls) < config_pytomo.MAX_CRAWLED_URLS):
         try:
@@ -829,7 +829,7 @@ def crawl_links(input_links, result_stream=None,
     # - download statistics: only for final cache server from which the video is
     #                        downloaded
     # - ping statistics: for each cache server (intermediate and final)
-    config_pytomo.LOG.debug('input_links: %s' % input_links)
+    config_pytomo.LOG.debug('input_links: %s', input_links)
     for url in input_links:
         next_urls = crawl_link(url, next_urls, result_stream, data_base,
                                related, loop, hd_first=hd_first)
@@ -837,7 +837,7 @@ def crawl_links(input_links, result_stream=None,
         next_urls = next_urls.difference(input_links)
     else:
         next_urls = input_links.copy()
-    config_pytomo.LOG.debug('next_urls: %s' % next_urls)
+    config_pytomo.LOG.debug('next_urls: %s', next_urls)
     return next_urls
 
 def do_rounds(input_links, result_stream, data_base, db_file,
@@ -845,8 +845,8 @@ def do_rounds(input_links, result_stream, data_base, db_file,
     '''Perform the rounds of crawl'''
     max_rounds = config_pytomo.MAX_ROUNDS
     for round_nb in xrange(max_rounds):
-        config_pytomo.LOG.warn('Round %d started\n%s'
-                               % (round_nb, config_pytomo.SEP_LINE))
+        config_pytomo.LOG.warn('Round %d started\n%s',
+                               round_nb, config_pytomo.SEP_LINE)
         # Reseting the name servers at start of each crawl
         config_pytomo.EXTRA_NAME_SERVERS_CC = []
         for (name_server, dns_server_ip_address) in (
@@ -856,8 +856,8 @@ def do_rounds(input_links, result_stream, data_base, db_file,
                                  dns_server_ip_address))
 #        config_pytomo.EXTRA_NAME_SERVERS_CC = (
 #                                           config_pytomo.EXTRA_NAME_SERVERS[:])
-        config_pytomo.LOG.info('Name servers at round %s:'
-                               % config_pytomo.EXTRA_NAME_SERVERS_CC)
+        config_pytomo.LOG.info('Name servers at round %s:',
+                               config_pytomo.EXTRA_NAME_SERVERS_CC)
         #config_pytomo.LOG.debug(input_links)
         try:
             input_links = crawl_links(input_links, result_stream,
@@ -873,7 +873,7 @@ def do_rounds(input_links, result_stream, data_base, db_file,
         if not input_links:
             break
         time.sleep(config_pytomo.DELAY_BETWEEN_REQUESTS)
-        config_pytomo.LOG.debug('Slept %d' %
+        config_pytomo.LOG.debug('Slept %d',
                                 config_pytomo.DELAY_BETWEEN_REQUESTS)
         # The plot is redrawn everytime the database is updated
         if config_pytomo.PLOT:
@@ -885,7 +885,7 @@ def do_crawl(result_stream=None, db_file=None, timestamp=None,
     '''Crawls the urls given by the url_file
     up to max_rounds are performed or max_visited_urls
     '''
-    if not db_file and not result_stream:
+    if not db_file and not result_stream and not config_pytomo.SNMP:
         config_pytomo.LOG.critical('Cannot start crawl because no file can '
                                    'store output')
         return
@@ -903,8 +903,8 @@ def do_crawl(result_stream=None, db_file=None, timestamp=None,
         data_base.create_pytomo_table(config_pytomo.TABLE_TIMESTAMP)
 #    max_per_page = config_pytomo.MAX_PER_PAGE
 #    max_per_url = config_pytomo.MAX_PER_URL
-    config_pytomo.LOG.debug('STATIC_URL_LIST: %s'
-                            % config_pytomo.STATIC_URL_LIST)
+    config_pytomo.LOG.debug('STATIC_URL_LIST: %s',
+                            config_pytomo.STATIC_URL_LIST)
     if config_pytomo.STATIC_URL_LIST:
         input_links = set(filter(None, config_pytomo.STATIC_URL_LIST))
     else:
@@ -924,7 +924,7 @@ def do_crawl(result_stream=None, db_file=None, timestamp=None,
                                       max_results=config_pytomo.MAX_PER_PAGE,
                                       country=config_pytomo.EXTRA_COUNTRY)))
             input_links = input_links.union(links_country)
-        config_pytomo.LOG.debug('bootstrap links: %s' % input_links)
+        config_pytomo.LOG.debug('bootstrap links: %s', input_links)
     if not input_links:
         config_pytomo.LOG.critical('Cannot find input links to crawl')
         if data_base:
@@ -944,7 +944,7 @@ def do_crawl(result_stream=None, db_file=None, timestamp=None,
     #                                            max_per_url)
     except MaxUrlException:
         config_pytomo.LOG.warn('Stopping crawl because %d urls have been '
-                               'crawled' % config_pytomo.MAX_CRAWLED_URLS)
+                               'crawled', config_pytomo.MAX_CRAWLED_URLS)
     if data_base:
         data_base.close_handle()
     config_pytomo.LOG.warn('Crawl finished\n' + config_pytomo.SEP_LINE)
@@ -977,8 +977,8 @@ def get_next_round_urls(lib_api, input_links,
                                             max_per_page, max_per_url)
                                             for url in input_links), [])
                            ).difference(input_links)
-    config_pytomo.LOG.info("%d links collected by crawler"
-                            % len(related_links))
+    config_pytomo.LOG.info('%d links collected by crawler',
+                           len(related_links))
     config_pytomo.LOG.debug(related_links)
     return related_links
 
@@ -1029,11 +1029,13 @@ def create_options(parser):
                       '(default %s)' % (not config_pytomo.LOOP)))
     parser.add_option('-R', '--related', dest='RELATED',
                       action='store_true', default=config_pytomo.RELATED,
-                      help=('Crawl related videos'))
+                      help=('Crawl related videos (default %s)'
+                            % config_pytomo.RELATED))
     parser.add_option('--no-related', dest='RELATED',
                       action='store_false', default=config_pytomo.RELATED,
                       help=('Do NOT crawl related videos (stays with the first '
-                        'urls found: either most popular or arguments given)'))
+                        'urls found: either most popular or arguments given) '
+                           '(default %s)' % (not config_pytomo.RELATED)))
     parser.add_option('-p', dest='MAX_PER_URL', type='int',
                       help=('Max number of related urls from each page '
                             '(default %d)' % config_pytomo.MAX_PER_URL),
@@ -1157,7 +1159,7 @@ def log_ip_address():
                                     config_pytomo.URL_TIMEOUT))['data']['ip']
         #except urllib2.URLError, mes:
         except Exception, mes:
-            config_pytomo.LOG.critical('Public IP address not found: %s' % mes)
+            config_pytomo.LOG.critical('Public IP address not found: %s', mes)
             count += 1
             print('Public IP address not found: %s, retrying in %i seconds' %
                   (mes, count))
@@ -1168,29 +1170,29 @@ def log_ip_address():
             is_valid = re.match(IP_MATCH_PATTERN, public_ip)
             if is_valid:
                 config_pytomo.LOG.critical('Machine has this public IP address:'
-                                           ' %s' % public_ip)
+                                           ' %s', public_ip)
             else:
                 config_pytomo.LOG.critical('Unable to Parse IP address: %s... '
-                                           'Skipping' % public_ip)
+                                           'Skipping', public_ip)
             break
     if count >= retries:
         config_pytomo.LOG.error(u'ERROR: giving up after %d retries, public IP'
-                                ' not found' % retries)
+                                ' not found', retries)
         print('Public IP address could not be logged.\n')
 
 def log_md5_results(result_file, db_file):
     'Computes and stores the md5 hash of result and database files'
     if db_file:
-        config_pytomo.LOG.critical('Hash of database file: %s'
-                                   % md5sum(db_file))
+        config_pytomo.LOG.critical('Hash of database file: %s',
+                                   md5sum(db_file))
     if result_file and result_file != sys.stdout:
-        config_pytomo.LOG.critical('Hash of result file: %s'
-                                   % md5sum(result_file))
+        config_pytomo.LOG.critical('Hash of result file: %s',
+                                   md5sum(result_file))
 
-def configure_log_file(timestamp, kaa_metadata=True):
+def configure_log_file(timestamp):
     'Configure log file and indicate succes or failure'
     print('Configuring log file')
-    if kaa_metadata:
+    if config_pytomo.LOG_LEVEL == logging.DEBUG:
         # to have kaa-metadata logs
         config_pytomo.LOG = logging.getLogger('metadata')
     else:
@@ -1221,8 +1223,8 @@ def configure_log_file(timestamp, kaa_metadata=True):
     # log all config file values except built in values
     for value in filter(lambda x: not x.startswith('__'),
                         config_pytomo.__dict__):
-        config_pytomo.LOG.critical('%s: %s'
-                                   % (value, getattr(config_pytomo, value)))
+        config_pytomo.LOG.critical('%s: %s',
+                                   value, getattr(config_pytomo, value))
     return log_file
 
 class MyTimeoutException(Exception):
@@ -1270,8 +1272,8 @@ def set_max_crawls(timeout=config_pytomo.USER_INPUT_TIMEOUT, prompt=True,
         try:
             config_pytomo.MAX_CRAWLED_URLS = int(max_crawls)
         except ValueError:
-            config_pytomo.LOG.error('User gave non-integer value: %s'
-                                    % max_crawls)
+            config_pytomo.LOG.error('User gave non-integer value: %s',
+                                    max_crawls)
     max_craw_message = ('The Max Crawls has been set to: %s'
                         % config_pytomo.MAX_CRAWLED_URLS)
     print(max_craw_message)
@@ -1332,7 +1334,7 @@ def log_provider(timeout=config_pytomo.USER_INPUT_TIMEOUT):
         if support_signal:
             # alarm disabled
             signal.alarm(0)
-    config_pytomo.LOG.critical('User has given this provider: %s' % provider)
+    config_pytomo.LOG.critical('User has given this provider: %s', provider)
     config_pytomo.PROVIDER = provider
 
 def prompt_provider(support_signal, timeout):
@@ -1402,12 +1404,12 @@ def main(version=None, argv=None):
         print('Database results are there: %s' % db_file)
     if config_pytomo.SNMP:
         set_up_snmp()
-    config_pytomo.LOG.critical('Offset between local time and UTC: %d'
-                               % timezone)
-    config_pytomo.LOG.warn('Pytomo version = %s' % version)
+    config_pytomo.LOG.critical('Offset between local time and UTC: %d',
+                               timezone)
+    config_pytomo.LOG.warn('Pytomo version = %s', version)
     config_pytomo.SYSTEM = platform.system()
-    config_pytomo.LOG.warn('Pytomo is running on this system: %s'
-                           % config_pytomo.SYSTEM)
+    config_pytomo.LOG.warn('Pytomo is running on this system: %s',
+                           config_pytomo.SYSTEM)
     if config_pytomo.PLOT:
         try:
             image_file = check_out_files(config_pytomo.IMAGE_FILE,
@@ -1429,13 +1431,13 @@ def main(version=None, argv=None):
         if not options.PROVIDER:
             log_provider(timeout=config_pytomo.USER_INPUT_TIMEOUT)
         else:
-            config_pytomo.LOG.critical('Provider given at command line: %s'
-                                       % options.PROVIDER)
+            config_pytomo.LOG.critical('Provider given at command line: %s',
+                                       options.PROVIDER)
         if not options.PROXIES:
             set_proxies_cli(timeout=config_pytomo.USER_INPUT_TIMEOUT*2)
         else:
-            config_pytomo.LOG.critical('Proxies given at command line: %s\n'
-                                       % options.PROXIES)
+            config_pytomo.LOG.critical('Proxies given at command line: %s\n',
+                                       options.PROXIES)
     set_max_crawls(timeout=config_pytomo.USER_INPUT_TIMEOUT,
                    prompt=(False if options.BATCH_MODE else True),
                    nb_max_crawls=options.MAX_CRAWLED_URLS)
@@ -1459,7 +1461,7 @@ def main(version=None, argv=None):
             config_pytomo.LOG.exception(mes)
             parser.error('Problem reading input file: %s'
                          % config_pytomo.INPUT_FILE)
-    config_pytomo.LOG.debug('Service for most popular links %s' %
+    config_pytomo.LOG.debug('Service for most popular links %s',
                             options.CRAWL_SERVICE)
     try:
         do_crawl(result_stream=result_stream, db_file=db_file,
@@ -1475,7 +1477,7 @@ def main(version=None, argv=None):
         print('\nCrawl interrupted by user')
         config_pytomo.LOG.critical('Crawl interrupted by user')
     except Exception, mes:
-        config_pytomo.LOG.exception('Uncaught exception: %s' % mes)
+        config_pytomo.LOG.exception('Uncaught exception: %s', mes)
     config_pytomo.LOG.debug(CACHED_PREFIXES)
     if config_pytomo.PLOT:
         lib_plot.plot_data(db_file, config_pytomo.COLUMN_NAMES,
