@@ -49,7 +49,7 @@ You can check the options with './start_server.py -h'.
 Do not change the RRD_PLOT_DIR, RRD_DIR in pytomo/config_pytomo.py.
 """
 
-VERSION = '3.0.3'
+VERSION = '3.0.4'
 
 LICENSE = 'GPLv2'
 
