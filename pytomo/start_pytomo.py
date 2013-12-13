@@ -183,7 +183,7 @@ def select_libraries(url):
 #    'http://r6---ati-tun2.c.youtube.com'
 #    '''
 #    match = CACHE_URL_REGEXP.match(url)
-#    config_pytomo.LOG.debug('translating url: %s' % url)
+#    config_pytomo.LOG.debug('translating url: %s', url)
 #    if not match:
 #        config_pytomo.LOG.debug('no match')
 #        new_url = url
@@ -193,7 +193,7 @@ def select_libraries(url):
 #        groups = filter(None, groups)
 #        new_url = (''.join((groups[0:3])) + groups[4].translate(TRANSLATION) +
 #                   ''.join((groups[5:])))
-#    config_pytomo.LOG.debug('url translated as: %s' % new_url)
+#    config_pytomo.LOG.debug('url translated as: %s', new_url)
 #    return new_url
 
 def compute_stats(url, cache_uri, do_download_stats, redirect_url=None,
@@ -721,8 +721,8 @@ def crawl_link(url, next_urls, result_stream, data_base, related, loop,
         crawled_urls = map(itemgetter(-1),
                        data_base.fetch_single_parameter_with_stats(PARAM_URL))
     except Error, mes:
-        config_pytomo.LOG.error('Unable to extract data %s with error:'
-                                '%s', PARAM_URL, mes)
+        config_pytomo.LOG.error('Unable to extract data %s with error: %s',
+                                PARAM_URL, mes)
         return next_urls
     if not loop and len(crawled_urls) >= config_pytomo.MAX_CRAWLED_URLS:
         config_pytomo.LOG.debug('Reached max crawls')
@@ -807,7 +807,8 @@ def crawl_link(url, next_urls, result_stream, data_base, related, loop,
             config_pytomo.LOG.info('no stats for url: %s', cache_server)
         if redirect_list:
             config_pytomo.LOG.error('new redirect list: %s', redirect_list)
-            config_pytomo.LOG.error('these addresses are NOT taken into account')
+            config_pytomo.LOG.error('these addresses are NOT taken into '
+                                    'account')
     if (related and len(next_urls) < config_pytomo.MAX_CRAWLED_URLS):
         try:
             related_urls = set(filter(None,
@@ -1086,9 +1087,13 @@ def create_options(parser):
                             'in the logs'), default=config_pytomo.LOG_PUBLIC_IP)
     parser.add_option('-c', '--centralise', dest='CENTRALISE_DATA',
                       action='store_true',
-                      help=('Send logs to the centralisation server %s'
-                            % lib_data_centralisation.MAIN_SERVER),
+                      help='Send logs to the centralisation server',
                       default=config_pytomo.CENTRALISE_DATA)
+    parser.add_option('--centralisation_server',
+                      dest='CENTRALISATION_SERVER',
+                      default=config_pytomo.CENTRALISATION_SERVER,
+                      help=('FTP server to centralise data (default %s)'
+                            % config_pytomo.CENTRALISATION_SERVER))
     parser.add_option('--http-proxy', dest='PROXIES', type='string',
                       help=('in case of http proxy to reach Internet '
                             '(default %s)' % config_pytomo.PROXIES),
@@ -1161,8 +1166,8 @@ def log_ip_address():
         except Exception, mes:
             config_pytomo.LOG.critical('Public IP address not found: %s', mes)
             count += 1
-            print('Public IP address not found: %s, retrying in %i seconds' %
-                  (mes, count))
+            print('Public IP address not found: %s, retrying in %i seconds'
+                  % (mes, count))
             time.sleep(count)
             continue
         else:
@@ -1501,15 +1506,15 @@ def main(version=None, argv=None):
             if (ftp.upload_file(tarfile_name) !=
                 lib_data_centralisation.ERROR_CODE):
                 print('\nFile %s has been uploaded on %s server.' %
-                      (tarfile_name, lib_data_centralisation.MAIN_SERVER))
+                      (tarfile_name, config_pytomo.CENTRALISATION_SERVER))
                 return 0
             else:
                 print('\nWARNING! File %s was not uploaded to %s server.' %
-                      (tarfile_name, lib_data_centralisation.MAIN_SERVER))
+                      (tarfile_name, config_pytomo.CENTRALISATION_SERVER))
             ftp.close_connection()
         else:
             print('\nWARNING! Could not establish connection to %s FTP server.'
-                  % (lib_data_centralisation.MAIN_SERVER))
+                  % (config_pytomo.CENTRALISATION_SERVER))
     print('\nCrawl finished.\n%s\n\nPLEASE SEND THIS FILE BY EMAIL: '
            '(to pytomo@gmail.com)\n%s\n'
            % (SEPARATOR_LINE, tarfile_name))

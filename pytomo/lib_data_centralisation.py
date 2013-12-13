@@ -37,7 +37,6 @@ try:
 except ValueError:
     import config_pytomo
 
-MAIN_SERVER = 'pytomo.dtdns.net'
 # uncomment if FTP server runs on a different port
 #MAIN_SERVER_PORT = 2121
 DIR_TO_STORE = 'pytomo_db_dir'
@@ -60,19 +59,19 @@ class PytomoFTP:
             opener = urllib2.build_opener(proxy)
             urllib2.install_opener(opener)
         try:
-            self.py_ftp = ftplib.FTP(MAIN_SERVER)
+            self.py_ftp = ftplib.FTP(config_pytomo.CENTRALISATION_SERVER)
             # uncomment if FTP server runs on a different port
             #self.py_ftp = ftplib.FTP()
             #self.py_ftp.connect(MAIN_SERVER, MAIN_SERVER_PORT)
         except ftplib.all_errors, mes:
-            config_pytomo.LOG.error('Could not connect to FTP server %s\n%s' %
-                                    (MAIN_SERVER, mes))
+            config_pytomo.LOG.error('Could not connect to FTP server %s\n%s',
+                                    config_pytomo.CENTRALISATION_SERVER, mes)
             return
         try:
             self.py_ftp.login()
         except ftplib.all_errors, mes:
-            config_pytomo.LOG.error('Could not login to FTP server %s\n%s' %
-                                    (MAIN_SERVER, mes))
+            config_pytomo.LOG.error('Could not login to FTP server %s\n%s',
+                                    config_pytomo.CENTRALISATION_SERVER, mes)
             return
         self.created = True
 
@@ -81,14 +80,15 @@ class PytomoFTP:
         '''
         if not self.created:
             config_pytomo.LOG.error('Connection to server %s could not be '
-                    'established, cannot upload file' % MAIN_SERVER)
+                                    'established, cannot upload file',
+                                    config_pytomo.CENTRALISATION_SERVER)
             return ERROR_CODE
         # change directory on the FTP server
         try:
             self.py_ftp.cwd(DIR_TO_STORE)
         except ftplib.all_errors, mes:
-            config_pytomo.LOG.error('Could not change directory to %s\n%s' %
-                                    (DIR_TO_STORE, mes))
+            config_pytomo.LOG.error('Could not change directory to %s\n%s',
+                                    DIR_TO_STORE, mes)
             return ERROR_CODE
         # when uploading the file, it should only be the filename, no path
         # otherwise the whole directory structure will be created on the FTP
@@ -98,13 +98,13 @@ class PytomoFTP:
         try:
             f_obj = open(file_to_upload, 'rb')
         except IOError:
-            config_pytomo.LOG.error('Could not open %s' % full_filename)
+            config_pytomo.LOG.error('Could not open %s', full_filename)
             return ERROR_CODE
         try:
             self.py_ftp.storbinary(STORE_CMD % file_to_upload, f_obj)
         except ftplib.all_errors, mes:
-            config_pytomo.LOG.error('Could not upload file %s\n%s' %
-                                    (full_filename, mes))
+            config_pytomo.LOG.error('Could not upload file %s\n%s',
+                                    full_filename, mes)
             return ERROR_CODE
         f_obj.close()
         return SUCCESS_CODE
@@ -115,8 +115,8 @@ class PytomoFTP:
         try:
             self.py_ftp.quit()
         except ftplib.all_errors, mes:
-            config_pytomo.LOG.error('Could not close connection to %s\n%s' %
-                                    (MAIN_SERVER, mes))
+            config_pytomo.LOG.error('Could not close connection to %s\n%s',
+                                    config_pytomo.CENTRALISATION_SERVER, mes)
             return ERROR_CODE
         return SUCCESS_CODE
 

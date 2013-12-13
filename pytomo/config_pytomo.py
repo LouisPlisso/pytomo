@@ -41,6 +41,7 @@ LOG_PUBLIC_IP = True
 
 # send the archive with the database and logs to the centralisation server
 CENTRALISE_DATA = False
+CENTRALISATION_SERVER = 'pytomo.dtdns.net'
 
 # loop on input links
 LOOP = False
