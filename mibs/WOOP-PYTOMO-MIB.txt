@@ -8,8 +8,19 @@ IMPORTS
     	DisplayString
         FROM SNMPv2-TC
 
-	wpNetworkStats
-	FROM WOOP-SNMP-MIB;
+
+woop MODULE-IDENTITY
+        LAST-UPDATED "201109280846Z"
+        ORGANIZATION "Wanadoo Portails Sophia-Antipolis"
+        CONTACT-INFO
+                "sysadmin@echo.fr"
+        DESCRIPTION
+                "This file defines the private WOOP SNMP MIB extensions."
+        ::= { experimental 53 }
+
+wpNetworkStats          OBJECT IDENTIFIER ::= { woop 5 }
+
+
 
 netPytomo MODULE-IDENTITY
 	LAST-UPDATED "0312051015Z"
@@ -23,7 +34,7 @@ netPytomo MODULE-IDENTITY
 
 pytomoGblStats OBJECT IDENTIFIER ::= { netPytomo 1 }
 pytomoUrlsStats OBJECT IDENTIFIER ::= { netPytomo 2 }
-pytomoDatacentersStats OBJECT IDENTIFIER ::= { netPytomo 3 }
+pytomoIpStats OBJECT IDENTIFIER ::= { netPytomo 3 }
 pytomoASStats OBJECT IDENTIFIER ::= { netPytomo 4 }
 
 
@@ -357,45 +368,45 @@ pytomoStatusCode OBJECT-TYPE
              ::= { pytomoUrlEntry 29 }
 
 
-pytomoDCTable  OBJECT-TYPE
+pytomoIpTable  OBJECT-TYPE
               SYNTAX  SEQUENCE OF PytomoURLEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
-        "This table lists statistics about datacenters hosting videos "
-          ::= { pytomoDatacentersStats 1 }
+        "This table lists statistics about ip hosting videos "
+          ::= { pytomoIpStats 1 }
 
-pytomoDCEntry OBJECT-TYPE
-              SYNTAX  PytomoEntry
+pytomoIpEntry OBJECT-TYPE
+              SYNTAX  pytomoIpENtry 
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
         "The conceptual row definition "
-          INDEX { pytomoDCENtry }
-              ::= { pytomoDCTable 1 }
+          INDEX { pytomoIpAddress }
+              ::= { pytomoIpTable 1 }
 
 
-pytomoDCENtry ::= SEQUENCE {
-             pytomoDCName             OCTET STRING,
-             pytomoDCCount            COUNTER64,
+pytomoIpENtry ::= SEQUENCE {
+             pytomoIpAddress          OCTET STRING,
+             pytomoIpCount            COUNTER64,
 }
 
 
-pytomoDCName OBJECT-TYPE
+pytomoIpAddress OBJECT-TYPE
                 SYNTAX OCTET STRING (SIZE(0..1024))
                 ACCESS not-accessible
                 STATUS mandatory
                 DESCRIPTION
-                 "Name of datacenter"
-            ::= {pytomoDCEntry 1 }
+                 "Cache Url IP"
+            ::= {pytomoIpEntry 1 }
 
-pytomoDCCount OBJECT-TYPE
+pytomoIpCount OBJECT-TYPE
                 SYNTAX Counter64
                 ACCESS not-accessible
                 STATUS mandatory
                 DESCRIPTION
-                 "Number of videos hosted by this datacenter uploaded since program start"
-            ::= {pytomoDCEntry 2}
+                 "Number of videos downloaded from this ip since program start"
+            ::= {pytomoIpEntry 2}
 
 
 
@@ -408,22 +419,22 @@ pytomoASTable  OBJECT-TYPE
           ::= { pytomoASStats 1 }
 
 pytomoASEntry OBJECT-TYPE
-              SYNTAX  PytomoEntry
+              SYNTAX  pytomoASENtry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
         "The conceptual row definition "
-          INDEX { pytomoASENtry }
+          INDEX { pytomoASNumber }
               ::= { pytomoASTable 1 }
 
 
 pytomoASENtry ::= SEQUENCE {
-             pytomoASName             OCTET STRING,
+             pytomoASNumber             OCTET STRING,
              pytomoASCount            COUNTER64,
 }
 
 
-pytomoASName OBJECT-TYPE
+pytomoASNumber OBJECT-TYPE
                 SYNTAX OCTET STRING (SIZE(0..1024))
                 ACCESS not-accessible
                 STATUS mandatory

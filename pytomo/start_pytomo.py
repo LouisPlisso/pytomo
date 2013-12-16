@@ -556,7 +556,16 @@ def set_up_snmp():
         config_pytomo.snmp_tables.append(config_pytomo.urlStatusCodeTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_INTEGER)
 
-
+        #Statistics by ip 
+        config_pytomo.IpNameTable = config_pytomo.dataset.addTable(config_pytomo.snmp_pytomoIpName, hebexsnmptools.TABLE_INDEX_STRING)
+        config_pytomo.IpCountTable = config_pytomo.dataset.addTable(config_pytomo.snmp_pytomoIpCount, hebexsnmptools.TABLE_INDEX_STRING)
+        config_pytomo.IpCountType =  hebexsnmptools.ASN_COUNTER64	
+        config_pytomo.IpNameType =  hebexsnmptools.ASN_OCTET_STR
+		#Statistics by AS
+        config_pytomo.ASNameTable = config_pytomo.dataset.addTable(config_pytomo.snmp_pytomoASName, hebexsnmptools.TABLE_INDEX_STRING)
+        config_pytomo.ASCountTable = config_pytomo.dataset.addTable(config_pytomo.snmp_pytomoASCount, hebexsnmptools.TABLE_INDEX_STRING)
+        config_pytomo.ASCountType = hebexsnmptools.ASN_COUNTER64
+        config_pytomo.ASNameType =  hebexsnmptools.ASN_OCTET_STR
 
 
 def check_out_files(file_pattern, directory, timestamp):
@@ -656,10 +665,12 @@ def add_stats(stats, cache_server_delay, url, result_stream=None, data_base=None
         format_datetime = lambda x: x.strftime('%Y%m%d %H:%M:%S')
         format_int = lambda x: x if x else 0
         identity = lambda x: x if x else ''
-        formatted_stats = format_stats(stats, cache_server_delay,
-                                       service=service)
+        formatted_stats = format_stats(stats, cache_server_delay,service=service)
+		
         for stats_line in formatted_stats:
             video_url = stats_line[config_pytomo.URL_IDX]
+            video_ip = stats_line[config_pytomo.IP_IDX]
+            video_as = str(stats_line[config_pytomo.AS_IDX])
             for table, snmp_type, idx in zip(config_pytomo.snmp_tables,
                                              config_pytomo.snmp_types,
                                              config_pytomo.STATS_IDX):
@@ -673,6 +684,22 @@ def add_stats(stats, cache_server_delay, url, result_stream=None, data_base=None
                     formatter = identity
                 table.registerValue(video_url, snmp_type,
                         formatter(stats_line[idx]))
+
+            if not config_pytomo.DOWNLOADED_BY_IP.has_key(video_ip):
+                config_pytomo.DOWNLOADED_BY_IP[video_ip] = 0
+                config_pytomo.IpNameTable.registerValue(video_ip, config_pytomo.IpNameType, video_ip)
+            if not config_pytomo.DOWNLOADED_BY_AS.has_key(video_as):
+                config_pytomo.DOWNLOADED_BY_AS[video_as] = 0
+                config_pytomo.ASNameTable.registerValue(video_as, config_pytomo.ASNameType, video_as)
+				
+            config_pytomo.DOWNLOADED_BY_IP[video_ip] += 1
+            config_pytomo.DOWNLOADED_BY_AS[video_as] += 1
+
+            config_pytomo.IpCountTable.registerValue(video_ip, config_pytomo.IpCountType , config_pytomo.DOWNLOADED_BY_IP[video_ip] )
+            config_pytomo.ASCountTable.registerValue(video_as, config_pytomo.ASCountType , config_pytomo.DOWNLOADED_BY_AS[video_as] )
+
+
+
 
 def retrieve_cache_urls(url, lib_download, hd_first=False):
     ''' Return the list of cache url servers for a given video.
