@@ -1,0 +1,456 @@
+WOOP-PYTOMO-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	OBJECT-TYPE, MODULE-IDENTITY,
+    	Counter32, Gauge32, TimeTicks, experimental
+        FROM SNMPv2-SMI
+
+    	DisplayString
+        FROM SNMPv2-TC
+
+
+woop MODULE-IDENTITY
+        LAST-UPDATED "201109280846Z"
+        ORGANIZATION "Wanadoo Portails Sophia-Antipolis"
+        CONTACT-INFO
+                "sysadmin@echo.fr"
+        DESCRIPTION
+                "This file defines the private WOOP SNMP MIB extensions."
+        ::= { experimental 53 }
+
+wpNetworkStats          OBJECT IDENTIFIER ::= { woop 5 }
+
+
+
+netPytomo MODULE-IDENTITY
+	LAST-UPDATED "0312051015Z"
+	ORGANIZATION "FT SCR/HDI/DOP/HEBEX Sophia-Antipolis"
+	CONTACT-INFO
+		"hebex@echo.fr"
+	DESCRIPTION
+		"This file defines the private extensions for pytomo module"
+	::= { wpNetworkStats 9 }
+
+
+pytomoGblStats OBJECT IDENTIFIER ::= { netPytomo 1 }
+pytomoUrlsStats OBJECT IDENTIFIER ::= { netPytomo 2 }
+pytomoIpStats OBJECT IDENTIFIER ::= { netPytomo 3 }
+pytomoASStats OBJECT IDENTIFIER ::= { netPytomo 4 }
+
+
+
+pytomoObjectName OBJECT-TYPE
+              SYNTAX  OCTET STRING
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+        "Object name"
+    ::= { pytomoGblStats 1 }
+
+pytomoDescr OBJECT-TYPE
+              SYNTAX  DisplayString (SIZE (0..255))
+              ACCESS  read-only
+              STATUS  mandatory
+          DESCRIPTION
+                      "Pytomo is a YouTube crawler designed to figure out network information out of
+                      YouTube video download."
+              ::= { pytomoGblStats 2}
+
+pytomoContact OBJECT-TYPE
+              SYNTAX  DisplayString (SIZE (0..255))
+              ACCESS  read-write
+              STATUS  mandatory
+              DESCRIPTION
+                      "Developped by Louis Plissonneau (Orange Labs)
+                      louis.plissonneau@orange.com
+                      philippe.thouvenin@orange.com
+                      "
+              ::= { pytomoGblStats 3}
+
+
+pytomoDownloadDuration OBJECT-TYPE
+              SYNTAX  Gauge
+              ACCESS  read-write
+              STATUS  mandatory
+              DESCRIPTION
+        " Maximum download duration - default 30s"
+              ::= { pytomoGblStats 4}
+
+pytomoSleepTime OBJECT-TYPE
+              SYNTAX  Gauge
+              ACCESS  read-write
+              STATUS  mandatory
+              DESCRIPTION
+        " Maximum SleepTime - default 10s"
+          ::= { pytomoGblStats 5}
+
+PytomoURLEntry ::= SEQUENCE {
+             pytomoUrlIndex             OCTET STRING,
+	     pytomoTimeStamp            OCTET STRING,
+             pytomoService              OCTET STRING,
+             pytomoCacheUrl             OCTET STRING,
+             pytomoCacheServerDelay     Gauge,
+             pytomoAddressIp            OCTET STRING,
+             pytomoResolver             OCTET STRING,
+             pytomoResolveTime          Gauge,
+             pytomoAsNumber             INTEGER,
+             pytomoPingMin              Gauge,
+             pytomoPingAvg              Gauge,
+             pytomoPingMax              Gauge,
+             pytomoDownloadTime         Gauge,
+             pytomoVideoType            Gauge,
+             pytomoVideoDuration        Gauge,
+             pytomoVideoLength          Gauge,
+             pytomoEncodingRate         Gauge,
+             pytomoDownloadBytes        INTEGER,
+             pytomoDownloadInterruptions INTEGER,
+             pytomoInitialData          Gauge,
+             pytomoInitialRate          Gauge,
+             pytomoInitialPlaybackBuffer Gauge,
+             pytomoBufferingDuration    Gauge,
+             pytomoPlaybackDuration     Gauge,
+             pytomoBufferDurationAtEnd  Gauge,
+             pytomoTimeTogetFirstByte   Gauge,
+             pytomoMaxInstantThp        Gauge,
+             pytomoRedirectUrl          OCTET STRING,
+             pytomoStatusCode           INTEGER
+}
+
+pytomoUrlTable  OBJECT-TYPE
+              SYNTAX  SEQUENCE OF PytomoURLEntry
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+        "This table list information computed by the Pytomo Agent"
+          ::= { pytomoUrlsStats 1 }
+
+pytomoUrlEntry OBJECT-TYPE
+              SYNTAX  PytomoEntry
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+        "The conceptual row definition "
+          INDEX { pytomoUrlIndex }
+              ::= { pytomoUrlTable 1 }
+
+pytomoUrlIndex OBJECT-TYPE
+                SYNTAX OCTET STRING (SIZE(0..1024))
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 3 and index in the table: URL of the video"
+            ::= { pytomoUrlEntry 1 }
+
+
+pytomoTimeStamp OBJECT-TYPE
+              SYNTAX  OCTET STRING (SIZE(0..27))
+              ACCESS  read-write
+              STATUS  mandatory
+              DESCRIPTION
+        "Column number 1 in the table: example of timestamp 2013-08-28 11:31:14.421192"
+          ::= { pytomoUrlEntry 2 }
+
+pytomoService OBJECT-TYPE
+                SYNTAX OCTET STRING (SIZE(0..12))
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 2 in the table: video service name (youtube or dailymotion)"
+            ::= { pytomoUrlEntry 3 }
+
+
+pytomoCacheUrl OBJECT-TYPE
+                SYNTAX OCTET STRING (SIZE(0..1024))
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 4 in the table: URL of the cache video server"
+             ::= { pytomoUrlEntry 4 }
+
+pytomoCacheServerDelay OBJECT-TYPE
+                SYNTAX Gauge 
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 5 in the table: unit s"
+             ::= { pytomoUrlEntry 5 }
+
+pytomoAddressIp OBJECT-TYPE
+                SYNTAX OCTET STRING 
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 6 in the table: IP address of the cache video server"
+             ::= { pytomoUrlEntry 6 }
+
+pytomoResolver OBJECT-TYPE
+                SYNTAX OCTET STRING
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 7 in the table: name of the resolver used to get this IP address"
+             ::= { pytomoUrlEntry 7 }
+
+pytomoResolveTime OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 8 in the table: time to resolve the URL - unit: s"
+             ::= { pytomoUrlEntry 8 }
+
+pytomoAsNumber OBJECT-TYPE
+                SYNTAX INTEGER (0..65535)
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 9 in the table: AS Number of the cache video server - max 65535"
+             ::= { pytomoUrlEntry 9 }
+
+pytomoPingMin OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 10 in the table: unit ms"
+             ::= { pytomoUrlEntry 10 }
+
+pytomoPingAvg OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 11 in the table: unit ms"
+             ::= { pytomoUrlEntry 11 }
+
+pytomoPingMax OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 12 in the table: unit ms"
+             ::= { pytomoUrlEntry 12 }
+
+pytomoDownloadTime OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 13 in the table: unit s"
+             ::= { pytomoUrlEntry 13 }
+
+pytomoVideoType OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 14 in the table"
+             ::= { pytomoUrlEntry 14 }
+
+pytomoVideoDuration OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 15 in the table: unit s"
+             ::= { pytomoUrlEntry 15 }
+
+pytomoVideoLength OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 16 in the table: unit bytes"
+             ::= { pytomoUrlEntry 16 }
+
+pytomoEncodingRate OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 17 in the table: unit kbps"
+             ::= { pytomoUrlEntry 17 }
+
+pytomoDownloadBytes OBJECT-TYPE
+                SYNTAX INTEGER
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 18 in the table: unit bytes"
+             ::= { pytomoUrlEntry 18 }
+
+pytomoDownloadInterruptions OBJECT-TYPE
+                SYNTAX INTEGER (0..100)
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 19 in the table: max = 100"
+             ::= { pytomoUrlEntry 19 }
+
+pytomoInitialData OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 20 in the table: unit bytes"
+             ::= { pytomoUrlEntry 20 }
+
+pytomoInitialRate OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 21 in the table: unit kbps"
+             ::= { pytomoUrlEntry 21 }
+
+pytomoInitialPlaybackBuffer OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 22 in the table: unit s"
+             ::= { pytomoUrlEntry 22 }
+
+pytomoBufferingDuration OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 23 in the table: unit s"
+             ::= { pytomoUrlEntry 23 }
+
+pytomoPlaybackDuration OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 24 in the table: unit s"
+             ::= { pytomoUrlEntry 24 }
+
+pytomoBufferDurationAtEnd OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 25 in the table: unit s"
+             ::= { pytomoUrlEntry 25 }
+
+pytomoTimeTogetFirstByte OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 26 in the table: unit s"
+             ::= { pytomoUrlEntry 26 }
+
+pytomoMaxInstantThp OBJECT-TYPE
+                SYNTAX Gauge
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 27 in the table: unit kbps"
+             ::= { pytomoUrlEntry 27 }
+
+pytomoRedirectUrl OBJECT-TYPE
+                SYNTAX OCTET STRING
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 28 in the table: URL given by HTTP302 message"
+             ::= { pytomoUrlEntry 28 }
+
+pytomoStatusCode OBJECT-TYPE
+                SYNTAX INTEGER
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Column number 29 in the table: HTTP Status code"
+             ::= { pytomoUrlEntry 29 }
+
+
+pytomoIpTable  OBJECT-TYPE
+              SYNTAX  SEQUENCE OF PytomoURLEntry
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+        "This table lists statistics about ip hosting videos "
+          ::= { pytomoIpStats 1 }
+
+pytomoIpEntry OBJECT-TYPE
+              SYNTAX  pytomoIpENtry 
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+        "The conceptual row definition "
+          INDEX { pytomoIpAddress }
+              ::= { pytomoIpTable 1 }
+
+
+pytomoIpENtry ::= SEQUENCE {
+             pytomoIpAddress          OCTET STRING,
+             pytomoIpCount            COUNTER64,
+}
+
+
+pytomoIpAddress OBJECT-TYPE
+                SYNTAX OCTET STRING (SIZE(0..1024))
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Cache Url IP"
+            ::= {pytomoIpEntry 1 }
+
+pytomoIpCount OBJECT-TYPE
+                SYNTAX Counter64
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Number of videos downloaded from this ip since program start"
+            ::= {pytomoIpEntry 2}
+
+
+
+pytomoASTable  OBJECT-TYPE
+              SYNTAX  SEQUENCE OF PytomoURLEntry
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+        "This table lists statistics about AS for datacenters hosting videos "
+          ::= { pytomoASStats 1 }
+
+pytomoASEntry OBJECT-TYPE
+              SYNTAX  pytomoASENtry
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+        "The conceptual row definition "
+          INDEX { pytomoASNumber }
+              ::= { pytomoASTable 1 }
+
+
+pytomoASENtry ::= SEQUENCE {
+             pytomoASNumber             OCTET STRING,
+             pytomoASCount            COUNTER64,
+}
+
+
+pytomoASNumber OBJECT-TYPE
+                SYNTAX OCTET STRING (SIZE(0..1024))
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Name of AS"
+            ::= {pytomoASEntry 1 }
+
+pytomoASCount OBJECT-TYPE
+                SYNTAX Counter64 
+                ACCESS not-accessible
+                STATUS mandatory
+                DESCRIPTION
+                 "Number of videos uploaded from this AS since program start"
+            ::= {pytomoASEntry 2}
+
+
+END
+
+

@@ -27,7 +27,7 @@ DATABASE = 'pytomo_database.db'
 # DO NOT USE ANY . OR - IN THE TABLE NAME
 TABLE = 'pytomo_crawl'
 
-LOG_DIR = 'logs'
+LOG_DIR = '/var/log/pytomo'
 # log file use '-' for standard output
 LOG_FILE = 'pytomo.log'
 #LOG_FILE = '-'
@@ -201,7 +201,7 @@ HD_FIRST = False
 
 ################################################################################
 # for snmp
-SNMP = False
+SNMP = True 
 ROOT_OID = '.1.3.6.1.3.53.5.9'
 
 # Table of global stats
@@ -213,7 +213,7 @@ snmp_pytomoDescr = '.'.join((snmp_pytomoGblStats, '2'))
 snmp_pytomoDescr_str = ('Pytomo  is a YouTube crawler designed to figure out '
                         'network information out of YouTube video download')
 snmp_pytomoContact = '.'.join((snmp_pytomoGblStats, '3'))
-snmp_pytomoContact_str = 'Pascal??'
+snmp_pytomoContact_str = 'Jean-Luc Sire / Pascal Beringuie '
 snmp_pytomoDownloadDuration = '.'.join((snmp_pytomoGblStats, '4'))
 snmp_pytomoSleepTime = '.'.join((snmp_pytomoGblStats, '5'))
 
@@ -251,8 +251,24 @@ snmp_pytomoMaxInstantThp = '.'.join((snmp_pytomoUrlStats, '27'))
 snmp_pytomoRedirectUrl = '.'.join((snmp_pytomoUrlStats, '28'))
 snmp_pytomoStatusCode = '.'.join((snmp_pytomoUrlStats, '29'))
 
+#Statistics by ip 
+snmp_pytomoIpStats = '.'.join((ROOT_OID, '3', '1', '1'))
+snmp_pytomoIpName = '.' .join((snmp_pytomoIpStats,'1'))
+snmp_pytomoIpCount = '.' .join((snmp_pytomoIpStats,'2'))
+
+#Statistics by AS
+snmp_pytomoASStats = '.'.join((ROOT_OID, '4', '1', '1'))
+snmp_pytomoASName = '.'.join((snmp_pytomoASStats,'1'))
+snmp_pytomoASCount = '.'.join((snmp_pytomoASStats,'2'))
+
+
+
+
+
 URL_IDX = 2
 TS_IDX = 0
+IP_IDX = 5
+AS_IDX = 8
 STATS_IDX = (
     2, #Url
     0, #TIMESTAMP
@@ -294,6 +310,9 @@ DATABASE_TIMESTAMP = None
 TABLE_TIMESTAMP = None
 SYSTEM = None
 RTT = None
+DOWNLOADED_BY_IP = {}
+DOWNLOADED_BY_AS = {}
+
 
 SEP_LINE = 80 * '#'
 NB_IDENT_VALUES = 8
