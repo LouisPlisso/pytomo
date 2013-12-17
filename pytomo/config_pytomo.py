@@ -27,7 +27,7 @@ DATABASE = 'pytomo_database.db'
 # DO NOT USE ANY . OR - IN THE TABLE NAME
 TABLE = 'pytomo_crawl'
 
-LOG_DIR = 'log'
+LOG_DIR = 'logs'
 # log file use '-' for standard output
 LOG_FILE = 'pytomo.log'
 #LOG_FILE = '-'
