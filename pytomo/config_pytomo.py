@@ -19,7 +19,8 @@ BATCH_MODE = False
 PROVIDER = ''
 
 RESULT_DIR = 'results'
-RESULT_FILE = 'pytomo.result'
+RESULT_FILE = None
+#RESULT_FILE = 'pytomo.result'
 
 DATABASE_DIR = 'databases'
 DATABASE = 'pytomo_database.db'
