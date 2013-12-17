@@ -19,15 +19,14 @@ BATCH_MODE = False
 PROVIDER = ''
 
 RESULT_DIR = 'results'
-RESULT_FILE = None
-#RESULT_FILE = 'pytomo.result'
+RESULT_FILE = 'pytomo.result'
 
 DATABASE_DIR = 'databases'
 DATABASE = 'pytomo_database.db'
 # DO NOT USE ANY . OR - IN THE TABLE NAME
 TABLE = 'pytomo_crawl'
 
-LOG_DIR = '/var/log/pytomo'
+LOG_DIR = 'log'
 # log file use '-' for standard output
 LOG_FILE = 'pytomo.log'
 #LOG_FILE = '-'
@@ -201,7 +200,7 @@ HD_FIRST = False
 
 ################################################################################
 # for snmp
-SNMP = True 
+SNMP = False 
 ROOT_OID = '.1.3.6.1.3.53.5.9'
 
 # Table of global stats
