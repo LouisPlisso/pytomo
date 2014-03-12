@@ -154,8 +154,9 @@ class YoutubeIE(lib_general_download.InfoExtractor):
                 self._downloader.trouble(u'ERROR: "token" parameter not in'
                                          'video info for unknown reason')
             return None
-        config_pytomo.LOG.debug(video_info.keys())
-        config_pytomo.LOG.debug(video_info['token'])
+        # JLS => add text more readable for the the file LOG
+        config_pytomo.LOG.debug('%d keys of video_info are : %s' % (video_info.__len__(), video_info.keys()))
+        config_pytomo.LOG.debug('video_info[\'token\'] : %s' % video_info['token'])
         return video_info
 
     @staticmethod
@@ -194,9 +195,10 @@ class YoutubeIE(lib_general_download.InfoExtractor):
             #               for ud in url_data)
             # fix inspired from: https://github.com/rg3/youtube-dl/issues/427
             try:
-                url_map = dict((ud['itag'], urllib.unquote(ud['url']) +
-                                '&signature=' + urllib.unquote(ud['sig']))
-                               for ud in url_data)
+                # JLS => issue in March the 1st, 2014 : Pytomo don't push any more datarow in database
+                # JLS => in url_data there is no more '&sig=...' but '%26signature=..." in url
+                # JLS => the preceding statement must be modified to solve the issue
+                url_map = dict((ud['itag'], urllib.unquote(ud['url'])) for ud in url_data)
             except KeyError:
                 config_pytomo.LOG.warning('Could not retrieve itag, url or sig'
                                           ' to download the video')
