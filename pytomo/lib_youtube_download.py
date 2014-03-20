@@ -156,7 +156,7 @@ class YoutubeIE(lib_general_download.InfoExtractor):
             return None
         # JLS => add text more readable for the the file LOG
         config_pytomo.LOG.debug('%d keys of video_info are : %s' % (video_info.__len__(), video_info.keys()))
-        config_pytomo.LOG.debug('video_info[\'token\'] : %s' % video_info['token'])
+        config_pytomo.LOG.debug("video_info['token'] : %s" % video_info['token'])
         return video_info
 
     @staticmethod
