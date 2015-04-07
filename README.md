@@ -101,21 +101,25 @@ Python Package](http://packages.debian.org/sid/python-kaa-metadata): it has been
 The graphical web interface requires the following external resources, that we recommend you to install from the repository
  of your OS distribution: 
  
-0. [.RRDtool python binding](http://oss.oetiker.ch/rrdtool/download.en.html)
+## [.RRDtool python binding](http://oss.oetiker.ch/rrdtool/download.en.html)
 * For Debian based OS:
+  
   ```
     sudo apt-get install python-rrdtool 
  ```
 * For RHEL based OS: 
+  
      ```
     yum install python-rrdtool 
   ```
-0. [.webpy](http://webpy.org/download)
+## [.webpy](http://webpy.org/download)
 * For Debian based OS: 
-     ```
+  
+ ```
     sudo apt-get install python-webpy
-      ```
+ ```
 * For RHEL based OS:
+
   ```
     yum install python-webpy
      ```
