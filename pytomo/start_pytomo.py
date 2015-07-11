@@ -556,10 +556,10 @@ def set_up_snmp():
         config_pytomo.snmp_tables.append(config_pytomo.urlStatusCodeTable)
         config_pytomo.snmp_types.append(hebexsnmptools.ASN_INTEGER)
 
-        #Statistics by ip 
+        #Statistics by ip
         config_pytomo.IpNameTable = config_pytomo.dataset.addTable(config_pytomo.snmp_pytomoIpName, hebexsnmptools.TABLE_INDEX_STRING)
         config_pytomo.IpCountTable = config_pytomo.dataset.addTable(config_pytomo.snmp_pytomoIpCount, hebexsnmptools.TABLE_INDEX_STRING)
-        config_pytomo.IpCountType =  hebexsnmptools.ASN_COUNTER64	
+        config_pytomo.IpCountType =  hebexsnmptools.ASN_COUNTER64
         config_pytomo.IpNameType =  hebexsnmptools.ASN_OCTET_STR
 		#Statistics by AS
         config_pytomo.ASNameTable = config_pytomo.dataset.addTable(config_pytomo.snmp_pytomoASName, hebexsnmptools.TABLE_INDEX_STRING)
@@ -666,7 +666,7 @@ def add_stats(stats, cache_server_delay, url, result_stream=None, data_base=None
         format_int = lambda x: x if x else 0
         identity = lambda x: x if x else ''
         formatted_stats = format_stats(stats, cache_server_delay,service=service)
-		
+
         for stats_line in formatted_stats:
             video_url = stats_line[config_pytomo.URL_IDX]
             video_ip = stats_line[config_pytomo.IP_IDX]
@@ -691,7 +691,7 @@ def add_stats(stats, cache_server_delay, url, result_stream=None, data_base=None
             if not config_pytomo.DOWNLOADED_BY_AS.has_key(video_as):
                 config_pytomo.DOWNLOADED_BY_AS[video_as] = 0
                 config_pytomo.ASNameTable.registerValue(video_as, config_pytomo.ASNameType, video_as)
-				
+
             config_pytomo.DOWNLOADED_BY_IP[video_ip] += 1
             config_pytomo.DOWNLOADED_BY_AS[video_as] += 1
 
@@ -1047,14 +1047,14 @@ def create_options(parser):
                       help=('Max number of rounds to perform (default %d)'
                             % config_pytomo.MAX_ROUNDS),
                       default=config_pytomo.MAX_ROUNDS)
-    parser.add_option('-l', '--loop', dest='LOOP', action='store_true',
-                      default=config_pytomo.LOOP,
-                      help=('Loop after completing the max nb of rounds '
-                      '(default %s)' % config_pytomo.LOOP))
     parser.add_option('--no-loop', dest='LOOP', action='store_false',
                       default=(not config_pytomo.LOOP),
                       help=('Do not loop after completing the max nb of rounds '
                       '(default %s)' % (not config_pytomo.LOOP)))
+    parser.add_option('-l', '--loop', dest='LOOP', action='store_true',
+                      default=config_pytomo.LOOP,
+                      help=('Loop after completing the max nb of rounds '
+                      '(default %s)' % config_pytomo.LOOP))
     parser.add_option('-R', '--related', dest='RELATED',
                       action='store_true', default=config_pytomo.RELATED,
                       help=('Crawl related videos (default %s)'

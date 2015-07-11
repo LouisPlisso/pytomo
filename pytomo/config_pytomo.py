@@ -190,18 +190,18 @@ MAX_NB_TRIES_ENCODING = 9
 # demo mode!
 DEMO = False
 
-#EXTRA_COUNTRY = None
+EXTRA_COUNTRY = None
 # for Tunisia
 #EXTRA_COUNTRY = 'TN'
 # for France
-EXTRA_COUNTRY = 'FR'
+#EXTRA_COUNTRY = 'FR'
 
 #high definition
 HD_FIRST = False
 
 ################################################################################
 # for snmp
-SNMP = False 
+SNMP = False
 ROOT_OID = '.1.3.6.1.3.53.5.9'
 
 # Table of global stats
@@ -251,7 +251,7 @@ snmp_pytomoMaxInstantThp = '.'.join((snmp_pytomoUrlStats, '27'))
 snmp_pytomoRedirectUrl = '.'.join((snmp_pytomoUrlStats, '28'))
 snmp_pytomoStatusCode = '.'.join((snmp_pytomoUrlStats, '29'))
 
-#Statistics by ip 
+#Statistics by ip
 snmp_pytomoIpStats = '.'.join((ROOT_OID, '3', '1', '1'))
 snmp_pytomoIpName = '.' .join((snmp_pytomoIpStats,'1'))
 snmp_pytomoIpCount = '.' .join((snmp_pytomoIpStats,'2'))
