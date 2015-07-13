@@ -111,6 +111,7 @@ MAX_ROUND_DURATION = 600
 
 IPADDR_TIMEOUT = 5
 URL_TIMEOUT = 5
+AS_URL_TIMEOUT = 15
 
 # choose between 'youtube' and 'dailymotion'
 CRAWL_SERVICE = 'youtube'

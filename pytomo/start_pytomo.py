@@ -247,7 +247,7 @@ def compute_stats(url, cache_uri, do_download_stats, redirect_url=None,
                 # HARD CODED fields of json data
                 as_nb = int(json.load(urllib2.urlopen(
                     AS_REQUEST_URL + ip_address,
-                timeout=config_pytomo.URL_TIMEOUT))['data']['last_seen']['origin'])
+                timeout=config_pytomo.AS_URL_TIMEOUT))['data']['last_seen']['origin'])
                 CACHED_PREFIXES[prefix] = as_nb
                 config_pytomo.LOG.debug('IP %s resolved as AS: %d',
                                         ip_address, as_nb)
