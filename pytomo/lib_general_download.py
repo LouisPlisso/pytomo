@@ -18,6 +18,7 @@ import time
 import urllib2
 import tempfile
 import os
+import ssl
 from urlparse import urlsplit
 #import cookielib
 
@@ -484,8 +485,7 @@ template')
         while count <= retries:
             # Establish connection
             try:
-                data = urllib2.urlopen(request,
-                                       timeout=config_pytomo.URL_TIMEOUT)
+                data = urllib2.urlopen(request, context=ssl._create_unverified_context())
                 #data = opener.open(request)
                 break
             except (urllib2.HTTPError, ), err:
@@ -497,8 +497,7 @@ template')
                     config_pytomo.LOG.exception(err)
                     try:
                         # Open the connection again without the range header
-                        data = urllib2.urlopen(basic_request,
-                                               timeout=config_pytomo.URL_TIMEOUT)
+                        data = urllib2.urlopen(request, context=ssl._create_unverified_context())
                         #data = opener.open(basic_request)
                     except (urllib2.HTTPError, ), err:
                         if err.code < 500 or err.code >= 600:

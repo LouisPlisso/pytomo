@@ -126,7 +126,7 @@ class YoutubeIE(lib_general_download.InfoExtractor):
         self.report_video_webpage_download(video_id)
         video_info = None
         for el_type in ['&el=embedded', '&el=detailpage', '&el=vevo', '']:
-            video_info_url = ('http://www.youtube.com/get_video_info?\
+            video_info_url = ('https://www.youtube.com/get_video_info?\
 &video_id=%s%s&ps=default&eurl=&gl=US&hl=en' % (video_id, el_type))
             request = urllib2.Request(video_info_url, None,
                                       config_pytomo.STD_HEADERS)
@@ -138,31 +138,31 @@ class YoutubeIE(lib_general_download.InfoExtractor):
                 video_info_webpage = urllib2.urlopen(request,
                                      timeout=config_pytomo.URL_TIMEOUT).read()
                 video_info = parse_qs(video_info_webpage)
-                if 'token' in video_info:
+                if 'account_playback_token' in video_info:
                     break
             except (urllib2.URLError, httplib.HTTPException, socket.error), err:
                 self._downloader.trouble(
                     u'ERROR: unable to download video info webpage: %s'
                     % str(err))
                 return
-        if 'token' not in video_info:
+        if 'account_playback_token' not in video_info:
             if 'reason' in video_info:
                 self._downloader.trouble(u'ERROR: YouTube said: %s'
                                          % video_info['reason'][0].decode(
                                              'utf-8'))
             else:
-                self._downloader.trouble(u'ERROR: "token" parameter not in'
+                self._downloader.trouble(u'ERROR: "account_playback_token" parameter not in'
                                          'video info for unknown reason')
             return None
         # JLS => add text more readable for the the file LOG
         config_pytomo.LOG.debug('%d keys of video_info are : %s' % (video_info.__len__(), video_info.keys()))
-        config_pytomo.LOG.debug("video_info['token'] : %s" % video_info['token'])
+        config_pytomo.LOG.debug("video_info['account_playback_token'] : %s" % video_info['account_playback_token'])
         return video_info
 
     @staticmethod
     def get_swf(video_webpage, mobj):
         "Attempt to extract SWF player URL"
-        mobj = re.search(r'swfConfig.*?"(http:\\/\\/.*?watch.*?-.*?\.swf)"',
+        mobj = re.search(r'swfConfig.*?"(https:\\/\\/.*?watch.*?-.*?\.swf)"',
                          video_webpage)
         if mobj is not None:
             player_url = re.sub(r'\\(.)', r'\1', mobj.group(1))
@@ -178,7 +178,7 @@ class YoutubeIE(lib_general_download.InfoExtractor):
         """
         video_url_list = None
         #req_format = self._downloader.params.get('format', None)
-        get_video_template = ('http://www.youtube.com/get_video?'
+        get_video_template = ('https://www.youtube.com/get_video?'
                               + 'video_id=%s&t=%s&eurl=&el=&ps=&asv=&fmt=%%s'
                               % (video_id, video_token))
         if 'fmt_url_map' in video_info:
@@ -258,7 +258,7 @@ class YoutubeIE(lib_general_download.InfoExtractor):
             return
         # Start extracting information
         self.report_information_extraction(video_id)
-        video_token = urllib.unquote_plus(video_info['token'][0])
+        video_token = urllib.unquote_plus(video_info['account_playback_token'][0])
         video_url_list = self.get_video_url_list(video_id, video_token,
                                                  video_info)
         for format_param, video_real_url in video_url_list:
@@ -321,7 +321,7 @@ def get_cache_url(url, redirect=False, hd_first=False):
     except Exception, mes:
         config_pytomo.LOG.exception('Uncaught exception: %s' % mes)
         return None
-    video_token = urllib.unquote_plus(video_info['token'][0])
+    video_token = urllib.unquote_plus(video_info['account_playback_token'][0])
     # req_format='-1' for all available formats
     # req_format=None for best available format
     try:
