@@ -126,7 +126,7 @@ class YoutubeIE(lib_general_download.InfoExtractor):
         self.report_video_webpage_download(video_id)
         video_info = None
         for el_type in ['&el=embedded', '&el=detailpage', '&el=vevo', '']:
-            video_info_url = ('http://www.youtube.com/get_video_info?\
+            video_info_url = ('https://www.youtube.com/get_video_info?\
 &video_id=%s%s&ps=default&eurl=&gl=US&hl=en' % (video_id, el_type))
             request = urllib2.Request(video_info_url, None,
                                       config_pytomo.STD_HEADERS)
@@ -162,7 +162,7 @@ class YoutubeIE(lib_general_download.InfoExtractor):
     @staticmethod
     def get_swf(video_webpage, mobj):
         "Attempt to extract SWF player URL"
-        mobj = re.search(r'swfConfig.*?"(http:\\/\\/.*?watch.*?-.*?\.swf)"',
+        mobj = re.search(r'swfConfig.*?"(https:\\/\\/.*?watch.*?-.*?\.swf)"',
                          video_webpage)
         if mobj is not None:
             player_url = re.sub(r'\\(.)', r'\1', mobj.group(1))
@@ -178,7 +178,7 @@ class YoutubeIE(lib_general_download.InfoExtractor):
         """
         video_url_list = None
         #req_format = self._downloader.params.get('format', None)
-        get_video_template = ('http://www.youtube.com/get_video?'
+        get_video_template = ('https://www.youtube.com/get_video?'
                               + 'video_id=%s&t=%s&eurl=&el=&ps=&asv=&fmt=%%s'
                               % (video_id, video_token))
         if 'fmt_url_map' in video_info:
